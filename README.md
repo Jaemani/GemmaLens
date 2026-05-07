@@ -32,6 +32,15 @@ Frontend app: `http://localhost:3000`
 
 Set `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` if the backend runs elsewhere.
 
+## Smoke Test
+
+```bash
+curl http://127.0.0.1:8000/health
+curl -X POST http://127.0.0.1:8000/documents \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Demo","content":"Although previous studies have suggested a correlation between sleep deprivation and reduced cognitive performance, the extent to which these findings generalize across real-world learning environments remains unclear. To address this gap, we analyze longitudinal study logs collected from undergraduate students over a six-week period.","source_type":"text"}'
+```
+
 ## Prototype Scope
 
 This first slice supports pasted text or uploaded text/markdown/PDF files, mock structured document analysis, and dictionary saving. Real model quality, auth, quizzes, sync, and multi-document RAG are roadmap items.
