@@ -17,7 +17,10 @@ class DocumentIngestionService:
         else:
             content = raw.decode("utf-8", errors="ignore")
             source_type = "markdown" if extension in {"md", "markdown"} else "text"
-        return DocumentCreate(title=name, content=self.normalize_text(content), source_type=source_type)
+        normalized = self.normalize_text(content)
+        if not normalized:
+            raise ValueError("No extractable text found")
+        return DocumentCreate(title=name, content=normalized, source_type=source_type)
 
     def _extract_pdf(self, raw: bytes) -> str:
         try:

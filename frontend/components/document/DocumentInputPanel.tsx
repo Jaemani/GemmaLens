@@ -24,6 +24,17 @@ export function DocumentInputPanel() {
     }
   }
 
+  async function uploadAndAnalyze(file: File) {
+    setBusy(true);
+    try {
+      const document = await api.uploadDocument(file);
+      await api.analyzeDocument(document.id);
+      router.push(`/analysis/${document.id}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="grid gap-5 lg:grid-cols-[1fr_320px]">
       <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
@@ -37,7 +48,7 @@ export function DocumentInputPanel() {
           </button>
         </div>
       </div>
-      <DocumentUploadCard onText={(fileName, text) => { setTitle(fileName); setContent(text); }} />
+      <DocumentUploadCard disabled={busy} onFile={uploadAndAnalyze} />
     </section>
   );
 }

@@ -22,6 +22,17 @@ export const api = {
   listDocuments: () => request<DocumentListItem[]>("/documents"),
   createDocument: (payload: { title: string; content: string; source_type: string }) =>
     request<DocumentRead>("/documents", { method: "POST", body: JSON.stringify(payload) }),
+  uploadDocument: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch(`${API_BASE}/documents/upload`, {
+      method: "POST",
+      body: formData,
+      cache: "no-store"
+    });
+    if (!response.ok) throw new Error(await response.text());
+    return response.json() as Promise<DocumentRead>;
+  },
   analyzeDocument: (documentId: string) =>
     request<AnalysisResult>(`/documents/${documentId}/analyze`, { method: "POST" }),
   getAnalysis: (documentId: string) => request<AnalysisResult>(`/documents/${documentId}/analysis`),

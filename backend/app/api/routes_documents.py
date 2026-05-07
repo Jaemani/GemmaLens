@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.errors import not_found
@@ -17,7 +17,13 @@ def create_document(payload: DocumentCreate, db: Session = Depends(get_db)):
 
 @router.post("/upload", response_model=DocumentRead)
 async def upload_document(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    payload = await DocumentIngestionService().from_upload(file)
+    try:
+        payload = await DocumentIngestionService().from_upload(file)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No extractable text found in uploaded document",
+        ) from None
     return DocumentRepository(db).create(payload)
 
 
