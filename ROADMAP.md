@@ -15,6 +15,7 @@
 - Harden Gemma 4 MLX structured output with schema-aware repair.
 - Add streaming progress events.
 - Add per-task prompts and provider selection.
+- Define edge runtime matrix: desktop MLX/Ollama, Android on-device, web shell with local model download, optional remote fallback.
 
 ## Later
 
@@ -22,4 +23,4 @@
 - Local embeddings for personal memory.
 - Sync and account support.
 - Browser extension.
-- Mobile companion.
+- Android prototype for on-device or companion-device inference.

@@ -39,9 +39,21 @@ The model layer should drive multilingual behavior through prompts and schemas. 
 - Switching E2B/E4B loads a different model once.
 - Mock preset is best for fast UI demos.
 
+## Edge Device Direction
+
+Gemma 4 is an edge-device model family, so PaperLens should not become a desktop-only product. The current PC/Mac prototype is a practical first runtime, but future packaging should consider:
+
+- desktop local inference for students with laptops;
+- Android on-device inference when a stable mobile runtime is available;
+- a hosted web app shell that can guide users through downloading compatible local model assets;
+- optional remote fallback for users whose device cannot run the model.
+
+Near-term product stance: keep the document pipeline and schemas device-agnostic, then choose runtime by device capability.
+
 ## Near Product Decisions
 
 - Whether language settings are global user preferences or per-document settings.
 - Whether dictionary items should store both original text and support-language explanation.
 - How much Korean explanation remains in first public demo.
 - Whether to expose model runtime settings to users or keep them in developer settings.
+- Whether Android runs full analysis on-device or uses a companion/local network runtime first.
