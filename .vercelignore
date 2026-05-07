@@ -1,0 +1,14 @@
+.git
+.next
+**/.next
+node_modules
+**/node_modules
+backend/.venv
+backend/.venv-mlx
+paperlens.db
+model_runtime.json
+~/Models
+dist
+out
+.env
+.env.local

@@ -11,3 +11,4 @@ out/
 dist/
 .env
 .env.local
+.vercel
