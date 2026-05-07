@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import DateTime, String, Text
@@ -14,4 +14,4 @@ class Document(Base):
     title: Mapped[str] = mapped_column(String(255), default="Untitled document")
     source_type: Mapped[str] = mapped_column(String(32), default="text")
     content: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
