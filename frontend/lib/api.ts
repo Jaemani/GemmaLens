@@ -1,4 +1,4 @@
-import type { AnalysisResult, DictionaryItem, DocumentListItem, DocumentRead } from "./types";
+import type { AnalysisResult, DictionaryItem, DocumentListItem, DocumentRead, ModelStatus } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -18,6 +18,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  getModelStatus: () => request<ModelStatus>("/models/status"),
   listDocuments: () => request<DocumentListItem[]>("/documents"),
   createDocument: (payload: { title: string; content: string; source_type: string }) =>
     request<DocumentRead>("/documents", { method: "POST", body: JSON.stringify(payload) }),

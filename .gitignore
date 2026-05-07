@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv-mlx/
 paperlens.db
 node_modules/
 .next/

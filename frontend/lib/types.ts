@@ -69,3 +69,12 @@ export type DictionaryItem = {
   encounter_count: number;
   created_at: string;
 };
+
+export type ModelStatus = {
+  provider: string;
+  ollama_model: string;
+  ollama_base_url: string;
+  mlx_model_path: string;
+  mlx_model_available: boolean;
+  mock_fallback: boolean;
+};

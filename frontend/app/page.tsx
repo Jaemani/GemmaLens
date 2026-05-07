@@ -1,8 +1,18 @@
 import Link from "next/link";
 import { ArrowRight, BookMarked, FileText } from "lucide-react";
+import { ModelStatusCard } from "@/components/common/ModelStatusCard";
 import { AppShell } from "@/components/layout/AppShell";
+import { api } from "@/lib/api";
+import type { ModelStatus } from "@/lib/types";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  let modelStatus: ModelStatus | null = null;
+  try {
+    modelStatus = await api.getModelStatus();
+  } catch {
+    modelStatus = null;
+  }
+
   return (
     <AppShell>
       <section className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
@@ -17,6 +27,7 @@ export default function DashboardPage() {
           </Link>
         </div>
         <div className="grid gap-4">
+          <ModelStatusCard status={modelStatus} />
           <Stat icon={<FileText size={20} />} label="Pipeline" value="Document to learning object" />
           <Stat icon={<BookMarked size={20} />} label="Dictionary" value="Save terms and structures" />
         </div>

@@ -7,11 +7,12 @@
 - Add repeated-structure tracking.
 - Add import history and document deletion.
 - Add richer Korean explanations.
+- Add model settings screen for mock, MLX, and Ollama switching.
 
 ## Model Expansion
 
 - Complete Ollama adapter configuration UI.
-- Add Gemma adapter.
+- Harden Gemma 4 MLX structured output with schema-aware repair.
 - Add streaming progress events.
 - Add per-task prompts and provider selection.
 
