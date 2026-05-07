@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { BookOpen, FileText, LayoutDashboard } from "lucide-react";
+import { BookOpen, FileText, HelpCircle, LayoutDashboard } from "lucide-react";
 
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/documents", label: "Documents", icon: FileText },
-  { href: "/dictionary", label: "Dictionary", icon: BookOpen }
+  { href: "/dictionary", label: "Dictionary", icon: BookOpen },
+  { href: "/guide", label: "Guide", icon: HelpCircle }
 ];
 
 export function Sidebar() {
