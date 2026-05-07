@@ -67,6 +67,18 @@ export type DictionaryItem = {
   document_id: string | null;
   notes: string | null;
   encounter_count: number;
+  view_count: number;
+  last_viewed_at: string | null;
+  created_at: string;
+};
+
+export type UserProfile = {
+  id: string;
+  display_name: string;
+  target_level: "B1" | "B2" | "C1" | "C2" | "domain-heavy" | "unknown";
+  support_language: "English" | "Korean" | "Spanish" | "French" | "Japanese";
+  learning_language: "English" | "Korean" | "Spanish" | "French" | "Japanese";
+  onboarding_completed: boolean;
   created_at: string;
 };
 

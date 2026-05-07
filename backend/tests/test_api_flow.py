@@ -20,6 +20,28 @@ def test_health_and_model_status(client):
     assert "mlx_model_available" in body
 
 
+def test_profile_language_settings(client):
+    profile = client.get("/profile")
+    assert profile.status_code == 200
+    assert profile.json()["learning_language"] == "English"
+
+    updated = client.patch(
+        "/profile",
+        json={
+            "support_language": "Japanese",
+            "learning_language": "Spanish",
+            "target_level": "B2",
+            "onboarding_completed": True,
+        },
+    )
+    assert updated.status_code == 200
+    body = updated.json()
+    assert body["support_language"] == "Japanese"
+    assert body["learning_language"] == "Spanish"
+    assert body["target_level"] == "B2"
+    assert body["onboarding_completed"] is True
+
+
 def test_model_config_can_switch_provider(client):
     updated = client.post(
         "/models/config",
@@ -91,6 +113,12 @@ def test_document_analysis_and_dictionary_flow(client):
     items = client.get("/dictionary/items")
     assert items.status_code == 200
     assert len(items.json()) == 1
+    assert items.json()[0]["view_count"] == 0
+
+    viewed = client.post(f"/dictionary/items/{saved_again.json()['id']}/view")
+    assert viewed.status_code == 200
+    assert viewed.json()["view_count"] == 1
+    assert viewed.json()["last_viewed_at"] is not None
 
     deleted = client.delete(f"/dictionary/items/{saved_again.json()['id']}")
     assert deleted.status_code == 204

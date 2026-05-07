@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -41,3 +43,13 @@ class DictionaryRepository:
         self.db.delete(item)
         self.db.commit()
         return True
+
+    def mark_viewed(self, item_id: str) -> DictionaryItem | None:
+        item = self.db.get(DictionaryItem, item_id)
+        if not item:
+            return None
+        item.view_count += 1
+        item.last_viewed_at = datetime.now(UTC)
+        self.db.commit()
+        self.db.refresh(item)
+        return item

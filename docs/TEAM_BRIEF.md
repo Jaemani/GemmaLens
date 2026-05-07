@@ -32,6 +32,15 @@ Current default is English academic reading with Korean support in sentence expl
 
 The model layer should drive multilingual behavior through prompts and schemas. The app should not hard-code one language pair into data models.
 
+The prototype now includes local profile settings for support language, learning language, target level, and onboarding completion.
+
+## Learning Memory Direction
+
+- Dictionary items track how many times they were saved or encountered.
+- Dictionary items now also track view count and last viewed time.
+- This is the first step toward knowing what the user is learning now.
+- Future memory should combine saved terms, viewed items, document domains, and repeated sentence structures.
+
 ## Demo Notes
 
 - First MLX analysis after backend start loads model into memory and is slower.

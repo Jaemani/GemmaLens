@@ -1,4 +1,4 @@
-import type { AnalysisResult, DictionaryItem, DocumentListItem, DocumentRead, ModelConfigUpdate, ModelPreset, ModelStatus } from "./types";
+import type { AnalysisResult, DictionaryItem, DocumentListItem, DocumentRead, ModelConfigUpdate, ModelPreset, ModelStatus, UserProfile } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -40,6 +40,8 @@ export const api = {
     request<AnalysisResult>(`/documents/${documentId}/analyze`, { method: "POST" }),
   getAnalysis: (documentId: string) => request<AnalysisResult>(`/documents/${documentId}/analysis`),
   listDictionary: () => request<DictionaryItem[]>("/dictionary/items"),
+  markDictionaryViewed: (itemId: string) =>
+    request<DictionaryItem>(`/dictionary/items/${itemId}/view`, { method: "POST" }),
   saveDictionaryItem: (payload: {
     item_type: "term" | "phrase" | "sentence";
     text: string;
@@ -50,5 +52,8 @@ export const api = {
   deleteDictionaryItem: async (itemId: string) => {
     const response = await fetch(`${API_BASE}/dictionary/items/${itemId}`, { method: "DELETE" });
     if (!response.ok) throw new Error(await response.text());
-  }
+  },
+  getProfile: () => request<UserProfile>("/profile"),
+  updateProfile: (payload: Partial<Omit<UserProfile, "id" | "created_at">>) =>
+    request<UserProfile>("/profile", { method: "PATCH", body: JSON.stringify(payload) })
 };

@@ -2,6 +2,9 @@
 
 ## 2026-05-08
 
+- Added local profile settings for support language, learning language, target level, and onboarding state.
+- Added dictionary viewed tracking with view count and last viewed time.
+- Added real-user test plan for multilingual users, hard PDFs, first-user onboarding, and learning-memory validation.
 - Added user guide page explaining project flow, levels, difficulty scores, language direction, and saved learning objects.
 - Added shareable team brief for developer and non-developer collaborators.
 - Added model presets for Gemma 4 E2B/E4B MLX bf16 and Ollama.

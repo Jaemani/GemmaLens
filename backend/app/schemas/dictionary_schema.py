@@ -22,6 +22,8 @@ class DictionaryItemRead(BaseModel):
     document_id: str | None
     notes: str | None
     encounter_count: int
+    view_count: int
+    last_viewed_at: datetime | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

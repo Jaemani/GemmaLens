@@ -8,6 +8,7 @@ from app.api.routes_dictionary import router as dictionary_router
 from app.api.routes_documents import router as documents_router
 from app.api.routes_health import router as health_router
 from app.api.routes_models import router as models_router
+from app.api.routes_user_profile import router as user_profile_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.init_db import init_db
@@ -35,6 +36,7 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(models_router)
+app.include_router(user_profile_router)
 app.include_router(documents_router)
 app.include_router(analysis_router)
 app.include_router(dictionary_router)

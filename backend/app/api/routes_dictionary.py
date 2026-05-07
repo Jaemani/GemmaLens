@@ -20,6 +20,14 @@ def list_dictionary_items(db: Session = Depends(get_db)):
     return DictionaryRepository(db).list()
 
 
+@router.post("/{item_id}/view", response_model=DictionaryItemRead)
+def mark_dictionary_item_viewed(item_id: str, db: Session = Depends(get_db)):
+    item = DictionaryRepository(db).mark_viewed(item_id)
+    if not item:
+        raise not_found("Dictionary item not found")
+    return item
+
+
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_dictionary_item(item_id: str, db: Session = Depends(get_db)):
     deleted = DictionaryRepository(db).delete(item_id)
