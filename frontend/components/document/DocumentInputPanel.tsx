@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { AnalysisProgress } from "@/components/analysis/AnalysisProgress";
 import { DocumentUploadCard } from "./DocumentUploadCard";
 
 const SAMPLE_TEXT = "Although previous studies have suggested a correlation between sleep deprivation and reduced cognitive performance, the extent to which these findings generalize across real-world learning environments remains unclear. To address this gap, we analyze longitudinal study logs collected from undergraduate students over a six-week period.";
@@ -12,27 +13,42 @@ export function DocumentInputPanel() {
   const [title, setTitle] = useState("Sleep and learning excerpt");
   const [content, setContent] = useState(SAMPLE_TEXT);
   const [busy, setBusy] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [step, setStep] = useState(0);
 
-  async function submit() {
+  async function runWithProgress(action: () => Promise<void>) {
     setBusy(true);
+    setElapsed(0);
+    setStep(0);
+    const timer = window.setInterval(() => {
+      setElapsed((value) => value + 1);
+      setStep((value) => Math.min(value + 1, 3));
+    }, 1000);
     try {
-      const document = await api.createDocument({ title, content, source_type: "text" });
-      await api.analyzeDocument(document.id);
-      router.push(`/analysis/${document.id}`);
+      await action();
+      setStep(4);
     } finally {
+      window.clearInterval(timer);
       setBusy(false);
     }
   }
 
-  async function uploadAndAnalyze(file: File) {
-    setBusy(true);
-    try {
-      const document = await api.uploadDocument(file);
+  async function submit() {
+    await runWithProgress(async () => {
+      const document = await api.createDocument({ title, content, source_type: "text" });
+      setStep(2);
       await api.analyzeDocument(document.id);
       router.push(`/analysis/${document.id}`);
-    } finally {
-      setBusy(false);
-    }
+    });
+  }
+
+  async function uploadAndAnalyze(file: File) {
+    await runWithProgress(async () => {
+      const document = await api.uploadDocument(file);
+      setStep(2);
+      await api.analyzeDocument(document.id);
+      router.push(`/analysis/${document.id}`);
+    });
   }
 
   return (
@@ -48,7 +64,10 @@ export function DocumentInputPanel() {
           </button>
         </div>
       </div>
-      <DocumentUploadCard disabled={busy} onFile={uploadAndAnalyze} />
+      <div className="space-y-5">
+        <DocumentUploadCard disabled={busy} onFile={uploadAndAnalyze} />
+        {busy ? <AnalysisProgress step={step} elapsed={elapsed} /> : null}
+      </div>
     </section>
   );
 }

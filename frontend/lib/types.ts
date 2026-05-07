@@ -72,6 +72,8 @@ export type DictionaryItem = {
 
 export type ModelStatus = {
   provider: "mock" | "mlx" | "ollama";
+  preset_id: "mock" | "gemma4-e2b-mlx" | "gemma4-e4b-mlx" | "gemma4-e4b-ollama";
+  preset_label: string;
   ollama_model: string;
   ollama_base_url: string;
   mlx_model_path: string;
@@ -79,4 +81,16 @@ export type ModelStatus = {
   mock_fallback: boolean;
 };
 
-export type ModelConfigUpdate = Partial<Pick<ModelStatus, "provider" | "ollama_model" | "ollama_base_url" | "mlx_model_path">>;
+export type ModelPreset = {
+  id: ModelStatus["preset_id"];
+  label: string;
+  runtime: ModelStatus["provider"];
+  size: string;
+  speed: string;
+  availability: "ready" | "missing" | "external";
+  description: string;
+};
+
+export type ModelConfigUpdate = {
+  preset_id?: ModelStatus["preset_id"];
+};

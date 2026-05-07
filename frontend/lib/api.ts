@@ -1,4 +1,4 @@
-import type { AnalysisResult, DictionaryItem, DocumentListItem, DocumentRead, ModelConfigUpdate, ModelStatus } from "./types";
+import type { AnalysisResult, DictionaryItem, DocumentListItem, DocumentRead, ModelConfigUpdate, ModelPreset, ModelStatus } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -19,6 +19,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getModelStatus: () => request<ModelStatus>("/models/status"),
+  listModelPresets: () => request<ModelPreset[]>("/models/presets"),
   updateModelConfig: (payload: ModelConfigUpdate) =>
     request<ModelStatus>("/models/config", { method: "POST", body: JSON.stringify(payload) }),
   listDocuments: () => request<DocumentListItem[]>("/documents"),

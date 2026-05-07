@@ -8,8 +8,9 @@
 
 body {
   margin: 0;
-  background: #f8faf7;
-  color: #17201b;
+  background: #f8fafd;
+  color: #202124;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 button,

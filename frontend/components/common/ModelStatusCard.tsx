@@ -1,68 +1,81 @@
 "use client";
 
-import { useState } from "react";
+import { CheckCircle2, Cloud, Cpu, FlaskConical } from "lucide-react";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { ModelStatus } from "@/lib/types";
+import type { ModelPreset, ModelStatus } from "@/lib/types";
 
-const providers = ["mock", "mlx", "ollama"] as const;
+const runtimeIcon = {
+  mock: FlaskConical,
+  mlx: Cpu,
+  ollama: Cloud
+};
 
 export function ModelStatusCard({ status }: { status: ModelStatus | null }) {
   const [current, setCurrent] = useState(status);
-  const [provider, setProvider] = useState<ModelStatus["provider"]>(status?.provider ?? "mock");
-  const [mlxModelPath, setMlxModelPath] = useState(status?.mlx_model_path ?? "~/Models/mlx/gemma-4-e4b-it-OptiQ-4bit");
-  const [ollamaBaseUrl, setOllamaBaseUrl] = useState(status?.ollama_base_url ?? "http://localhost:11434");
-  const [ollamaModel, setOllamaModel] = useState(status?.ollama_model ?? "gemma3:4b");
-  const [busy, setBusy] = useState(false);
+  const [presets, setPresets] = useState<ModelPreset[]>([]);
+  const [busyPreset, setBusyPreset] = useState<string | null>(null);
 
-  async function save() {
-    setBusy(true);
+  useEffect(() => {
+    api.listModelPresets().then(setPresets).catch(() => setPresets([]));
+  }, []);
+
+  async function selectPreset(preset: ModelPreset) {
+    setBusyPreset(preset.id);
     try {
-      const updated = await api.updateModelConfig({
-        provider,
-        mlx_model_path: mlxModelPath,
-        ollama_base_url: ollamaBaseUrl,
-        ollama_model: ollamaModel
-      });
+      const updated = await api.updateModelConfig({ preset_id: preset.id });
       setCurrent(updated);
     } finally {
-      setBusy(false);
+      setBusyPreset(null);
     }
   }
 
   return (
-    <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
-      <p className="text-sm text-neutral-500">Model runtime</p>
-      <h2 className="mt-1 text-lg font-semibold uppercase">{current?.provider ?? "offline"}</h2>
+    <div className="rounded-2xl border border-line bg-panel p-5 shadow-material">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-neutral-500">Model preset</p>
+          <h2 className="mt-1 text-xl font-semibold text-ink">{current?.preset_label ?? "Backend offline"}</h2>
+        </div>
+        {current ? <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase text-accent">{current.provider}</span> : null}
+      </div>
+
       {current ? (
-        <div className="mt-3 space-y-2 text-sm text-neutral-700">
-          <p>Mock fallback: {current.mock_fallback ? "enabled" : "disabled"}</p>
-          <p>MLX model: {current.mlx_model_available ? "available" : "not found"}</p>
-          <p className="break-all text-xs text-neutral-500">{current.mlx_model_path}</p>
-          <div className="space-y-3 pt-3">
-            <div className="flex rounded-md border border-line p-1">
-              {providers.map((item) => (
-                <button
-                  key={item}
-                  onClick={() => setProvider(item)}
-                  className={`flex-1 rounded px-2 py-1 text-xs font-semibold uppercase ${provider === item ? "bg-accent text-white" : "hover:bg-surface"}`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-            <label className="block text-xs font-semibold text-neutral-500" htmlFor="mlx-path">MLX path</label>
-            <input id="mlx-path" value={mlxModelPath} onChange={(event) => setMlxModelPath(event.target.value)} className="w-full rounded-md border border-line px-3 py-2 text-xs" />
-            <label className="block text-xs font-semibold text-neutral-500" htmlFor="ollama-url">Ollama URL</label>
-            <input id="ollama-url" value={ollamaBaseUrl} onChange={(event) => setOllamaBaseUrl(event.target.value)} className="w-full rounded-md border border-line px-3 py-2 text-xs" />
-            <label className="block text-xs font-semibold text-neutral-500" htmlFor="ollama-model">Ollama model</label>
-            <input id="ollama-model" value={ollamaModel} onChange={(event) => setOllamaModel(event.target.value)} className="w-full rounded-md border border-line px-3 py-2 text-xs" />
-            <button onClick={save} disabled={busy} className="w-full rounded-md bg-accent px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
-              {busy ? "Saving..." : "Save runtime"}
-            </button>
-          </div>
+        <div className="mt-4 space-y-3">
+          {presets.map((preset) => {
+            const Icon = runtimeIcon[preset.runtime];
+            const selected = current.preset_id === preset.id;
+            const disabled = preset.availability === "missing";
+            return (
+              <button
+                key={preset.id}
+                onClick={() => selectPreset(preset)}
+                disabled={disabled || busyPreset !== null}
+                className={`w-full rounded-2xl border p-4 text-left transition ${selected ? "border-accent bg-blue-50" : "border-line bg-white hover:bg-surface"} disabled:cursor-not-allowed disabled:opacity-55`}
+              >
+                <div className="flex items-start gap-3">
+                  <Icon size={20} className={selected ? "text-accent" : "text-neutral-500"} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-semibold text-ink">{preset.label}</p>
+                      {selected ? <CheckCircle2 size={18} className="text-accent" /> : null}
+                    </div>
+                    <p className="mt-1 text-xs text-neutral-600">{preset.description}</p>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full bg-surface px-2 py-1">{preset.size}</span>
+                      <span className="rounded-full bg-surface px-2 py-1">{preset.speed}</span>
+                      <span className={`rounded-full px-2 py-1 ${preset.availability === "ready" ? "bg-green-50 text-green-700" : preset.availability === "external" ? "bg-amber-50 text-amber" : "bg-red-50 text-red-700"}`}>
+                        {preset.availability}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-neutral-600">Backend unavailable.</p>
+        <p className="mt-3 text-sm text-neutral-600">Start the backend to select a model.</p>
       )}
     </div>
   );

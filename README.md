@@ -60,7 +60,7 @@ This first slice supports pasted text or uploaded text/markdown/PDF files, mock 
 For Apple Silicon, use the MLX path. The recommended small local model is:
 
 ```txt
-mlx-community/gemma-4-e4b-it-OptiQ-4bit
+mlx-community/gemma-4-e4b-it-bf16
 ```
 
 Download model weights:
@@ -83,4 +83,4 @@ Run backend with MLX provider:
 
 The app still falls back to mock output if MLX is missing, fails to load, or returns invalid JSON.
 
-Note: `mlx-community/gemma-4-e4b-it-4bit` is a multimodal/VLM conversion and may not load in `mlx-lm` text-only mode. The OptiQ variant is the default because its model card documents standard `mlx-lm` usage.
+The default E4B preset uses the full-precision MLX bf16 conversion at `~/Models/mlx/gemma-4-e4b-it-bf16`.
