@@ -28,7 +28,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "mlx_model_path": "~/Models/mlx/gemma-4-e4b-it-bf16",
         "size": "E4B",
         "speed": "Best local quality",
-        "description": "Full-precision bf16 Gemma 4 E4B. M1 Max 32 GB can hold it.",
+        "description": "Full-precision bf16 Gemma 4 E4B for highest local quality.",
     },
     "gemma4-e4b-ollama": {
         "label": "Gemma 4 E4B (Ollama)",

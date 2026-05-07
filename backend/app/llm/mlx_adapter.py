@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 class MLXAdapter(ModelAdapter):
     _model: ClassVar[Any | None] = None
     _tokenizer: ClassVar[Any | None] = None
+    _model_path: ClassVar[str | None] = None
 
     def __init__(self) -> None:
         self.settings = get_settings()
@@ -49,17 +50,23 @@ class MLXAdapter(ModelAdapter):
             return await self.fallback.analyze_document(document_id, text, chunks)
 
     def _load(self):
-        if self.__class__._model is not None and self.__class__._tokenizer is not None:
+        model_path = str(Path(self.runtime_config["mlx_model_path"]).expanduser())
+        if (
+            self.__class__._model is not None
+            and self.__class__._tokenizer is not None
+            and self.__class__._model_path == model_path
+        ):
             return self.__class__._model, self.__class__._tokenizer
 
-        model_path = Path(self.runtime_config["mlx_model_path"]).expanduser()
-        if not model_path.exists():
+        path = Path(model_path)
+        if not path.exists():
             raise FileNotFoundError(f"MLX model not found: {model_path}")
 
         from mlx_lm.utils import load_model, load_tokenizer
 
-        self.__class__._model, _ = load_model(model_path, strict=False)
-        self.__class__._tokenizer = load_tokenizer(model_path)
+        self.__class__._model, _ = load_model(path, strict=False)
+        self.__class__._tokenizer = load_tokenizer(path)
+        self.__class__._model_path = model_path
         return self.__class__._model, self.__class__._tokenizer
 
     def _build_prompt(self, document_id: str, text: str, chunks: list[str]) -> str:
