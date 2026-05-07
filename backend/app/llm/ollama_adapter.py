@@ -8,6 +8,7 @@ from app.core.config import get_settings
 from app.llm.base import ModelAdapter
 from app.llm.mock_adapter import MockModelAdapter
 from app.schemas.analysis_schema import AnalysisResult
+from app.services.model_runtime_service import ModelRuntimeService
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 class OllamaAdapter(ModelAdapter):
     def __init__(self) -> None:
         self.settings = get_settings()
+        self.runtime_config = ModelRuntimeService().provider_config()
         self.fallback = MockModelAdapter()
 
     async def analyze_document(self, document_id: str, text: str, chunks: list[str]) -> AnalysisResult:
@@ -23,9 +25,9 @@ class OllamaAdapter(ModelAdapter):
             try:
                 async with httpx.AsyncClient(timeout=45) as client:
                     response = await client.post(
-                        f"{self.settings.ollama_base_url}/api/generate",
+                        f"{self.runtime_config['ollama_base_url']}/api/generate",
                         json={
-                            "model": self.settings.ollama_model,
+                            "model": self.runtime_config["ollama_model"],
                             "prompt": prompt,
                             "stream": False,
                             "format": "json",

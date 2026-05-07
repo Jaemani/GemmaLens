@@ -9,6 +9,7 @@ from app.llm.base import ModelAdapter
 from app.llm.json_utils import extract_json_object
 from app.llm.mock_adapter import MockModelAdapter
 from app.schemas.analysis_schema import AnalysisResult
+from app.services.model_runtime_service import ModelRuntimeService
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class MLXAdapter(ModelAdapter):
 
     def __init__(self) -> None:
         self.settings = get_settings()
+        self.runtime_config = ModelRuntimeService().provider_config()
         self.fallback = MockModelAdapter()
 
     async def analyze_document(self, document_id: str, text: str, chunks: list[str]) -> AnalysisResult:
@@ -50,7 +52,7 @@ class MLXAdapter(ModelAdapter):
         if self.__class__._model is not None and self.__class__._tokenizer is not None:
             return self.__class__._model, self.__class__._tokenizer
 
-        model_path = Path(self.settings.mlx_model_path).expanduser()
+        model_path = Path(self.runtime_config["mlx_model_path"]).expanduser()
         if not model_path.exists():
             raise FileNotFoundError(f"MLX model not found: {model_path}")
 

@@ -71,10 +71,12 @@ export type DictionaryItem = {
 };
 
 export type ModelStatus = {
-  provider: string;
+  provider: "mock" | "mlx" | "ollama";
   ollama_model: string;
   ollama_base_url: string;
   mlx_model_path: string;
   mlx_model_available: boolean;
   mock_fallback: boolean;
 };
+
+export type ModelConfigUpdate = Partial<Pick<ModelStatus, "provider" | "ollama_model" | "ollama_base_url" | "mlx_model_path">>;

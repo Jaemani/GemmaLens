@@ -20,6 +20,26 @@ def test_health_and_model_status(client):
     assert "mlx_model_available" in body
 
 
+def test_model_config_can_switch_provider(client):
+    updated = client.post(
+        "/models/config",
+        json={
+            "provider": "mock",
+            "ollama_model": "gemma4:test",
+            "ollama_base_url": "http://localhost:11434",
+            "mlx_model_path": "~/Models/mlx/gemma-4-e4b-it-OptiQ-4bit",
+        },
+    )
+    assert updated.status_code == 200
+    body = updated.json()
+    assert body["provider"] == "mock"
+    assert body["ollama_model"] == "gemma4:test"
+
+    status = client.get("/models/status")
+    assert status.status_code == 200
+    assert status.json()["ollama_model"] == "gemma4:test"
+
+
 def test_document_analysis_and_dictionary_flow(client):
     created = client.post(
         "/documents",

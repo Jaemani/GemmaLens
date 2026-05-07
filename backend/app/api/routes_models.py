@@ -1,21 +1,16 @@
-from pathlib import Path
-
 from fastapi import APIRouter
 
-from app.core.config import get_settings
+from app.schemas.model_schema import ModelConfigUpdate, ModelStatus
+from app.services.model_runtime_service import ModelRuntimeService
 
 router = APIRouter(prefix="/models", tags=["models"])
 
 
-@router.get("/status")
+@router.get("/status", response_model=ModelStatus)
 def model_status():
-    settings = get_settings()
-    mlx_path = Path(settings.mlx_model_path).expanduser()
-    return {
-        "provider": settings.model_provider,
-        "ollama_model": settings.ollama_model,
-        "ollama_base_url": settings.ollama_base_url,
-        "mlx_model_path": str(mlx_path),
-        "mlx_model_available": mlx_path.exists(),
-        "mock_fallback": True,
-    }
+    return ModelRuntimeService().status()
+
+
+@router.post("/config", response_model=ModelStatus)
+def update_model_config(payload: ModelConfigUpdate):
+    return ModelRuntimeService().update(payload)

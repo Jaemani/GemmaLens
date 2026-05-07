@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,6 +13,7 @@ from app.main import app
 
 @pytest.fixture()
 def client(tmp_path) -> Generator[TestClient, None, None]:
+    Path("model_runtime.json").unlink(missing_ok=True)
     database_url = f"sqlite:///{tmp_path / 'test.db'}"
     engine = create_engine(database_url, connect_args={"check_same_thread": False})
     TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
@@ -29,3 +31,4 @@ def client(tmp_path) -> Generator[TestClient, None, None]:
         yield test_client
     app.dependency_overrides.clear()
     engine.dispose()
+    Path("model_runtime.json").unlink(missing_ok=True)
