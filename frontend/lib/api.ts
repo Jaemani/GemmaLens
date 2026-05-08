@@ -1,4 +1,14 @@
-import type { AnalysisResult, DictionaryItem, DocumentListItem, DocumentRead, ModelConfigUpdate, ModelPreset, ModelStatus, UserProfile } from "./types";
+import type {
+  AnalysisResult,
+  DictionaryItem,
+  DocumentListItem,
+  DocumentRead,
+  ModelConfigUpdate,
+  ModelPreset,
+  ModelStatus,
+  TranscriptResponse,
+  UserProfile
+} from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -55,5 +65,9 @@ export const api = {
   },
   getProfile: () => request<UserProfile>("/profile"),
   updateProfile: (payload: Partial<Omit<UserProfile, "id" | "created_at">>) =>
-    request<UserProfile>("/profile", { method: "PATCH", body: JSON.stringify(payload) })
+    request<UserProfile>("/profile", { method: "PATCH", body: JSON.stringify(payload) }),
+  parseTranscript: (payload: { content: string; source_name: string }) =>
+    request<TranscriptResponse>("/video/transcripts/parse", { method: "POST", body: JSON.stringify(payload) }),
+  fetchYouTubeTranscript: (payload: { url: string; languages?: string[] }) =>
+    request<TranscriptResponse>("/video/transcripts/youtube", { method: "POST", body: JSON.stringify(payload) })
 };

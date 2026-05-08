@@ -106,3 +106,20 @@ export type ModelPreset = {
 export type ModelConfigUpdate = {
   preset_id?: ModelStatus["preset_id"];
 };
+
+export type TranscriptSegment = {
+  index: number;
+  start: number;
+  duration: number;
+  end: number;
+  text: string;
+};
+
+export type TranscriptResponse = {
+  source_type: "subtitle" | "youtube";
+  source_id: string | null;
+  title: string | null;
+  segments: TranscriptSegment[];
+  plain_text: string;
+  warning: string | null;
+};
