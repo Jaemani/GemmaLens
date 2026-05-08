@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: sololingo-api
+    env: docker
+    dockerContext: backend
+    dockerfilePath: backend/Dockerfile
+    healthCheckPath: /health
+    disk:
+      name: sololingo-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: MODEL_PROVIDER
+        value: mock
+      - key: MODEL_SWITCHING_ENABLED
+        value: "false"
+      - key: MODEL_RUNTIME_CONFIG_PATH
+        value: /tmp/model_runtime.json
+      - key: DATABASE_URL
+        value: sqlite:////data/paperlens.db
+      - key: CORS_ALLOW_ORIGIN_REGEX
+        value: https://.*\.vercel\.app

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { AnalysisResult } from "@/lib/types";
+import { demoAnalysis, DEMO_DOCUMENT_ID } from "@/lib/demoData";
 import {
   ANALYSIS_EXPERIMENT_STORAGE_KEY,
   DEFAULT_ANALYSIS_EXPERIMENT,
@@ -36,6 +37,13 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
 
     async function loadOrAnalyze() {
       try {
+        if (documentId === DEMO_DOCUMENT_ID) {
+          if (!cancelled) {
+            setAnalysis(demoAnalysis);
+            setStep(4);
+          }
+          return;
+        }
         try {
           const existing = await api.getAnalysis(documentId);
           if (!cancelled) {
@@ -86,13 +94,15 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       setAutoSaveStatus(`Auto-saving ${rows.length} high-priority items...`);
       await Promise.all(
         rows.map((row) =>
-          api.saveDictionaryItem({
-            item_type: row.type,
-            text: row.text,
-            meaning: row.meaning,
-            source_sentence: row.source_sentence,
-            document_id: currentAnalysis.document_id
-          })
+          currentAnalysis.document_id === DEMO_DOCUMENT_ID
+            ? Promise.resolve()
+            : api.saveDictionaryItem({
+                item_type: row.type,
+                text: row.text,
+                meaning: row.meaning,
+                source_sentence: row.source_sentence,
+                document_id: currentAnalysis.document_id
+              })
         )
       );
       if (!cancelled) setAutoSaveStatus(`${rows.length} high-priority items saved for B comparison.`);
@@ -116,6 +126,11 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
 
   return (
     <div className="space-y-6">
+      {documentId === DEMO_DOCUMENT_ID ? (
+        <div className="rounded-lg border border-line bg-blue-50 p-4 text-sm text-accent">
+          Demo mode uses fixed sample data so Vercel reviewers can test UI and A/B variants without a local model server.
+        </div>
+      ) : null}
       <ExperimentSwitchPanel config={config} onChange={setConfig} />
       {autoSaveStatus ? (
         <div className="rounded-lg border border-line bg-blue-50 px-4 py-3 text-sm font-medium text-accent">{autoSaveStatus}</div>

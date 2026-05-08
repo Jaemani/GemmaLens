@@ -44,7 +44,7 @@ PRESETS: dict[str, dict[str, str]] = {
 class ModelRuntimeService:
     def __init__(self) -> None:
         self.settings = get_settings()
-        self.config_path = Path("model_runtime.json")
+        self.config_path = Path(self.settings.model_runtime_config_path)
 
     def status(self) -> ModelStatus:
         config = self._merged_config()
@@ -62,11 +62,14 @@ class ModelRuntimeService:
         )
 
     def update(self, payload: ModelConfigUpdate) -> ModelStatus:
+        if not self.settings.model_switching_enabled:
+            return self.status()
         current = self._merged_config()
         updates = payload.model_dump(exclude_none=True)
         if preset_id := updates.pop("preset_id", None):
             current.update(self._preset_config(preset_id))
         current.update(updates)
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
         self.config_path.write_text(json.dumps(current, indent=2), encoding="utf-8")
         return self.status()
 

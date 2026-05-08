@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
@@ -15,9 +16,11 @@ export function DocumentInputPanel() {
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [step, setStep] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   async function runWithProgress(action: () => Promise<void>) {
     setBusy(true);
+    setError(null);
     setElapsed(0);
     setStep(0);
     const timer = window.setInterval(() => {
@@ -27,6 +30,8 @@ export function DocumentInputPanel() {
     try {
       await action();
       setStep(4);
+    } catch {
+      setError("Analysis stopped because the backend/model server is not reachable from this browser. Use demo result for team UI feedback, or run the local backend and set NEXT_PUBLIC_API_BASE_URL.");
     } finally {
       window.clearInterval(timer);
       setBusy(false);
@@ -59,10 +64,21 @@ export function DocumentInputPanel() {
         <label className="mt-5 block text-sm font-semibold" htmlFor="content">Document text</label>
         <textarea id="content" value={content} onChange={(event) => setContent(event.target.value)} rows={14} className="mt-2 w-full resize-y rounded-md border border-line px-3 py-2 leading-6" />
         <div className="mt-4 flex justify-end">
-          <button disabled={busy || !content.trim()} onClick={submit} className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-            {busy ? "Analyzing..." : "Analyze document"}
-          </button>
+          <div className="flex flex-wrap justify-end gap-3">
+            <Link href="/analysis/demo" className="rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface">
+              Open demo result
+            </Link>
+            <button disabled={busy || !content.trim()} onClick={submit} className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+              {busy ? "Analyzing..." : "Analyze document"}
+            </button>
+          </div>
         </div>
+        {error ? (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-semibold">Backend not connected</p>
+            <p className="mt-1">{error}</p>
+          </div>
+        ) : null}
       </div>
       <div className="space-y-5">
         <DocumentUploadCard disabled={busy} onFile={uploadAndAnalyze} />

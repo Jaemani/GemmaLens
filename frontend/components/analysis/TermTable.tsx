@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { AnalysisResult } from "@/lib/types";
 import { api } from "@/lib/api";
 import type { AnalysisExperimentConfig } from "@/lib/experiments";
+import { DEMO_DOCUMENT_ID } from "@/lib/demoData";
 
 type Row = {
   key: string;
@@ -23,15 +24,20 @@ export function TermTable({ analysis, config }: { analysis: AnalysisResult; conf
 
   async function save(row: Row) {
     setSavingKey(row.key);
-    await api.saveDictionaryItem({
-      item_type: row.type,
-      text: row.text,
-      meaning: row.meaning,
-      source_sentence: row.source_sentence,
-      document_id: analysis.document_id
-    });
-    setSavedKeys((current) => new Set(current).add(row.key));
-    setSavingKey(null);
+    try {
+      if (analysis.document_id !== DEMO_DOCUMENT_ID) {
+        await api.saveDictionaryItem({
+          item_type: row.type,
+          text: row.text,
+          meaning: row.meaning,
+          source_sentence: row.source_sentence,
+          document_id: analysis.document_id
+        });
+      }
+      setSavedKeys((current) => new Set(current).add(row.key));
+    } finally {
+      setSavingKey(null);
+    }
   }
 
   return (
@@ -40,7 +46,11 @@ export function TermTable({ analysis, config }: { analysis: AnalysisResult; conf
         <div>
           <h2 className="text-lg font-semibold">Learning objects</h2>
           <p className="mt-1 text-sm text-neutral-600">
-            {config.saveMode === "manual" ? "Manual save baseline. User chooses what enters the dictionary." : "High-priority items can be auto-saved for comparison."}
+            {analysis.document_id === DEMO_DOCUMENT_ID
+              ? "Demo save state is local to this browser tab."
+              : config.saveMode === "manual"
+                ? "Manual save baseline. User chooses what enters the dictionary."
+                : "High-priority items can be auto-saved for comparison."}
           </p>
         </div>
         <span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-neutral-600">

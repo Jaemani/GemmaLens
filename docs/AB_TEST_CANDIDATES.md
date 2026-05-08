@@ -245,7 +245,7 @@ The analysis result page now includes browser-local A/B controls:
 - Labels: A learning priority / B reason shown.
 - Layout: A table first / B reading context first.
 
-Default is all A. The switch is intentionally local to the browser so the team can compare variants without database migration or backend deployment.
+Default is all A. The switch is intentionally local to the browser so the team can compare variants without database migration or backend deployment. On Vercel, `/analysis/demo` uses fixed sample data so reviewers can test these controls without a local model server.
 
 ## Discussion Questions For Team
 

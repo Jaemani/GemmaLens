@@ -47,6 +47,9 @@ The prototype now includes local profile settings for support language, learning
 - Repeated analysis with same selected MLX model reuses cached model.
 - Switching E2B/E4B loads a different model once.
 - Mock preset is best for fast UI demos.
+- Vercel deployment is currently for team UI feedback only. It can open `/analysis/demo` without a backend, but real Gemma analysis still needs a reachable FastAPI backend connected to local MLX/Ollama.
+- Do not expose a personal Mac LLM server directly for team testing. Use local demos now, then decide on a controlled backend/runtime path later.
+- Next deployment step: deploy the backend in mock mode first. This makes the full product flow testable without model hosting, while preserving the same adapter layer for local Mac and future Android runtimes.
 
 ## Edge Device Direction
 

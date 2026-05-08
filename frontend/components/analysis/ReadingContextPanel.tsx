@@ -1,4 +1,5 @@
 import type { AnalysisResult } from "@/lib/types";
+import type { ReactNode } from "react";
 
 export function ReadingContextPanel({ analysis }: { analysis: AnalysisResult }) {
   const sentences = Array.from(
@@ -41,7 +42,7 @@ function renderHighlightedSentence(sentence: string, analysis: AnalysisResult) {
     .filter((match) => match.index >= 0)
     .sort((a, b) => a.index - b.index);
 
-  const parts: React.ReactNode[] = [];
+  const parts: ReactNode[] = [];
   let cursor = 0;
   for (const match of matches) {
     if (match.index < cursor) continue;

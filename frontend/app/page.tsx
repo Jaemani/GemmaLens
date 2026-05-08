@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BookMarked, FileText } from "lucide-react";
+import { ArrowRight, BookMarked, FileText, FlaskConical } from "lucide-react";
 import { ModelStatusCard } from "@/components/common/ModelStatusCard";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
@@ -25,9 +25,19 @@ export default async function DashboardPage() {
             Start analysis
             <ArrowRight size={16} />
           </Link>
+          <Link href="/analysis/demo" className="ml-3 mt-6 inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface">
+            Open demo result
+            <FlaskConical size={16} />
+          </Link>
         </div>
         <div className="grid gap-4">
           <ModelStatusCard status={modelStatus} />
+          <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
+            <p className="text-sm font-medium text-neutral-500">Team testing</p>
+            <p className="mt-2 text-sm leading-6 text-neutral-700">
+              Vercel can show the UI demo now. Real Gemma analysis still needs a reachable backend connected to the local MLX/Ollama server.
+            </p>
+          </div>
           <Stat icon={<FileText size={20} />} label="Pipeline" value="Document to learning object" />
           <Stat icon={<BookMarked size={20} />} label="Dictionary" value="Save terms and structures" />
         </div>
