@@ -62,6 +62,13 @@ def test_model_config_can_switch_provider(client):
     assert status.json()["ollama_model"] == "gemma4:test"
 
 
+def test_runtime_persisted_preset_applies_model_path(client):
+    updated = client.post("/models/config", json={"preset_id": "gemma4-e2b-mlx"})
+    assert updated.status_code == 200
+    assert updated.json()["preset_id"] == "gemma4-e2b-mlx"
+    assert "gemma-4-e2b" in updated.json()["mlx_model_path"]
+
+
 def test_document_analysis_and_dictionary_flow(client):
     created = client.post(
         "/documents",

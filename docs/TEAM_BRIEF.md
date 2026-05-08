@@ -74,4 +74,5 @@ Near-term product stance: keep the document pipeline and schemas device-agnostic
 
 - `docs/AB_TEST_CANDIDATES.md`: cleanup-time A/B tests for term, expression, highlight, and dictionary UX.
 - `docs/LEARNING_RESEARCH_NOTES.md`: short learning-research notes translated into product decisions.
+- `docs/MODEL_BENCHMARK_RESULTS.md`: current local E2B/E4B MLX benchmark results.
 - Frontend `/experiments`: visible controller for all six documented A/B candidates.

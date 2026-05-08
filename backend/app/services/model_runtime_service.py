@@ -110,6 +110,9 @@ class ModelRuntimeService:
         if self.config_path.exists():
             try:
                 persisted = json.loads(self.config_path.read_text(encoding="utf-8"))
+                preset_id = persisted.get("preset_id")
+                if preset_id in PRESETS:
+                    config.update(self._preset_config(preset_id))
                 config.update({k: v for k, v in persisted.items() if v is not None})
             except json.JSONDecodeError:
                 pass

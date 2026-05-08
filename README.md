@@ -93,3 +93,11 @@ backend/.venv-mlx/bin/python scripts/local_model_smoke.py --provider mlx --prese
 ```
 
 Output is written to `tmp/local_model_smoke.json`.
+
+Run a local E2B/E4B benchmark over fixed samples:
+
+```bash
+backend/.venv-mlx/bin/python scripts/model_benchmark.py
+```
+
+Benchmark summaries are written to `tmp/model_benchmark/summary.json` and `tmp/model_benchmark/summary.csv`.
