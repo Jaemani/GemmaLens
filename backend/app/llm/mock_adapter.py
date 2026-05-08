@@ -9,7 +9,6 @@ from app.schemas.analysis_schema import (
     TermItem,
 )
 
-
 SAMPLE_PARAGRAPH = (
     "Although previous studies have suggested a correlation between sleep deprivation "
     "and reduced cognitive performance, the extent to which these findings generalize "

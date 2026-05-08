@@ -5,7 +5,6 @@ from typing import Any
 from app.core.config import get_settings
 from app.schemas.model_schema import ModelConfigUpdate, ModelPreset, ModelStatus
 
-
 PRESETS: dict[str, dict[str, str]] = {
     "mock": {
         "label": "Mock analysis",

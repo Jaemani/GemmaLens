@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     mlx_model_path: str = "~/Models/mlx/gemma-4-e4b-it-bf16"
     mlx_max_tokens: int = 1800
     mlx_temperature: float = 0.1
+    raw_model_output_path: str | None = None
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     cors_allow_origin_regex: str | None = None
 

@@ -46,6 +46,7 @@ curl -X POST http://127.0.0.1:8000/documents \
 ```bash
 cd backend
 pip install -r requirements-dev.txt
+ruff check app tests
 pytest
 ```
 
@@ -84,3 +85,11 @@ Run backend with MLX provider:
 The app still falls back to mock output if MLX is missing, fails to load, or returns invalid JSON.
 
 The default E4B preset uses the full-precision MLX bf16 conversion at `~/Models/mlx/gemma-4-e4b-it-bf16`.
+
+Run one local model smoke test and save normalized JSON:
+
+```bash
+backend/.venv-mlx/bin/python scripts/local_model_smoke.py --provider mlx --preset gemma4-e4b-mlx
+```
+
+Output is written to `tmp/local_model_smoke.json`.

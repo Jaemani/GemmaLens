@@ -80,11 +80,13 @@ def test_document_analysis_and_dictionary_flow(client):
     analysis = analyzed.json()
     assert analysis["document_id"] == document["id"]
     assert analysis["domain"]["primary_domain"]
+    assert "quality_warnings" in analysis
     assert {term["term"] for term in analysis["terms"]} >= {
         "sleep deprivation",
         "cognitive performance",
         "longitudinal study",
     }
+    assert all("learning_priority" in term for term in analysis["terms"])
 
     saved = client.post(
         "/dictionary/items",

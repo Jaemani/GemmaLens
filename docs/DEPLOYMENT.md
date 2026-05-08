@@ -61,3 +61,13 @@ Keep the current model adapter boundary:
 - future `hosted`: controlled cloud fallback
 
 Do not expose a personal Mac LLM server directly to team testers. For local demos, use the Mac backend on a trusted network only, or package the runtime later.
+
+## Local Model Hardening
+
+Real model output must pass through:
+
+```txt
+raw model text -> JSON extraction/repair -> schema validation -> normalization -> quality warnings -> UI-safe result
+```
+
+The backend now normalizes common E4B issues such as typo enum values, missing fields, duplicate items, wrong source sentences, and low-confidence items. Use `scripts/local_model_smoke.py` for repeatable local checks.

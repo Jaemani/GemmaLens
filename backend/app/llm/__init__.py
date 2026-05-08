@@ -1,4 +1,3 @@
-from app.core.config import get_settings
 from app.llm.base import ModelAdapter
 from app.llm.mlx_adapter import MLXAdapter
 from app.llm.mock_adapter import MockModelAdapter
