@@ -21,7 +21,7 @@ class AnalysisNormalizationService:
             "terms": self._terms(payload.get("terms"), document_text),
             "phrases": self._phrases(payload.get("phrases") or payload.get("academic_phrases") or payload.get("expressions"), document_text),
             "sentences": self._sentences(payload.get("sentences") or payload.get("sentence_structures") or payload.get("sentence_decomposition"), document_text),
-            "summaries": self._summaries(payload.get("summaries")),
+            "summaries": self._summaries(payload.get("summaries"), document_text),
             "quality_warnings": list(payload.get("quality_warnings") or []),
         }
         result = AnalysisResult.model_validate(normalized)
@@ -177,12 +177,13 @@ class AnalysisNormalizationService:
             }
         ]
 
-    def _summaries(self, value: Any) -> dict[str, Any]:
+    def _summaries(self, value: Any, document_text: str) -> dict[str, Any]:
         value = value if isinstance(value, dict) else {}
+        first_sentence = self._sentences_from_text(document_text)[0] if document_text.strip() else "Document summary not available."
         return {
-            "one_line": str(value.get("one_line") or "Summary not provided."),
-            "simple": str(value.get("simple") or value.get("simple_summary") or "Simple summary not provided."),
-            "academic": str(value.get("academic") or value.get("academic_summary") or "Academic summary not provided."),
+            "one_line": str(value.get("one_line") or first_sentence),
+            "simple": str(value.get("simple") or value.get("simple_summary") or first_sentence),
+            "academic": str(value.get("academic") or value.get("academic_summary") or first_sentence),
             "study_notes": self._string_list(value.get("study_notes")),
         }
 
@@ -218,7 +219,10 @@ class AnalysisNormalizationService:
 
     def _score(self, value: Any, default: int) -> int:
         try:
-            return max(0, min(10, int(value)))
+            parsed = float(value)
+            if 0 < parsed <= 1:
+                parsed *= 10
+            return max(0, min(10, round(parsed)))
         except (TypeError, ValueError):
             return default
 

@@ -31,7 +31,7 @@ class MLXAdapter(ModelAdapter):
             model, tokenizer = self._load()
             prompt = self._build_prompt(document_id, text, chunks)
             messages = [
-                {"role": "system", "content": "Return only valid JSON. Do not use markdown."},
+                {"role": "system", "content": "Return only valid JSON. Do not use markdown. Do not output thoughts, analysis, or commentary."},
                 {"role": "user", "content": prompt},
             ]
             formatted_prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True)

@@ -71,7 +71,7 @@ def test_normalizer_repairs_common_model_output_typos():
     assert result.terms[0].learning_priority == "must_review"
     assert result.terms[1].difficulty == "hard"
     assert result.phrases[0].function == "method"
-    assert result.summaries.simple == "Simple summary not provided."
+    assert result.summaries.simple.startswith("Although previous studies")
 
 
 def test_markdown_wrapped_json_can_be_extracted_and_normalized():
@@ -93,3 +93,22 @@ def test_markdown_wrapped_json_can_be_extracted_and_normalized():
     assert result.phrases[0].function == "limitation"
     assert result.sentences[0].sentence.startswith("Although previous studies")
     assert "term_count_out_of_range:1" in result.quality_warnings
+
+
+def test_normalizer_scales_decimal_difficulty_scores():
+    payload = {
+        "difficulty": {
+            "overall_level": "C1",
+            "lexical_difficulty": 0.7,
+            "syntax_difficulty": 0.8,
+            "domain_difficulty": 0.9,
+            "reason": "decimal scores from model",
+        }
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "doc-3", DOCUMENT_TEXT)
+
+    assert result.difficulty.lexical_difficulty == 7
+    assert result.difficulty.syntax_difficulty == 8
+    assert result.difficulty.domain_difficulty == 9
+    assert result.summaries.one_line.startswith("Although previous studies")
