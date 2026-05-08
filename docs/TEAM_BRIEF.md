@@ -66,3 +66,8 @@ Near-term product stance: keep the document pipeline and schemas device-agnostic
 - How much Korean explanation remains in first public demo.
 - Whether to expose model runtime settings to users or keep them in developer settings.
 - Whether Android runs full analysis on-device or uses a companion/local network runtime first.
+
+## Active Team Discussion Docs
+
+- `docs/AB_TEST_CANDIDATES.md`: cleanup-time A/B tests for term, expression, highlight, and dictionary UX.
+- `docs/LEARNING_RESEARCH_NOTES.md`: short learning-research notes translated into product decisions.

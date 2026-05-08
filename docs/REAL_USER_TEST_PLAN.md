@@ -57,3 +57,7 @@ Find whether PaperLens helps real learners avoid manual copy/paste note-taking w
 - Domain memory: detect repeated fields such as LLM, medicine, law, economics.
 - Similar-area term suggestions based on saved terms and document domain.
 - Hard-PDF diagnostics: extraction quality score, page count, text coverage, warning when OCR is needed.
+
+## Related Test Candidates
+
+See `docs/AB_TEST_CANDIDATES.md` for the current A/B candidates focused on reducing cleanup time and improving dictionary quality.
