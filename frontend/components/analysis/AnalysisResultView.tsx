@@ -3,11 +3,20 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { AnalysisResult } from "@/lib/types";
+import {
+  ANALYSIS_EXPERIMENT_STORAGE_KEY,
+  DEFAULT_ANALYSIS_EXPERIMENT,
+  parseAnalysisExperiment,
+  stringifyAnalysisExperiment,
+  type AnalysisExperimentConfig
+} from "@/lib/experiments";
 import { DomainOverviewCard } from "./DomainOverviewCard";
 import { LayeredSummaryPanel } from "./LayeredSummaryPanel";
+import { ReadingContextPanel } from "./ReadingContextPanel";
 import { SentenceDecompositionCard } from "./SentenceDecompositionCard";
-import { TermTable } from "./TermTable";
+import { buildRows, TermTable } from "./TermTable";
 import { AnalysisProgress } from "./AnalysisProgress";
+import { ExperimentSwitchPanel } from "./ExperimentSwitchPanel";
 import { ErrorState } from "../common/ErrorState";
 
 export function AnalysisResultView({ documentId }: { documentId: string }) {
@@ -15,6 +24,8 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [step, setStep] = useState(1);
+  const [config, setConfig] = useState<AnalysisExperimentConfig>(DEFAULT_ANALYSIS_EXPERIMENT);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,14 +65,74 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
     };
   }, [documentId]);
 
+  useEffect(() => {
+    setConfig(parseAnalysisExperiment(window.localStorage.getItem(ANALYSIS_EXPERIMENT_STORAGE_KEY)));
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(ANALYSIS_EXPERIMENT_STORAGE_KEY, stringifyAnalysisExperiment(config));
+  }, [config]);
+
+  useEffect(() => {
+    if (!analysis || config.saveMode !== "autoHighPriority") {
+      setAutoSaveStatus(null);
+      return;
+    }
+
+    const currentAnalysis = analysis;
+    let cancelled = false;
+    async function autoSaveHighPriority() {
+      const rows = buildRows(currentAnalysis).filter((row) => row.highPriority);
+      setAutoSaveStatus(`Auto-saving ${rows.length} high-priority items...`);
+      await Promise.all(
+        rows.map((row) =>
+          api.saveDictionaryItem({
+            item_type: row.type,
+            text: row.text,
+            meaning: row.meaning,
+            source_sentence: row.source_sentence,
+            document_id: currentAnalysis.document_id
+          })
+        )
+      );
+      if (!cancelled) setAutoSaveStatus(`${rows.length} high-priority items saved for B comparison.`);
+    }
+
+    autoSaveHighPriority().catch(() => {
+      if (!cancelled) setAutoSaveStatus("Auto-save failed. Manual save is still available.");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [analysis, config.saveMode]);
+
   if (error) return <ErrorState message={error} />;
   if (!analysis) return <AnalysisProgress step={step} elapsed={elapsed} />;
 
+  const learningObjects = <TermTable analysis={analysis} config={config} />;
+  const summaries = <LayeredSummaryPanel analysis={analysis} />;
+  const reader = <ReadingContextPanel analysis={analysis} />;
+
   return (
     <div className="space-y-6">
+      <ExperimentSwitchPanel config={config} onChange={setConfig} />
+      {autoSaveStatus ? (
+        <div className="rounded-lg border border-line bg-blue-50 px-4 py-3 text-sm font-medium text-accent">{autoSaveStatus}</div>
+      ) : null}
       <DomainOverviewCard analysis={analysis} />
-      <LayeredSummaryPanel analysis={analysis} />
-      <TermTable analysis={analysis} />
+      {config.resultLayout === "tableFirst" ? (
+        <>
+          {learningObjects}
+          {summaries}
+        </>
+      ) : (
+        <>
+          {reader}
+          {learningObjects}
+          {summaries}
+        </>
+      )}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Sentence structures</h2>
         {analysis.sentences.map((sentence) => <SentenceDecompositionCard key={sentence.core_structure} sentence={sentence} />)}

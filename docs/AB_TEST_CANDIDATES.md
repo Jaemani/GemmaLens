@@ -237,6 +237,16 @@ Test only these:
 
 Keep everything else stable.
 
+## Current Prototype Switch
+
+The analysis result page now includes browser-local A/B controls:
+
+- Save mode: A manual save / B auto-save high priority.
+- Labels: A learning priority / B reason shown.
+- Layout: A table first / B reading context first.
+
+Default is all A. The switch is intentionally local to the browser so the team can compare variants without database migration or backend deployment.
+
 ## Discussion Questions For Team
 
 - Are we optimizing for first demo speed or long-term learning value?
