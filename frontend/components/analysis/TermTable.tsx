@@ -15,6 +15,7 @@ type Row = {
   priorityLabel: string;
   reasonLabel: string;
   highPriority: boolean;
+  reviewStates: string[];
 };
 
 export function TermTable({ analysis, config }: { analysis: AnalysisResult; config: AnalysisExperimentConfig }) {
@@ -72,8 +73,39 @@ export function TermTable({ analysis, config }: { analysis: AnalysisResult; conf
             {rows.map((row) => (
               <tr key={row.key} className="border-t border-line align-top">
                 <td className="px-4 py-3 capitalize text-neutral-500">{row.type}</td>
-                <td className="px-4 py-3 font-medium">{row.text}</td>
-                <td className="max-w-md px-4 py-3 text-neutral-700">{row.meaning}</td>
+                <td className="px-4 py-3">
+                  <p className="font-medium">{row.text}</p>
+                  {config.itemDetail === "learningCard" ? (
+                    <div className="mt-3 space-y-2 rounded-md bg-surface p-3 text-xs leading-5 text-neutral-700">
+                      <p>
+                        <span className="font-semibold text-ink">Context:</span> {row.source_sentence}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-ink">Why:</span> {row.reasonLabel}
+                      </p>
+                    </div>
+                  ) : null}
+                </td>
+                <td className="max-w-md px-4 py-3 text-neutral-700">
+                  {row.meaning}
+                  {config.reviewState === "study" ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {row.reviewStates.map((state) => (
+                        <button key={state} type="button" className="rounded-full border border-line px-2.5 py-1 text-xs font-semibold text-neutral-600 hover:bg-surface">
+                          {state}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {["New", "Viewed", "Familiar"].map((state) => (
+                        <button key={state} type="button" className="rounded-full border border-line px-2.5 py-1 text-xs font-semibold text-neutral-600 hover:bg-surface">
+                          {state}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${row.highPriority ? "bg-blue-100 text-accent" : "bg-surface text-neutral-600"}`}>
                     {config.labelMode === "priority" ? row.priorityLabel : row.reasonLabel}
@@ -109,7 +141,8 @@ export function buildRows(analysis: AnalysisResult): Row[] {
         source_sentence: term.source_sentence,
         priorityLabel: highPriority ? "Must know" : term.domain_relevance === "medium" ? "Useful here" : "Low priority",
         reasonLabel: term.domain_relevance === "high" ? "Important field term" : term.difficulty === "hard" ? "Blocks understanding" : "Useful in context",
-        highPriority
+        highPriority,
+        reviewStates: ["Review soon", "Mastered", "Ignore"]
       };
     }),
     ...analysis.phrases.map((phrase): Row => {
@@ -122,7 +155,8 @@ export function buildRows(analysis: AnalysisResult): Row[] {
         source_sentence: phrase.source_sentence,
         priorityLabel: highPriority ? "Useful expression" : "Low priority",
         reasonLabel: phrase.function === "general" ? "Structure pattern" : `Academic ${phrase.function}`,
-        highPriority
+        highPriority,
+        reviewStates: ["Review soon", "Mastered", "Ignore"]
       };
     })
   ];

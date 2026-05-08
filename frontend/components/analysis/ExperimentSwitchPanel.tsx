@@ -2,28 +2,36 @@
 
 import { SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
-import type { AnalysisExperimentConfig, LabelVariant, ResultLayoutVariant, SaveModeVariant } from "@/lib/experiments";
+import {
+  isBaselineA,
+  type AnalysisExperimentConfig,
+  type ItemDetailVariant,
+  type LabelVariant,
+  type ResultLayoutVariant,
+  type ReviewStateVariant,
+  type SaveModeVariant,
+  type UserFitVariant
+} from "@/lib/experiments";
 
 type Props = {
   config: AnalysisExperimentConfig;
   onChange: (config: AnalysisExperimentConfig) => void;
+  defaultOpen?: boolean;
 };
 
-export function ExperimentSwitchPanel({ config, onChange }: Props) {
-  const [open, setOpen] = useState(false);
+export function ExperimentSwitchPanel({ config, onChange, defaultOpen = false }: Props) {
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
     <section className="rounded-lg border border-line bg-panel p-4 shadow-material">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold">A/B test panel</p>
-          <p className="text-xs text-neutral-500">Default is all A. Use this panel for team feedback sessions.</p>
+          <p className="text-xs text-neutral-500">Controls all documented variants. Changes stay in this browser.</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-neutral-700">
-            {config.saveMode === "manual" && config.labelMode === "priority" && config.resultLayout === "tableFirst"
-              ? "A baseline"
-              : "Mixed variant"}
+            {isBaselineA(config) ? "All A baseline" : "Mixed variant"}
           </span>
           <button
             type="button"
@@ -36,9 +44,9 @@ export function ExperimentSwitchPanel({ config, onChange }: Props) {
         </div>
       </div>
       {open ? (
-        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+        <div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
           <SegmentedControl
-            label="Save mode"
+            label="1. Dictionary save"
             detail="A: user chooses saved items. B: app auto-saves high-priority items."
             value={config.saveMode}
             options={[
@@ -48,7 +56,7 @@ export function ExperimentSwitchPanel({ config, onChange }: Props) {
             onChange={(saveMode) => onChange({ ...config, saveMode })}
           />
           <SegmentedControl
-            label="Labels"
+            label="2. Highlight labels"
             detail="A: learning priority. B: why this item was shown."
             value={config.labelMode}
             options={[
@@ -58,7 +66,7 @@ export function ExperimentSwitchPanel({ config, onChange }: Props) {
             onChange={(labelMode) => onChange({ ...config, labelMode })}
           />
           <SegmentedControl
-            label="Layout"
+            label="3. Result layout"
             detail="A: cleanup table first. B: reading context first."
             value={config.resultLayout}
             options={[
@@ -67,13 +75,59 @@ export function ExperimentSwitchPanel({ config, onChange }: Props) {
             ]}
             onChange={(resultLayout) => onChange({ ...config, resultLayout })}
           />
+          <SegmentedControl
+            label="4. Item detail"
+            detail="A: compact item. B: expanded learning card details."
+            value={config.itemDetail}
+            options={[
+              { value: "compact", label: "A Compact" },
+              { value: "learningCard", label: "B Card" }
+            ]}
+            onChange={(itemDetail) => onChange({ ...config, itemDetail })}
+          />
+          <SegmentedControl
+            label="5. Review state"
+            detail="A: New/Viewed/Familiar. B: Review soon/Mastered/Ignore."
+            value={config.reviewState}
+            options={[
+              { value: "simple", label: "A Simple" },
+              { value: "study", label: "B Study" }
+            ]}
+            onChange={(reviewState) => onChange({ ...config, reviewState })}
+          />
+          <SegmentedControl
+            label="6. User fit"
+            detail="A: ask up front. B: learn from save/ignore/view actions."
+            value={config.userFit}
+            options={[
+              { value: "onboarding", label: "A Ask" },
+              { value: "actionLearning", label: "B Learn" }
+            ]}
+            onChange={(userFit) => onChange({ ...config, userFit })}
+          />
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                saveMode: "manual",
+                labelMode: "priority",
+                resultLayout: "tableFirst",
+                itemDetail: "compact",
+                reviewState: "simple",
+                userFit: "onboarding"
+              })
+            }
+            className="rounded-md border border-line px-3 py-2 text-xs font-semibold hover:bg-surface lg:col-span-2 xl:col-span-3"
+          >
+            Reset to all A baseline
+          </button>
         </div>
       ) : null}
     </section>
   );
 }
 
-function SegmentedControl<T extends SaveModeVariant | LabelVariant | ResultLayoutVariant>({
+function SegmentedControl<T extends SaveModeVariant | LabelVariant | ResultLayoutVariant | ItemDetailVariant | ReviewStateVariant | UserFitVariant>({
   label,
   detail,
   value,

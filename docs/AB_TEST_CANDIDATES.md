@@ -244,8 +244,11 @@ The analysis result page now includes browser-local A/B controls:
 - Save mode: A manual save / B auto-save high priority.
 - Labels: A learning priority / B reason shown.
 - Layout: A table first / B reading context first.
+- Item detail: A compact item / B learning card.
+- Review state: A simple state / B study state.
+- User fit: A ask during onboarding / B learn from actions.
 
-Default is all A. The switch is intentionally local to the browser so the team can compare variants without database migration or backend deployment. On Vercel, `/analysis/demo` uses fixed sample data so reviewers can test these controls without a local model server.
+Default is all A. The switch is intentionally local to the browser so the team can compare variants without database migration or backend deployment. On Vercel, `/analysis/demo` uses fixed sample data so reviewers can test these controls without a local model server. `/experiments` provides the full visible dashboard for team review.
 
 ## Discussion Questions For Team
 

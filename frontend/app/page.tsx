@@ -29,6 +29,9 @@ export default async function DashboardPage() {
             Open demo result
             <FlaskConical size={16} />
           </Link>
+          <Link href="/experiments" className="ml-3 mt-6 inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface">
+            A/B dashboard
+          </Link>
         </div>
         <div className="grid gap-4">
           <ModelStatusCard status={modelStatus} />

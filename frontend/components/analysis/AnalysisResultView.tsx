@@ -131,7 +131,15 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           Demo mode uses fixed sample data so Vercel reviewers can test UI and A/B variants without a local model server.
         </div>
       ) : null}
-      <ExperimentSwitchPanel config={config} onChange={setConfig} />
+      <ExperimentSwitchPanel config={config} onChange={setConfig} defaultOpen />
+      <section className="rounded-lg border border-line bg-panel p-4 shadow-material">
+        <p className="text-sm font-semibold">User-fit mode</p>
+        <p className="mt-1 text-sm text-neutral-600">
+          {config.userFit === "onboarding"
+            ? "A Ask mode: analysis assumes level, support language, learning language, and field are selected before reading."
+            : "B Learn mode: analysis should adapt from saved, ignored, viewed, and familiar items over time."}
+        </p>
+      </section>
       {autoSaveStatus ? (
         <div className="rounded-lg border border-line bg-blue-50 px-4 py-3 text-sm font-medium text-accent">{autoSaveStatus}</div>
       ) : null}
