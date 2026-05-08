@@ -1,6 +1,7 @@
 "use client";
 
-import { Clock, FileText, Link as LinkIcon, Play } from "lucide-react";
+import { BookOpenCheck, Clock, FileText, Link as LinkIcon, Play } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { TranscriptResponse, TranscriptSegment } from "@/lib/types";
@@ -19,7 +20,11 @@ type YouTubePlayer = {
   seekTo: (seconds: number, allowSeekAhead: boolean) => void;
 };
 
-const SAMPLE_SRT = `1
+const SAMPLE_SUBTITLES = [
+  {
+    label: "Movie dialogue",
+    sourceName: "movie-dialogue.srt",
+    content: `1
 00:00:01,000 --> 00:00:03,500
 You're not gonna get away with this.
 
@@ -30,12 +35,47 @@ I should have told you earlier.
 3
 00:00:07,000 --> 00:00:10,000
 This changes everything.
-`;
+`
+  },
+  {
+    label: "Technical tutorial",
+    sourceName: "technical-tutorial.srt",
+    content: `1
+00:00:01,000 --> 00:00:04,000
+Before we deploy the migration, we need to run an idempotent preflight check.
+
+2
+00:00:04,500 --> 00:00:08,000
+Otherwise, stale metadata can propagate across worker nodes.
+
+3
+00:00:08,500 --> 00:00:12,000
+This is why cache invalidation is treated as part of the release process.
+`
+  },
+  {
+    label: "Academic lecture",
+    sourceName: "academic-lecture.vtt",
+    content: `WEBVTT
+
+00:00:01.000 --> 00:00:05.000
+Today we are going to examine whether laboratory findings generalize to real-world learning environments.
+
+00:00:05.500 --> 00:00:09.000
+The key limitation is that controlled experiments often remove the very context we care about.
+
+00:00:09.500 --> 00:00:13.000
+To address this gap, researchers collect longitudinal data from students over several weeks.
+`
+  }
+];
 
 export function VideoLearningPanel() {
+  const router = useRouter();
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [videoId, setVideoId] = useState<string | null>(null);
-  const [subtitleText, setSubtitleText] = useState(SAMPLE_SRT);
+  const [subtitleText, setSubtitleText] = useState(SAMPLE_SUBTITLES[0].content);
+  const [sourceName, setSourceName] = useState(SAMPLE_SUBTITLES[0].sourceName);
   const [transcript, setTranscript] = useState<TranscriptResponse | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +87,15 @@ export function VideoLearningPanel() {
     () => transcript?.segments.find((segment) => currentTime >= segment.start && currentTime < segment.end),
     [currentTime, transcript]
   );
+  const sceneText = useMemo(() => {
+    if (!transcript || !activeSegment) return "";
+    const startIndex = Math.max(0, activeSegment.index - 2);
+    const endIndex = activeSegment.index + 1;
+    return transcript.segments
+      .filter((segment) => segment.index >= startIndex && segment.index <= endIndex)
+      .map((segment) => segment.text)
+      .join("\n");
+  }, [activeSegment, transcript]);
 
   useEffect(() => {
     if (!videoId) return;
@@ -83,7 +132,7 @@ export function VideoLearningPanel() {
     setBusy(true);
     setError(null);
     try {
-      const result = await api.parseTranscript({ content: subtitleText, source_name: "pasted-subtitle.srt" });
+      const result = await api.parseTranscript({ content: subtitleText, source_name: sourceName });
       setTranscript(result);
       if (!videoId) setVideoId(extractYouTubeId(youtubeUrl));
     } catch (err) {
@@ -114,6 +163,39 @@ export function VideoLearningPanel() {
     setCurrentTime(segment.start);
   }
 
+  async function analyzeTranscript() {
+    if (!transcript?.plain_text.trim()) return;
+    await analyzeText("Video transcript", transcript.plain_text, "transcript");
+  }
+
+  async function analyzeCurrentScene() {
+    if (!sceneText.trim()) return;
+    await analyzeText(`Video scene at ${formatTime(activeSegment?.start ?? currentTime)}`, sceneText, "video_segment");
+  }
+
+  async function analyzeText(title: string, content: string, sourceType: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const document = await api.createDocument({ title, content, source_type: sourceType });
+      await api.analyzeDocument(document.id);
+      router.push(`/analysis/${document.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not analyze transcript text.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function useSample(index: number) {
+    const sample = SAMPLE_SUBTITLES[index];
+    setSubtitleText(sample.content);
+    setSourceName(sample.sourceName);
+    setTranscript(null);
+    setCurrentTime(0);
+    setError(null);
+  }
+
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
       <section className="space-y-5">
@@ -139,6 +221,20 @@ export function VideoLearningPanel() {
               Fetch transcript
             </button>
           </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {SAMPLE_SUBTITLES.map((sample, index) => (
+              <button
+                key={sample.sourceName}
+                type="button"
+                onClick={() => useSample(index)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                  sourceName === sample.sourceName ? "border-accent bg-blue-50 text-accent" : "border-line text-neutral-600 hover:bg-surface"
+                }`}
+              >
+                {sample.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="aspect-video overflow-hidden rounded-lg border border-line bg-black shadow-material">
@@ -150,13 +246,37 @@ export function VideoLearningPanel() {
             <FileText size={17} className="text-accent" />
             Subtitle fallback
           </div>
+          <input
+            value={sourceName}
+            onChange={(event) => setSourceName(event.target.value)}
+            className="mt-3 w-full rounded-md border border-line px-3 py-2 text-sm"
+            placeholder="subtitle filename"
+          />
           <textarea
             value={subtitleText}
             onChange={(event) => setSubtitleText(event.target.value)}
             rows={9}
             className="mt-3 w-full resize-y rounded-md border border-line px-3 py-2 text-sm leading-6"
           />
-          <div className="mt-3 flex justify-end">
+          <div className="mt-3 flex flex-wrap justify-end gap-3">
+            <button
+              type="button"
+              onClick={analyzeCurrentScene}
+              disabled={busy || !sceneText.trim()}
+              className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-50"
+            >
+              <BookOpenCheck size={16} />
+              Analyze current scene
+            </button>
+            <button
+              type="button"
+              onClick={analyzeTranscript}
+              disabled={busy || !transcript?.plain_text.trim()}
+              className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-50"
+            >
+              <BookOpenCheck size={16} />
+              Analyze transcript
+            </button>
             <button
               type="button"
               onClick={parseSubtitle}

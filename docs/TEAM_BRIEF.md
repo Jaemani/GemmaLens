@@ -76,4 +76,5 @@ Near-term product stance: keep the document pipeline and schemas device-agnostic
 - `docs/LEARNING_RESEARCH_NOTES.md`: short learning-research notes translated into product decisions.
 - `docs/MODEL_BENCHMARK_RESULTS.md`: current local E2B/E4B MLX benchmark results.
 - `docs/VIDEO_LEARNING_STRATEGY.md`: transcript-first video learning plan and first technical slice.
+- `docs/VIDEO_PERSONA_TEST_PLAN.md`: persona-based video testing scenarios.
 - Frontend `/experiments`: visible controller for all six documented A/B candidates.
