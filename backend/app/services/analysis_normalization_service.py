@@ -977,7 +977,7 @@ class AnalysisNormalizationService:
         value = re.sub(r"^(?:the|a|an|or|and|but|these|those|this|that)\s+", "", value, flags=re.IGNORECASE)
         value = re.sub(r"^(?:dominant|best-performing|best performing|recent|previous|current)\s+", "", value, flags=re.IGNORECASE)
         lowered = value.lower()
-        if lowered in {"term", "string", "concept", "introduction recurrent"}:
+        if lowered in {"term", "string", "concept", "introduction recurrent", "tion model", "sentation models"}:
             return ""
         if lowered in {"training deep neural networks", "inputs changes during training"}:
             return ""

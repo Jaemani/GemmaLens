@@ -245,3 +245,66 @@ Unlike recent language repre- sentation models, BERT is designed to pre- train d
     assert "pretrain" in readable
     assert not re.search(r"\btion model\b", readable)
     assert not re.search(r"\bsentation models\b", readable)
+
+
+def test_batch_norm_real_paper_snippet_keeps_concepts_and_fragments_separate():
+    document = (
+        "Training Deep Neural Networks is complicated by the fact that the distribution of each layer's inputs changes during training, "
+        "as the parameters of the previous layers change. We refer to this phenomenon as internal covariate shift, and address the problem "
+        "by normalizing layer inputs. Batch Normalization allows us to use much higher learning rates and be less careful about initialization."
+    )
+    payload = {
+        "terms": [
+            {"term": "Training Deep Neural Networks", "meaning": "generic title-like fragment"},
+            {"term": "inputs changes during training", "meaning": "bad noun fragment"},
+            {"term": "Batch Normalization", "meaning": "normalizes layer inputs"},
+        ],
+        "concepts": [
+            {"concept": "Training Deep Neural Networks", "explanation": "generic title-like fragment"},
+            {"concept": "inputs changes during training", "explanation": "bad noun fragment"},
+            {"concept": "internal covariate shift", "explanation": "layer input distributions change during training"},
+        ],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "batch-norm", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+
+    assert "Training Deep Neural Networks" not in terms
+    assert "inputs changes during training" not in terms
+    assert "Training Deep Neural Networks" not in concepts
+    assert "inputs changes during training" not in concepts
+    assert "Batch Normalization" in terms
+    assert "internal covariate shift" in concepts
+
+
+def test_bert_real_paper_snippet_drops_pdf_artifacts_and_unhelpful_model_terms():
+    document = (
+        "We introduce a new language representation model called BERT, which stands for Bidirectional Encoder Representations from Transformers. "
+        "Unlike recent language representation models, BERT is designed to pretrain deep bidirectional representations from unlabeled text by jointly "
+        "conditioning on both left and right context in all layers. The pre-trained BERT model can be fine-tuned with just one additional output layer."
+    )
+    payload = {
+        "terms": [
+            {"term": "tion model", "meaning": "PDF split artifact"},
+            {"term": "sentation models", "meaning": "PDF split artifact"},
+            {"term": "pre-trained bert model", "meaning": "generic local noun phrase"},
+            {"term": "BERT", "meaning": "Bidirectional Encoder Representations from Transformers"},
+        ],
+        "concepts": [
+            {"concept": "new language representation model", "explanation": "generic local noun phrase"},
+            {"concept": "Bidirectional Encoder Representations", "explanation": "partial expansion"},
+            {"concept": "BERT", "explanation": "bidirectional Transformer representation model"},
+        ],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+
+    assert "tion model" not in terms
+    assert "sentation models" not in terms
+    assert "pre-trained bert model" not in terms
+    assert "new language representation model" not in concepts
+    assert "BERT" in terms
+    assert "BERT" in concepts

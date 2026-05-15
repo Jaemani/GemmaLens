@@ -37,6 +37,7 @@ Local demo records currently include:
 - A completed section lesson now includes `Analyze next unstudied`, keeping the reading loop moving after the user finishes a section.
 - The cumulative paper map refreshes after section analysis.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
+- Added real-paper normalization fixtures for BatchNorm and BERT snippets so generic fragments and PDF split artifacts are rejected in tests.
 - The per-result concept block is called `Concept anchors`, while the cumulative cross-section block is called `Paper map`.
 - The section reader shows a short preview of the current backend-cleaned text before opening the full source text.
 
@@ -46,7 +47,7 @@ Local demo records currently include:
 - Full-paper staged analysis is not automated yet. The user still has to trigger section analysis manually, though the UI now helps move to the next unstudied section.
 - The lower analysis page still contains large report-style blocks. It is usable, but it is not yet a polished reading companion.
 - Some source extraction remains lossy for multi-column papers and equations.
-- Concept quality is improved by guardrails, but still needs real model-output contract tests across more papers.
+- Concept quality is improved by guardrails, but still needs broader real model-output contract tests across more papers and sections.
 - Paper map is cumulative from analyzed sections only; it does not yet perform a final whole-paper merge after all major sections are complete.
 
 ## Next Product Fixes
