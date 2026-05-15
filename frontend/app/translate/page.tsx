@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 
 const LIMIT = 1200;
 
-export default function ToolsPage() {
+export default function TranslatePage() {
   const [sourceLanguage, setSourceLanguage] = useState("English");
   const [targetLanguage, setTargetLanguage] = useState("Korean");
   const [text, setText] = useState("");
@@ -56,8 +56,8 @@ export default function ToolsPage() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-accent">Focused tool</p>
             <h1 className="mt-2 text-2xl font-semibold">Translate</h1>
+            <p className="mt-2 text-sm text-neutral-600">Quick model-backed translation for short sentences and paragraphs.</p>
           </div>
           <p className="text-xs font-medium text-neutral-500">{LIMIT} character limit</p>
         </div>

@@ -12,6 +12,14 @@ document or transcript -> extracted text -> structured learning objects -> dicti
 
 The project is not a PDF chatbot and not a general summarizer. The intended product value is personalized language acquisition while reading real material.
 
+The current product distinction is:
+
+```text
+translation explains the current sentence
+summary explains the current document
+GemmaLens builds a reusable reading guide: concepts, terms, phrases, sentence structures, and review memory
+```
+
 ## 2. Competition Fit
 
 The project aligns with the Gemma 4 Good Hackathon themes in these areas:
@@ -48,7 +56,7 @@ This is not legal advice; it is an engineering compliance checklist based on the
   - `/video`: YouTube transcript/subtitle learning
   - `/dictionary`: saved terms and expressions
   - `/settings`: learner profile
-  - `/tools`: focused translation UI
+  - `/translate`: short text translation UI
   - `/quiz`: quiz generation from analyzed docs/videos
   - `/guide`: user-level guide
 
@@ -105,11 +113,14 @@ Important current policy:
 
 ### Analysis Result
 
-- Structured result includes domain, difficulty, terms, phrases, sentence decomposition, summaries, and warnings.
+- Structured result includes domain, difficulty, terms, phrases, concepts, sentence decomposition, summaries, and warnings.
+- Concepts are first-class learning objects, separate from dictionary terms. They connect vocabulary to the paper's argument, method, and referenced ideas.
+- Concepts can be saved to the dictionary/review store, just like terms and phrases.
 - Added A/B controls for save behavior, labels, layout, item detail, review state, and user-fit mode.
 - Added user-facing section-level status when analysis is section-limited.
 - Hid internal validator warnings from the result UI because they are debugging signals, not learning content.
 - Prevented silent mock fallback on MLX failure.
+- Added a re-analysis button so cached low-quality results can be replaced after model/runtime improvements.
 
 ### Video Learning
 
@@ -190,6 +201,7 @@ source chunk
 -> code-generated fast meta/summary for Q4 routes
 -> atomic term task
 -> atomic phrase task
+-> atomic concept task or source-grounded concept fallback
 -> atomic sentence task
 -> JSON extraction/repair
 -> source-grounded normalization
@@ -226,14 +238,24 @@ Required next step:
 
 ```text
 extract full text
+-> clean front matter and detect readable abstract/introduction
 -> split by page/section
 -> run atomic tasks for section 1..N sequentially
 -> store each section result
--> merge into whole-paper summary/map
--> generate per-section vocab/sentence drills
+-> build a whole-paper map: research problem, method, key concepts, references, and conclusion
+-> generate per-page lessons: concepts, vocabulary, phrases, sentence structures, and study notes
+-> merge repeated concepts/terms into review memory
 ```
 
 This staged approach is better for edge devices than sending a full paper in one prompt.
+
+Recommended reading UX:
+
+- Start with a whole-paper map so the learner knows what the paper is trying to do.
+- Let the learner open one page or section at a time.
+- Each page should show: concept anchors, must-know terms, reusable academic phrases, hard sentence structures, and a short Korean/support-language guide.
+- Save concepts separately from words. A concept such as "internal covariate shift" may have related terms, cited references, and repeated mentions across the paper.
+- Track repeated concepts and references so the learner sees which ideas are central instead of memorizing every extracted phrase.
 
 ### Translation
 

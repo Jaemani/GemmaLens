@@ -5,7 +5,7 @@ const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/video", label: "Video", icon: Video },
-  { href: "/tools", label: "Translate", icon: Languages },
+  { href: "/translate", label: "Translate", icon: Languages },
   { href: "/quiz", label: "Quiz", icon: FileQuestion },
   { href: "/experiments", label: "Experiments", icon: FlaskConical },
   { href: "/dictionary", label: "Dictionary", icon: BookOpen },

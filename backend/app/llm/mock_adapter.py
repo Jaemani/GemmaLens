@@ -1,6 +1,7 @@
 from app.llm.base import ModelAdapter
 from app.schemas.analysis_schema import (
     AnalysisResult,
+    ConceptItem,
     DifficultyInfo,
     DomainInfo,
     LayeredSummaries,
@@ -53,6 +54,26 @@ class MockModelAdapter(ModelAdapter):
                 PhraseItem(phrase="the extent to which", function="general", explanation="Frames a question about degree or scope.", source_sentence=first_sentence),
                 PhraseItem(phrase="remains unclear", function="limitation", explanation="Marks an unresolved research problem.", source_sentence=first_sentence),
                 PhraseItem(phrase="to address this gap", function="method", explanation="Connects the research gap to the authors' method.", source_sentence=second_sentence),
+            ],
+            concepts=[
+                ConceptItem(
+                    concept="generalize across real-world learning environments",
+                    explanation="The research problem is whether a finding from previous studies applies in real learning contexts.",
+                    source_sentence=first_sentence,
+                    related_terms=["generalize", "real-world learning environments", "cognitive performance"],
+                    why_it_matters="This concept explains why the paper exists, not just which words are difficult.",
+                    references=[],
+                    confidence=0.86,
+                ),
+                ConceptItem(
+                    concept="longitudinal study logs",
+                    explanation="A method concept: repeated learning records are observed across time.",
+                    source_sentence=second_sentence,
+                    related_terms=["longitudinal study", "study logs"],
+                    why_it_matters="Understanding the method helps the reader evaluate the paper's evidence.",
+                    references=[],
+                    confidence=0.82,
+                ),
             ],
             sentences=[
                 SentenceDecomposition(

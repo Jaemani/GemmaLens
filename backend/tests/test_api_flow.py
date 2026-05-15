@@ -94,6 +94,8 @@ def test_document_analysis_and_dictionary_flow(client):
         "longitudinal study",
     }
     assert all("learning_priority" in term for term in analysis["terms"])
+    assert len(analysis["concepts"]) >= 1
+    assert analysis["concepts"][0]["concept"]
 
     saved = client.post(
         "/dictionary/items",
@@ -119,19 +121,31 @@ def test_document_analysis_and_dictionary_flow(client):
     assert saved_again.status_code == 200
     assert saved_again.json()["encounter_count"] == 2
 
+    saved_concept = client.post(
+        "/dictionary/items",
+        json={
+            "item_type": "concept",
+            "text": analysis["concepts"][0]["concept"],
+            "meaning": analysis["concepts"][0]["explanation"],
+            "document_id": document["id"],
+        },
+    )
+    assert saved_concept.status_code == 200
+
     items = client.get("/dictionary/items")
     assert items.status_code == 200
-    assert len(items.json()) == 1
-    assert items.json()[0]["view_count"] == 0
+    assert len(items.json()) == 2
+    term_item = next(item for item in items.json() if item["item_type"] == "term")
+    assert term_item["view_count"] == 0
 
-    viewed = client.post(f"/dictionary/items/{saved_again.json()['id']}/view")
+    viewed = client.post(f"/dictionary/items/{term_item['id']}/view")
     assert viewed.status_code == 200
     assert viewed.json()["view_count"] == 1
     assert viewed.json()["last_viewed_at"] is not None
 
-    deleted = client.delete(f"/dictionary/items/{saved_again.json()['id']}")
+    deleted = client.delete(f"/dictionary/items/{term_item['id']}")
     assert deleted.status_code == 204
-    assert client.get("/dictionary/items").json() == []
+    assert len(client.get("/dictionary/items").json()) == 1
 
 
 def test_upload_document_uses_ingestion_service(client):

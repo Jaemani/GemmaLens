@@ -11,8 +11,8 @@ GemmaLens turns academic or technical documents into personalized language-learn
 - Model runtime: Mock, Ollama scaffold, MLX Gemma 4 presets, and ThinkPad remote Gemma 4 presets over Tailscale.
 - Local models installed: Gemma 4 E2B bf16 and Gemma 4 E4B bf16 under `~/Models/mlx`.
 - Input: pasted text, text/markdown upload, basic PDF text extraction.
-- Output: domain, difficulty, terms, phrases, sentence decomposition, layered summaries.
-- Dictionary: save/list/delete terms, phrases, and sentences.
+- Output: domain, difficulty, concepts, terms, phrases, sentence decomposition, layered summaries.
+- Dictionary: save/list/delete concepts, terms, phrases, and sentences.
 
 ## Current Learning Signals
 
@@ -36,6 +36,9 @@ The prototype now includes local profile settings for support language, learning
 
 ## Learning Memory Direction
 
+- Concepts are now separate from words. A concept is an idea the reader must understand to follow the paper, such as a method, hypothesis, phenomenon, or theoretical claim.
+- Terms are vocabulary items. Phrases are reusable academic expressions. Concepts are argument anchors.
+- Future concept memory should connect repeated concepts across pages, related terms, and citation markers.
 - Dictionary items track how many times they were saved or encountered.
 - Dictionary items now also track view count and last viewed time.
 - This is the first step toward knowing what the user is learning now.
@@ -81,6 +84,25 @@ Near-term product stance: keep the document pipeline and schemas device-agnostic
 - Current active test runtime can be switched to `Gemma 4 E2B (ThinkPad fp16)` or `Gemma 4 E4B (ThinkPad fp16)` for remote CPU testing.
 - Q4 remote analysis now uses atomic tasks. The system asks Gemma for small term/phrase/sentence jobs, then code parses, validates, discards ungrounded items, and fills sparse outputs with source-grounded fallback candidates.
 - This is the intended edge-device principle: Gemma handles language judgment; deterministic code handles reliability.
+- Concept extraction has been added as a first-class step. For Q4 edge testing, concepts can be generated from source-grounded terms without another slow model call; larger/faster runtimes can use a dedicated concept extraction task.
+- The result page now includes a paper-map concept panel before the vocabulary table, because paper reading needs idea structure before word memorization.
+- Cached old analyses can be replaced with the re-analysis button after changing model/runtime logic.
+
+## Paper Reading Direction
+
+The target experience should not be "upload a PDF and get a short summary." The useful learning structure is:
+
+```text
+whole-paper map
+-> page/section guide
+-> concept anchors
+-> must-know terms
+-> reusable academic phrases
+-> hard sentence decomposition
+-> save/review memory
+```
+
+For long papers, the MVP should analyze page-by-page or section-by-section. A global summary alone is too shallow for language learning; a full-paper prompt is too fragile for edge devices. Sequential page lessons plus a merged paper map fit the product and the Gemma edge-device story better.
 
 ## Active Team Discussion Docs
 

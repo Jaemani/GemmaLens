@@ -1,4 +1,5 @@
 from app.llm.json_utils import extract_json_object
+from app.services.academic_text_service import AcademicTextService
 from app.services.analysis_normalization_service import AnalysisNormalizationService
 
 DOCUMENT_TEXT = (
@@ -131,3 +132,44 @@ def test_normalizer_discards_items_not_grounded_in_source():
 
     assert [term.term for term in result.terms] == ["sleep deprivation"]
     assert [phrase.phrase for phrase in result.phrases] == ["remains unclear"]
+
+
+def test_normalizer_keeps_source_grounded_concepts():
+    payload = {
+        "terms": [{"term": "cognitive performance", "meaning": "mental task performance", "domain_relevance": "high"}],
+        "concepts": [
+            {
+                "concept": "cognitive performance",
+                "explanation": "A concept needed to understand what sleep loss may affect.",
+                "source_sentence": "wrong sentence",
+                "related_terms": ["sleep deprivation"],
+                "why_it_matters": "It connects the paper's topic to measurable learning outcomes.",
+                "references": [],
+            },
+            {"concept": "invented construct", "explanation": "not grounded"},
+        ],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "doc-5", DOCUMENT_TEXT)
+
+    assert [concept.concept for concept in result.concepts] == ["cognitive performance"]
+    assert result.concepts[0].source_sentence.startswith("Although previous studies")
+
+
+def test_academic_text_service_starts_after_front_matter_abstract():
+    raw_text = """
+arXiv:1502.03167v3 [cs.LG] 2 Mar 2015
+Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift
+Sergey Ioffe Google Inc., sioffe@google.com
+Christian Szegedy Google Inc., szegedy@google.com
+Abstract
+Training Deep Neural Networks is complicated by the fact that the distribution of each layer's inputs changes during training.
+1 Introduction
+Deep learning has dramatically advanced.
+"""
+
+    readable = AcademicTextService().readable_section(raw_text)
+
+    assert readable.startswith("Training Deep Neural Networks")
+    assert "sioffe@google.com" not in readable
+    assert not readable.startswith("arXiv")

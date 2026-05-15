@@ -113,6 +113,30 @@ export const demoAnalysis: AnalysisResult = {
         "To address this gap, we analyze longitudinal study logs collected from undergraduate students over a six-week period."
     }
   ],
+  concepts: [
+    {
+      concept: "generalize across real-world learning environments",
+      explanation: "The core research problem: whether findings from controlled sleep studies still apply in real classroom settings.",
+      source_sentence:
+        "Although previous studies have suggested a correlation between sleep deprivation and reduced cognitive performance, the extent to which these findings generalize across real-world learning environments remains unclear.",
+      related_terms: ["generalize", "real-world learning environments", "cognitive performance"],
+      why_it_matters: "This concept connects the vocabulary to the paper's motivation: the authors are testing whether a known effect transfers to real learning contexts.",
+      references: [],
+      learning_priority: "field_term",
+      confidence: 0.86
+    },
+    {
+      concept: "longitudinal study logs",
+      explanation: "A method concept: the authors use repeated records over six weeks instead of a one-time test.",
+      source_sentence:
+        "To address this gap, we analyze longitudinal study logs collected from undergraduate students over a six-week period.",
+      related_terms: ["longitudinal study", "study logs", "six-week period"],
+      why_it_matters: "Understanding the method helps the reader predict what evidence the paper can and cannot provide.",
+      references: [],
+      learning_priority: "field_term",
+      confidence: 0.82
+    }
+  ],
   sentences: [
     {
       sentence:

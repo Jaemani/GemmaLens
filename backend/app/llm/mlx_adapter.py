@@ -83,12 +83,13 @@ class MLXAdapter(ModelAdapter):
             notes = payload.get("notes", [])
             if not isinstance(notes, list):
                 notes = []
+            notes = [str(note).strip() for note in notes if self._is_real_note(str(note))]
             return TranslationResponse(
                 source_language=source_language,
                 target_language=target_language,
                 source_text=text,
                 translated_text=translated_text,
-                notes=[str(note) for note in notes[:3]],
+                notes=notes[:3],
             )
         except (ImportError, FileNotFoundError, ValueError, Exception) as exc:
             logger.exception("MLX translation failed")
@@ -164,8 +165,16 @@ class MLXAdapter(ModelAdapter):
             "Translate the input faithfully for a language learner. "
             "Preserve technical terms when they are normally used in the target language, but translate surrounding explanation naturally. "
             "Do not add commentary inside translated_text. "
-            "Use this exact JSON shape: {\"translated_text\":\"string\",\"notes\":[\"optional short learner note\"]}\n"
+            "Use this exact JSON shape: {\"translated_text\":\"string\",\"notes\":[\"real note if useful\"]}\n"
             f"Source language: {source_language}\n"
             f"Target language: {target_language}\n\n"
             f"TEXT:\n{text[:1200]}"
         )
+
+    def _is_real_note(self, value: str) -> bool:
+        normalized = value.lower().strip()
+        if not normalized:
+            return False
+        if normalized in {"string", "short learner note", "learner note", "note"}:
+            return False
+        return "actual translation" not in normalized

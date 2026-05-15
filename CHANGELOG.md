@@ -2,6 +2,15 @@
 
 ## 2026-05-15
 
+- Added first-class concept extraction to analysis results, separate from vocabulary and phrases.
+- Added concept saving to the dictionary/review store.
+- Added a concept map panel before vocabulary tables so paper reading starts from ideas, not only words.
+- Added readable-section cleanup to skip PDF front matter such as arXiv headers, authors, and emails before analysis.
+- Added re-analysis from the result page so cached weak results can be replaced after runtime/pipeline improvements.
+- Renamed `/tools` to `/translate` and removed the "Focused tool" label.
+- Optimized remote Q4 translation by skipping JSON mode for short translations; the local smoke test dropped from about 31s to about 1.6s.
+- Filtered placeholder translation notes such as `short learner note`.
+- Added paper-reading architecture documentation for whole-paper maps, page/section lessons, concepts, references, and edge atomic tasks.
 - Added technical report for hackathon submission planning.
 - Made mock mode demo/deploy-only and removed silent mock fallback for real MLX failures.
 - Added searchable multilingual language catalog for settings and translate.

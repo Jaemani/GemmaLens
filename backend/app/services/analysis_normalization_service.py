@@ -14,12 +14,15 @@ class AnalysisNormalizationService:
         return self.normalize_payload(result.model_dump(), result.document_id, document_text)
 
     def normalize_payload(self, payload: dict[str, Any], document_id: str, document_text: str) -> AnalysisResult:
+        terms = self._terms(payload.get("terms"), document_text)
+        phrases = self._phrases(payload.get("phrases") or payload.get("academic_phrases") or payload.get("expressions"), document_text)
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
             "difficulty": self._difficulty(payload.get("difficulty")),
-            "terms": self._terms(payload.get("terms"), document_text),
-            "phrases": self._phrases(payload.get("phrases") or payload.get("academic_phrases") or payload.get("expressions"), document_text),
+            "terms": terms,
+            "phrases": phrases,
+            "concepts": self._concepts(payload.get("concepts"), document_text, terms),
             "sentences": self._sentences(payload.get("sentences") or payload.get("sentence_structures") or payload.get("sentence_decomposition"), document_text),
             "summaries": self._summaries(payload.get("summaries"), document_text),
             "quality_warnings": list(payload.get("quality_warnings") or []),
@@ -154,6 +157,66 @@ class AnalysisNormalizationService:
                 )
         return phrases
 
+    def _concepts(self, value: Any, document_text: str, terms: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        rows = value if isinstance(value, list) else []
+        concepts: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            concept = str(row.get("concept") or row.get("name") or row.get("text") or "").strip()
+            if not concept or concept.lower() in {"string", "concept", "actual concept"}:
+                continue
+            if not self._appears_in_text(concept, document_text):
+                continue
+            key = concept.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            explanation = str(row.get("explanation") or row.get("meaning") or "Concept explanation not provided.").strip()
+            source_sentence = self._source_sentence(row.get("source_sentence"), concept, document_text)
+            concepts.append(
+                {
+                    "concept": concept,
+                    "explanation": explanation,
+                    "source_sentence": source_sentence,
+                    "related_terms": self._string_list(row.get("related_terms")),
+                    "why_it_matters": str(row.get("why_it_matters") or row.get("reason") or "This concept helps connect vocabulary to the paper's main argument."),
+                    "references": self._string_list(row.get("references")),
+                    "learning_priority": row.get("learning_priority") or "field_term",
+                    "confidence": self._confidence(row.get("confidence"), 0.6),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        if concepts:
+            return concepts[:8]
+        return self._fallback_concepts(document_text, terms)
+
+    def _fallback_concepts(self, document_text: str, terms: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        concepts: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for term in terms:
+            concept = str(term.get("term") or "").strip()
+            if not concept or concept.lower() in seen:
+                continue
+            if str(term.get("domain_relevance") or "").lower() == "low" and str(term.get("difficulty") or "").lower() == "easy":
+                continue
+            seen.add(concept.lower())
+            concepts.append(
+                {
+                    "concept": concept,
+                    "explanation": str(term.get("meaning") or "Source-grounded concept from this section."),
+                    "source_sentence": str(term.get("source_sentence") or self._source_sentence(None, concept, document_text)),
+                    "related_terms": [concept],
+                    "why_it_matters": "This is a concept anchor: understand it before memorizing surrounding vocabulary.",
+                    "references": self._references_near(str(term.get("source_sentence") or ""), document_text),
+                    "learning_priority": term.get("learning_priority") or "field_term",
+                    "confidence": self._confidence(term.get("confidence"), 0.45),
+                    "user_state": "suggested",
+                }
+            )
+        return concepts[:6]
+
     def _sentences(self, value: Any, document_text: str) -> list[dict[str, str]]:
         rows = value if isinstance(value, list) else []
         sentences: list[dict[str, str]] = []
@@ -197,7 +260,7 @@ class AnalysisNormalizationService:
 
     def _source_sentence(self, value: Any, target: str, document_text: str) -> str:
         candidate = str(value or "").strip()
-        if candidate and candidate.lower() in document_text.lower():
+        if candidate and self._appears_in_text(candidate, document_text):
             return candidate
         sentences = self._sentences_from_text(document_text)
         for sentence in sentences:
@@ -227,6 +290,11 @@ class AnalysisNormalizationService:
         if isinstance(value, str) and value.strip():
             return [value.strip()]
         return []
+
+    def _references_near(self, sentence: str, document_text: str) -> list[str]:
+        source = sentence or document_text[:1000]
+        references = re.findall(r"\([A-Z][A-Za-z-]+(?: et al\.)?,?\s+\d{4}[a-z]?\)|\[\d+(?:,\s*\d+)*\]", source)
+        return references[:4]
 
     def _score(self, value: Any, default: int) -> int:
         try:

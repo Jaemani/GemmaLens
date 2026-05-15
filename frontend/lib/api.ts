@@ -132,7 +132,7 @@ export const api = {
   markDictionaryViewed: (itemId: string) =>
     request<DictionaryItem>(`/dictionary/items/${itemId}/view`, { method: "POST" }),
   saveDictionaryItem: (payload: {
-    item_type: "term" | "phrase" | "sentence";
+    item_type: "term" | "phrase" | "sentence" | "concept";
     text: string;
     meaning?: string;
     source_sentence?: string;

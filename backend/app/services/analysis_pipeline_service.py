@@ -3,6 +3,7 @@ from app.llm import get_model_adapter
 from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.document_repository import DocumentRepository
 from app.schemas.analysis_schema import AnalysisResult
+from app.services.academic_text_service import AcademicTextService
 from app.services.analysis_normalization_service import AnalysisNormalizationService
 from app.services.chunking_service import ChunkingService
 
@@ -15,19 +16,21 @@ class AnalysisPipelineService:
         self.chunker = ChunkingService()
         self.adapter = get_model_adapter()
         self.normalizer = AnalysisNormalizationService()
+        self.academic_text = AcademicTextService()
 
     async def analyze(self, document_id: str) -> AnalysisResult | None:
         document = self.documents.get(document_id)
         if not document:
             return None
-        chunks = self.chunker.chunk(document.content)
-        analysis_text = self._analysis_text(document.content)
+        readable_text = self.academic_text.readable_section(document.content)
+        chunks = self.chunker.chunk(readable_text)
+        analysis_text = self._analysis_text(readable_text)
         analysis_chunks = chunks[: self.settings.analysis_model_max_chunks]
         result = await self.adapter.analyze_document(document.id, analysis_text, analysis_chunks)
-        result = self.normalizer.normalize_result(result, document.content)
-        if len(" ".join(document.content.split())) > len(analysis_text):
+        result = self.normalizer.normalize_result(result, readable_text)
+        if len(" ".join(readable_text.split())) > len(analysis_text):
             result.quality_warnings.append(
-                "This is a section-level analysis from the beginning of the document. Full-document staged analysis is not implemented yet."
+                "This is a section-level analysis from the first readable section. Full-document staged analysis is not implemented yet."
             )
         self.analyses.upsert(result)
         return result

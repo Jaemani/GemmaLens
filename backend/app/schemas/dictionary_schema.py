@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class DictionaryItemCreate(BaseModel):
-    item_type: Literal["term", "phrase", "sentence"]
+    item_type: Literal["term", "phrase", "sentence", "concept"]
     text: str = Field(min_length=1, max_length=500)
     meaning: str | None = None
     source_sentence: str | None = None

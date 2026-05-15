@@ -43,6 +43,16 @@ export type AnalysisResult = {
     explanation: string;
     source_sentence: string;
   }>;
+  concepts?: Array<{
+    concept: string;
+    explanation: string;
+    source_sentence: string;
+    related_terms: string[];
+    why_it_matters: string;
+    references: string[];
+    learning_priority: string;
+    confidence: number;
+  }>;
   sentences: Array<{
     sentence: string;
     core_structure: string;
@@ -61,7 +71,7 @@ export type AnalysisResult = {
 
 export type DictionaryItem = {
   id: string;
-  item_type: "term" | "phrase" | "sentence";
+  item_type: "term" | "phrase" | "sentence" | "concept";
   text: string;
   meaning: string | null;
   source_sentence: string | null;

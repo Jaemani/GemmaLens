@@ -40,11 +40,23 @@ class RemoteGemmaAdapter(ModelAdapter):
         )
         terms = await self._json_task("terms", self._terms_prompt(task_text), max_tokens=self._task_budget("terms"), fallback={"terms": self._fallback_terms(task_text)})
         phrases = await self._json_task("phrases", self._phrases_prompt(task_text), max_tokens=self._task_budget("phrases"), fallback={"phrases": self._fallback_phrases(task_text)})
+        concepts = (
+            {"concepts": self._fallback_concepts(task_text, terms.get("terms", []))}
+            if self._is_q4_remote()
+            else await self._json_task(
+                "concepts",
+                self._concepts_prompt(task_text),
+                max_tokens=self._task_budget("concepts"),
+                fallback={"concepts": self._fallback_concepts(task_text, terms.get("terms", []))},
+            )
+        )
         sentences = await self._json_task("sentences", self._sentences_prompt(task_text), max_tokens=self._task_budget("sentences"), fallback={"sentences": []})
         if self._is_q4_remote() or len(terms.get("terms", [])) < 2:
             terms["terms"] = [*terms.get("terms", []), *self._fallback_terms(task_text)]
         if self._is_q4_remote() or len(phrases.get("phrases", [])) < 2:
             phrases["phrases"] = [*phrases.get("phrases", []), *self._fallback_phrases(task_text)]
+        if not concepts.get("concepts"):
+            concepts["concepts"] = self._fallback_concepts(task_text, terms.get("terms", []))
         return {
             "document_id": document_id,
             "domain": meta.get("domain", {}),
@@ -52,6 +64,7 @@ class RemoteGemmaAdapter(ModelAdapter):
             "summaries": meta.get("summaries", {}),
             "terms": terms.get("terms", []),
             "phrases": phrases.get("phrases", []),
+            "concepts": concepts.get("concepts", []),
             "sentences": sentences.get("sentences", []),
             "quality_warnings": ["analysis_mode:atomic_remote"],
         }
@@ -73,12 +86,21 @@ class RemoteGemmaAdapter(ModelAdapter):
 
     async def translate_text(self, source_language: str, target_language: str, text: str) -> TranslationResponse:
         try:
+            if self._is_q4_remote():
+                translated_text = await self._translate_plain(source_language, target_language, text)
+                return TranslationResponse(
+                    source_language=source_language,
+                    target_language=target_language,
+                    source_text=text,
+                    translated_text=translated_text,
+                    notes=[],
+                )
             prompt = (
                 "Return JSON only. No markdown. "
                 "Translate faithfully for a language learner. "
                 "Do not copy placeholder words from this instruction. "
                 "The translated_text value must be the actual translation of TEXT. "
-                "Use this JSON shape: {\"translated_text\":\"actual translation\",\"notes\":[\"short learner note\"]}\n"
+                "Use this JSON shape: {\"translated_text\":\"actual translation\",\"notes\":[\"real note if useful\"]}\n"
                 f"Source language: {source_language}\n"
                 f"Target language: {target_language}\n\n"
                 f"TEXT:\n{text[:1200]}"
@@ -101,12 +123,13 @@ class RemoteGemmaAdapter(ModelAdapter):
             notes = payload.get("notes", [])
             if not isinstance(notes, list):
                 notes = []
+            notes = [str(note).strip() for note in notes if self._is_real_note(str(note))]
             return TranslationResponse(
                 source_language=source_language,
                 target_language=target_language,
                 source_text=text,
                 translated_text=translated_text,
-                notes=[str(note) for note in notes[:3]],
+                notes=notes[:3],
             )
         except (httpx.HTTPError, ValueError, Exception) as exc:
             logger.exception("Remote Gemma translation failed")
@@ -181,8 +204,8 @@ class RemoteGemmaAdapter(ModelAdapter):
 
     def _task_budget(self, task_name: str) -> int:
         if not self._is_q4_remote():
-            return {"meta": 256, "terms": 384, "phrases": 320, "sentences": 384}[task_name]
-        return {"meta": 128, "terms": 160, "phrases": 128, "sentences": 144}[task_name]
+            return {"meta": 256, "terms": 384, "phrases": 320, "concepts": 320, "sentences": 384}[task_name]
+        return {"meta": 128, "terms": 160, "phrases": 128, "concepts": 128, "sentences": 144}[task_name]
 
     def _fast_meta(self, text: str) -> dict[str, Any]:
         first_sentence = text.split(". ")[0].strip()
@@ -278,6 +301,53 @@ class RemoteGemmaAdapter(ModelAdapter):
             )
         return rows[:3]
 
+    def _fallback_concepts(self, text: str, terms: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        known_meanings = {
+            "batch normalization": "A training technique that normalizes layer inputs within mini-batches to stabilize and accelerate neural network training.",
+            "internal covariate shift": "The paper's motivating idea: layer input distributions change as earlier layers update during training.",
+            "optimization landscape": "The shape of the loss surface that determines how easy or hard gradient-based training is.",
+            "mini-batch": "A small batch of training examples used for one parameter update.",
+            "layer activations": "The values produced by a neural network layer before they are passed to later layers.",
+        }
+        candidates = [str(row.get("term") or "").strip() for row in terms]
+        candidates.extend(self._candidate_terms(text))
+        concepts: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for candidate in candidates:
+            if not candidate:
+                continue
+            key = candidate.lower()
+            if key in seen:
+                continue
+            sentence = self._sentence_containing(text, candidate)
+            if not sentence:
+                continue
+            seen.add(key)
+            concepts.append(
+                {
+                    "concept": candidate,
+                    "explanation": known_meanings.get(key, "A source-grounded concept that anchors this section's argument."),
+                    "source_sentence": sentence,
+                    "related_terms": [candidate],
+                    "why_it_matters": "Concepts explain the paper's reasoning; vocabulary explains the words used to express it.",
+                    "references": self._references_in(sentence),
+                    "learning_priority": "field_term",
+                    "confidence": 0.45,
+                }
+            )
+        return concepts[:4]
+
+    def _references_in(self, text: str) -> list[str]:
+        return re.findall(r"\([A-Z][A-Za-z-]+(?: et al\.)?,?\s+\d{4}[a-z]?\)|\[\d+(?:,\s*\d+)*\]", text)[:4]
+
+    def _is_real_note(self, value: str) -> bool:
+        normalized = value.lower().strip()
+        if not normalized:
+            return False
+        if normalized in {"string", "short learner note", "learner note", "note"}:
+            return False
+        return "actual translation" not in normalized
+
     def _sentence_containing(self, text: str, needle: str) -> str:
         for sentence in text.split(". "):
             sentence = sentence.strip()
@@ -322,5 +392,16 @@ class RemoteGemmaAdapter(ModelAdapter):
             "Return only JSON with key sentences. sentences must be an array. "
             "Each object must include: sentence, core_structure, simplified_version, korean_explanation, difficulty_reason. "
             "The sentence must be copied exactly from SOURCE. Keep explanations concise.\n\n"
+            f"SOURCE:\n{text}"
+        )
+
+    def _concepts_prompt(self, text: str) -> str:
+        return (
+            "Atomic task: extract 2 to 4 source-grounded concepts from SOURCE for paper reading. "
+            "Concepts are ideas the reader must understand, not just dictionary words. "
+            "Return only JSON with key concepts. concepts must be an array. "
+            "Each concept object must include: concept, explanation, source_sentence, related_terms, why_it_matters, references, learning_priority, confidence. "
+            "The concept text must literally appear in SOURCE. The source_sentence must be copied from SOURCE. "
+            "references should include citation markers from the source_sentence if present, otherwise an empty array. Do not invent concepts.\n\n"
             f"SOURCE:\n{text}"
         )

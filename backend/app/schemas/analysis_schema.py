@@ -98,6 +98,23 @@ class PhraseItem(BaseModel):
         return TermItem.normalize_learning_priority(value)
 
 
+class ConceptItem(BaseModel):
+    concept: str
+    explanation: str
+    source_sentence: str
+    related_terms: list[str] = Field(default_factory=list)
+    why_it_matters: str = ""
+    references: list[str] = Field(default_factory=list)
+    learning_priority: Literal["must_review", "useful", "field_term", "low_priority"] = "field_term"
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+    user_state: Literal["suggested", "saved", "ignored", "viewed", "familiar"] = "suggested"
+
+    @field_validator("learning_priority", mode="before")
+    @classmethod
+    def normalize_learning_priority(cls, value: str) -> str:
+        return TermItem.normalize_learning_priority(value)
+
+
 class SentenceDecomposition(BaseModel):
     sentence: str
     core_structure: str
@@ -119,6 +136,7 @@ class AnalysisResult(BaseModel):
     difficulty: DifficultyInfo
     terms: list[TermItem]
     phrases: list[PhraseItem]
+    concepts: list[ConceptItem] = Field(default_factory=list)
     sentences: list[SentenceDecomposition]
     summaries: LayeredSummaries
     quality_warnings: list[str] = Field(default_factory=list)
