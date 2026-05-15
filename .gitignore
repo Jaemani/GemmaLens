@@ -13,3 +13,5 @@ tmp/
 .env
 .env.local
 .vercel
+frontend/test-results/
+frontend/playwright-report/
