@@ -34,6 +34,7 @@ Local demo records currently include:
 - The section reader now gets backend-cleaned sections from `GET /documents/{id}/sections`; it no longer duplicates splitting logic in the browser.
 - `Analyze this section` uses the same zero-based backend section index that the UI displays.
 - Backend section responses now include `analyzed`, and the reader shows analyzed count, section status chips, and a `Next unstudied` action.
+- A completed section lesson now includes `Analyze next unstudied`, keeping the reading loop moving after the user finishes a section.
 - The cumulative paper map refreshes after section analysis.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
 - The per-result concept block is called `Concept anchors`, while the cumulative cross-section block is called `Paper map`.
@@ -50,11 +51,10 @@ Local demo records currently include:
 
 ## Next Product Fixes
 
-1. Add an `Analyze next section` action after each section lesson so users can continue without returning to the top controls.
-2. Add a background staged-analysis mode that processes sections sequentially and updates paper-map coverage.
-3. Add a final merge step that deduplicates concepts, terms, expressions, references, and summaries after enough sections are analyzed.
-4. Improve PDF page-to-text-section alignment. If exact alignment is not possible, make the mismatch explicit and avoid implying they are the same unit.
-5. Add real-paper quality fixtures for BERT, BatchNorm, and Transformer papers that reject generic fragments and verify expected concept/term separation.
+1. Add a background staged-analysis mode that processes sections sequentially and updates paper-map coverage.
+2. Add a final merge step that deduplicates concepts, terms, expressions, references, and summaries after enough sections are analyzed.
+3. Improve PDF page-to-text-section alignment. If exact alignment is not possible, make the mismatch explicit and avoid implying they are the same unit.
+4. Add real-paper quality fixtures for BERT, BatchNorm, and Transformer papers that reject generic fragments and verify expected concept/term separation.
 
 ## Current Verdict
 

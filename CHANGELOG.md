@@ -10,6 +10,7 @@
 - Added backend document-section endpoints and switched the frontend section reader to use them, so displayed section numbers/text now match the exact backend section sent to Gemma for analysis.
 - Added `docs/REAL_PAPER_USABILITY_AUDIT.md` to track real-PDF usability against actual reading behavior instead of only implementation progress.
 - Added per-section analyzed status to backend section responses and the paper reader UI, including a compact section strip and a `Next unstudied` action.
+- Added an inline `Analyze next unstudied` action below a section lesson so the user can continue the paper-reading loop without returning to the top controls.
 - Replaced the native embedded PDF iframe with a PDF.js canvas preview, so the demo reliably shows the original PDF and supports PDF page Previous/Next controls.
 - Promoted extracted-section navigation so section Previous/Next and "Analyze this section" are visible without opening a hidden debug text block.
 - Added BERT-family learning guardrails after testing the BERT paper: BERT results now prioritize BERT, pre-training, fine-tuning, masked language model, and next sentence prediction instead of unrelated terms that merely appear elsewhere in the paper.

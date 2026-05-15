@@ -44,15 +44,17 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
     setError("");
   }, [pageIndex]);
 
-  async function analyzePage() {
-    if (!document || !currentSection || !page.trim()) return;
+  async function analyzeSectionAt(index: number) {
+    const section = sections[index];
+    if (!document || !section || !section.text.trim()) return;
+    setPageIndex(index);
     setIsAnalyzing(true);
     setError("");
     try {
-      const created = await api.analyzeDocumentSection(document.id, currentSection.index);
+      const created = await api.analyzeDocumentSection(document.id, section.index);
       setSectionAnalysis(created);
       setSections((current) =>
-        current.map((section) => (section.index === currentSection.index ? { ...section, analyzed: true } : section))
+        current.map((currentSection) => (currentSection.index === section.index ? { ...currentSection, analyzed: true } : currentSection))
       );
       onSectionAnalyzed?.();
     } catch (err) {
@@ -60,6 +62,10 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
     } finally {
       setIsAnalyzing(false);
     }
+  }
+
+  async function analyzePage() {
+    await analyzeSectionAt(pageIndex);
   }
 
   async function attachSourceFile(file: File) {
@@ -220,12 +226,29 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
       ) : error ? (
         <p className="mx-5 my-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       ) : null}
-      {sectionAnalysis ? <InlineSectionLesson analysis={sectionAnalysis} sectionNumber={pageIndex + 1} /> : null}
+      {sectionAnalysis ? (
+        <InlineSectionLesson
+          analysis={sectionAnalysis}
+          sectionNumber={pageIndex + 1}
+          onAnalyzeNext={targetUnanalyzedIndex >= 0 ? () => analyzeSectionAt(targetUnanalyzedIndex) : undefined}
+          isAnalyzingNext={isAnalyzing}
+        />
+      ) : null}
     </section>
   );
 }
 
-function InlineSectionLesson({ analysis, sectionNumber }: { analysis: AnalysisResult; sectionNumber: number }) {
+function InlineSectionLesson({
+  analysis,
+  sectionNumber,
+  onAnalyzeNext,
+  isAnalyzingNext
+}: {
+  analysis: AnalysisResult;
+  sectionNumber: number;
+  onAnalyzeNext?: () => void;
+  isAnalyzingNext: boolean;
+}) {
   const terms = analysis.terms.slice(0, 6);
   const phrases = analysis.phrases.slice(0, 6);
   return (
@@ -254,6 +277,19 @@ function InlineSectionLesson({ analysis, sectionNumber }: { analysis: AnalysisRe
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Hard sentence pattern</p>
           <p className="mt-2 text-sm font-semibold text-ink">{analysis.sentences[0].core_structure}</p>
           <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.sentences[0].korean_explanation}</p>
+        </div>
+      ) : null}
+      {onAnalyzeNext ? (
+        <div className="mt-5 flex justify-end border-t border-line pt-4">
+          <button
+            type="button"
+            onClick={onAnalyzeNext}
+            disabled={isAnalyzingNext}
+            className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
+          >
+            <SkipForward size={16} />
+            {isAnalyzingNext ? "Analyzing next section..." : "Analyze next unstudied"}
+          </button>
         </div>
       ) : null}
     </div>
