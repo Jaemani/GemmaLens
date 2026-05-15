@@ -77,8 +77,8 @@ export type UserProfile = {
   id: string;
   display_name: string;
   target_level: "B1" | "B2" | "C1" | "C2" | "domain-heavy" | "unknown";
-  support_language: "English" | "Korean" | "Spanish" | "French" | "Japanese";
-  learning_language: "English" | "Korean" | "Spanish" | "French" | "Japanese";
+  support_language: string;
+  learning_language: string;
   onboarding_completed: boolean;
   created_at: string;
 };
@@ -92,6 +92,7 @@ export type ModelStatus = {
   mlx_model_path: string;
   mlx_model_available: boolean;
   mock_fallback: boolean;
+  demo_mode: boolean;
 };
 
 export type ModelPreset = {

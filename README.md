@@ -6,7 +6,7 @@ Local-first academic language learning harness for turning documents into struct
 
 - Backend: FastAPI, Pydantic, SQLAlchemy, SQLite, Uvicorn
 - Frontend: Next.js, TypeScript, Tailwind CSS
-- Model layer: provider-neutral adapter with mock default and Ollama scaffold
+- Model layer: provider-neutral adapter with MLX local runtime, Ollama scaffold, and demo-only mock mode
 
 ## Run Backend
 
@@ -54,7 +54,7 @@ Uploads support `.txt`, `.md`, `.markdown`, and basic text-extractable `.pdf` fi
 
 ## Prototype Scope
 
-This first slice supports pasted text or uploaded text/markdown/PDF files, mock structured document analysis, and dictionary saving. Real model quality, auth, quizzes, sync, and multi-document RAG are roadmap items.
+This slice supports pasted text or uploaded text/markdown/PDF files, local structured document analysis, transcript learning, dictionary saving, translation UI, and quiz draft generation. Full-paper staged analysis, model-backed translation, auth, sync, and multi-document RAG are roadmap items.
 
 ## Optional Gemma 4 MLX Runtime
 
@@ -82,7 +82,7 @@ Run backend with MLX provider:
 ./scripts/run_backend_mlx.sh
 ```
 
-The app still falls back to mock output if MLX is missing, fails to load, or returns invalid JSON.
+Local MLX failures return explicit errors. Mock output is reserved for demo/deployment UI testing via `APP_DEMO_MODE=true`.
 
 The default E4B preset uses the full-precision MLX bf16 conversion at `~/Models/mlx/gemma-4-e4b-it-bf16`.
 
@@ -101,3 +101,7 @@ backend/.venv-mlx/bin/python scripts/model_benchmark.py
 ```
 
 Benchmark summaries are written to `tmp/model_benchmark/summary.json` and `tmp/model_benchmark/summary.csv`.
+
+## Technical Report
+
+See `docs/TECHNICAL_REPORT.md` for architecture, competition-rule checklist, current limitations, and recommended learning-method design.

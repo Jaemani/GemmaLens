@@ -2,10 +2,10 @@
 
 import { Clipboard, Languages, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
+import { LanguageSelect } from "@/components/common/LanguageSelect";
 import { AppShell } from "@/components/layout/AppShell";
 
 const LIMIT = 1200;
-const languages = ["English", "Korean", "Spanish", "French", "Japanese"];
 
 export default function ToolsPage() {
   const [sourceLanguage, setSourceLanguage] = useState("English");
@@ -43,8 +43,8 @@ export default function ToolsPage() {
       <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Select label="From" value={sourceLanguage} onChange={setSourceLanguage} />
-            <Select label="To" value={targetLanguage} onChange={setTargetLanguage} />
+            <LanguageSelect label="From" value={sourceLanguage} onChange={setSourceLanguage} />
+            <LanguageSelect label="To" value={targetLanguage} onChange={setTargetLanguage} />
           </div>
           <textarea
             value={text}
@@ -91,16 +91,5 @@ export default function ToolsPage() {
         </aside>
       </section>
     </AppShell>
-  );
-}
-
-function Select({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="text-sm font-semibold">
-      {label}
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-md border border-line bg-white px-3 py-2 text-sm">
-        {languages.map((language) => <option key={language}>{language}</option>)}
-      </select>
-    </label>
   );
 }

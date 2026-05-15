@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LanguageSelect } from "@/components/common/LanguageSelect";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
 import type { UserProfile } from "@/lib/types";
 
-const languages: UserProfile["support_language"][] = ["English", "Korean", "Spanish", "French", "Japanese"];
 const levels: UserProfile["target_level"][] = ["B1", "B2", "C1", "C2", "domain-heavy", "unknown"];
 
 export default function SettingsPage() {
@@ -60,21 +60,24 @@ export default function SettingsPage() {
           <section className="rounded-2xl border border-line bg-panel p-6 shadow-material">
             <h2 className="text-xl font-semibold">Language pair</h2>
             <Field label="Learning language">
-              <Segmented
-                items={languages}
+              <LanguageSelect
+                label="Search learning language"
                 value={profile.learning_language}
                 onChange={(learning_language) => save({ learning_language })}
                 disabled={busy}
               />
             </Field>
             <Field label="Explanation language">
-              <Segmented
-                items={languages}
+              <LanguageSelect
+                label="Search explanation language"
                 value={profile.support_language}
                 onChange={(support_language) => save({ support_language })}
                 disabled={busy}
               />
             </Field>
+            <p className="mt-4 rounded-2xl bg-surface p-4 text-sm leading-6 text-neutral-700">
+              Gemma-family docs describe broad multilingual support across 140+ languages. Quality may vary by language pair, model size, and prompt.
+            </p>
           </section>
 
           <section className="rounded-2xl border border-line bg-panel p-6 shadow-material">

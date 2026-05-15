@@ -12,6 +12,8 @@ services:
     envVars:
       - key: MODEL_PROVIDER
         value: mock
+      - key: APP_DEMO_MODE
+        value: "true"
       - key: MODEL_SWITCHING_ENABLED
         value: "false"
       - key: MODEL_RUNTIME_CONFIG_PATH

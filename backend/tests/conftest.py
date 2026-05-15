@@ -1,5 +1,9 @@
+import os
 from collections.abc import Generator
 from pathlib import Path
+
+os.environ.setdefault("APP_DEMO_MODE", "true")
+os.environ.setdefault("MODEL_PROVIDER", "mock")
 
 import pytest
 from fastapi.testclient import TestClient

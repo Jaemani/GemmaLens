@@ -2,12 +2,14 @@
 
 ## Near Term
 
-- Improve PDF extraction quality.
-- Add quiz/review mode from saved dictionary items.
+- Implement staged full-document analysis: page/section analysis, stored section results, merged paper map, and whole-paper summary.
+- Add backend model-backed translation endpoint.
+- Add backend quiz generation endpoint with distractors and level-aware question types.
+- Improve PDF extraction quality and section detection.
 - Add repeated-structure tracking.
-- Add import history and document deletion.
+- Add import history cleanup controls across documents, videos, and cached quizzes.
 - Add richer Korean explanations.
-- Add model settings screen for mock, MLX, and Ollama switching.
+- Add richer multilingual explanation quality checks.
 
 ## Model Expansion
 

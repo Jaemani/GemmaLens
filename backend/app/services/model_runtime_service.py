@@ -49,7 +49,7 @@ class ModelRuntimeService:
         config = self._merged_config()
         mlx_path = Path(config["mlx_model_path"]).expanduser()
         preset_id = config["preset_id"]
-        preset = PRESETS[preset_id]
+        preset = self._available_presets()[preset_id]
         return ModelStatus(
             provider=config["provider"],
             preset_id=preset_id,
@@ -58,6 +58,8 @@ class ModelRuntimeService:
             ollama_base_url=config["ollama_base_url"],
             mlx_model_path=str(mlx_path),
             mlx_model_available=mlx_path.exists(),
+            mock_fallback=self.settings.app_demo_mode,
+            demo_mode=self.settings.app_demo_mode,
         )
 
     def update(self, payload: ModelConfigUpdate) -> ModelStatus:
@@ -75,7 +77,7 @@ class ModelRuntimeService:
     def presets(self) -> list[ModelPreset]:
         current = self._merged_config()
         presets: list[ModelPreset] = []
-        for preset_id, preset in PRESETS.items():
+        for preset_id, preset in self._available_presets().items():
             runtime = preset["provider"]
             availability = "external" if runtime == "ollama" else "ready"
             if runtime == "mlx":
@@ -101,7 +103,7 @@ class ModelRuntimeService:
 
     def _merged_config(self) -> dict[str, Any]:
         config: dict[str, Any] = {
-            "preset_id": "mock",
+            "preset_id": "gemma4-e2b-mlx",
             "provider": self.settings.model_provider,
             "ollama_model": self.settings.ollama_model,
             "ollama_base_url": self.settings.ollama_base_url,
@@ -111,7 +113,7 @@ class ModelRuntimeService:
             try:
                 persisted = json.loads(self.config_path.read_text(encoding="utf-8"))
                 preset_id = persisted.get("preset_id")
-                if preset_id in PRESETS:
+                if preset_id in self._available_presets():
                     config.update(self._preset_config(preset_id))
                 config.update({k: v for k, v in persisted.items() if v is not None})
             except json.JSONDecodeError:
@@ -120,14 +122,16 @@ class ModelRuntimeService:
             "OptiQ" in config["mlx_model_path"] or "4bit" in config["mlx_model_path"] or "4-bit" in config["mlx_model_path"]
         ):
             config.update(self._preset_config("gemma4-e4b-mlx"))
-        elif config["preset_id"] == "mock" and config["provider"] == "mlx":
-            config.update(self._preset_config("gemma4-e4b-mlx"))
+        elif config["provider"] == "mock" and not self.settings.app_demo_mode:
+            config.update(self._preset_config("gemma4-e2b-mlx"))
+        elif config["preset_id"] == "mock" and not self.settings.app_demo_mode:
+            config.update(self._preset_config("gemma4-e2b-mlx"))
         elif config["preset_id"] == "mock" and config["provider"] == "ollama":
             config.update(self._preset_config("gemma4-e4b-ollama"))
         return config
 
     def _preset_config(self, preset_id: str) -> dict[str, Any]:
-        preset = PRESETS[preset_id]
+        preset = self._available_presets()[preset_id]
         return {
             "preset_id": preset_id,
             "provider": preset["provider"],
@@ -135,3 +139,8 @@ class ModelRuntimeService:
             "ollama_base_url": self.settings.ollama_base_url,
             "mlx_model_path": preset.get("mlx_model_path", self.settings.mlx_model_path),
         }
+
+    def _available_presets(self) -> dict[str, dict[str, str]]:
+        if self.settings.app_demo_mode:
+            return PRESETS
+        return {key: value for key, value in PRESETS.items() if key != "mock"}

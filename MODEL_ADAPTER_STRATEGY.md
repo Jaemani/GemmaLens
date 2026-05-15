@@ -5,7 +5,7 @@
 - Keep model providers swappable.
 - Require structured JSON output.
 - Retry invalid JSON.
-- Fall back to mock output.
+- Use mock output only in explicit demo/deploy mode.
 - Keep prompts outside route handlers.
 
 ## Interface
@@ -16,7 +16,7 @@ All adapters implement `ModelAdapter.analyze_document(text, chunks)` and return 
 
 ### MockModelAdapter
 
-Default adapter. Produces deterministic output from bundled sample content and general fallback text. It lets the app run with no external dependencies.
+Demo/deployment adapter. Produces deterministic output from bundled sample content for UI testing without a local model. It should not be used for real local analysis.
 
 ### OllamaAdapter
 
@@ -24,7 +24,13 @@ HTTP scaffold for local Ollama-compatible models. It builds a structured prompt,
 
 ### MLXAdapter
 
-Apple Silicon local runtime scaffold for MLX-converted Gemma 4 text models. It loads `MLX_MODEL_PATH`, asks for strict JSON, validates with Pydantic, and falls back to mock output if the model or `mlx-lm` runtime is unavailable. Current local presets use bf16 Gemma 4 E2B and E4B models.
+Apple Silicon local runtime scaffold for MLX-converted Gemma 4 text models. It loads `MLX_MODEL_PATH`, asks for strict JSON, validates with Pydantic, and returns explicit errors when the model fails. Current local presets use bf16 Gemma 4 E2B and E4B models.
+
+### Runtime Policy
+
+- Local development: use MLX or Ollama.
+- Demo deployment: use mock only with `APP_DEMO_MODE=true`.
+- Real model failure must not silently return mock learning content.
 
 ### Edge Runtime Direction
 

@@ -1,7 +1,5 @@
 import { AppShell } from "@/components/layout/AppShell";
 
-const languages = ["English", "Korean", "Spanish", "French", "Japanese"];
-
 const levels = [
   { label: "B1", detail: "Can follow main ideas but needs support for academic phrases and dense grammar." },
   { label: "B2", detail: "Can read general academic text with help for domain words and long sentences." },
@@ -68,15 +66,10 @@ export default function GuidePage() {
         <section className="rounded-2xl border border-line bg-panel p-6 shadow-material">
           <h2 className="text-xl font-semibold">Language direction</h2>
           <p className="mt-2 text-sm leading-6 text-neutral-700">
-            The prototype is built around English academic reading today. The planned interface lets users choose both their native/support language and target learning language.
+            The prototype began with Korean learners reading English papers, but the interface now supports searchable language selection for broad Gemma-family multilingual coverage.
           </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {languages.map((language) => (
-              <span key={language} className="rounded-full bg-blue-50 px-3 py-2 text-sm font-medium text-accent">{language}</span>
-            ))}
-          </div>
           <p className="mt-4 text-sm leading-6 text-neutral-700">
-            The core can stay model-driven: prompts can request explanations, translations, sentence decomposition, and study notes in the selected support language while analyzing the selected learning language.
+            The core stays model-driven: prompts can request explanations, translations, sentence decomposition, and study notes in the selected support language while analyzing the selected learning language. Actual quality must be tested per language pair.
           </p>
         </section>
 

@@ -23,7 +23,8 @@ class ModelStatus(BaseModel):
     ollama_base_url: str
     mlx_model_path: str
     mlx_model_available: bool
-    mock_fallback: bool = True
+    mock_fallback: bool = False
+    demo_mode: bool = False
 
 
 class ModelConfigUpdate(BaseModel):

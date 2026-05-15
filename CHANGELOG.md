@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-05-15
+
+- Added technical report for hackathon submission planning.
+- Made mock mode demo/deploy-only and removed silent mock fallback for real MLX failures.
+- Added searchable multilingual language catalog for settings and translate.
+- Split Translate and Quiz into independent routes.
+- Added quiz generation from analyzed documents/videos with browser cache.
+- Added document/video history deletion.
+- Added YouTube transcript fallback through `yt-dlp`.
+- Collapsed manual subtitle fallback in video learning.
+- Added section-level analysis warning for long documents.
+
 ## 2026-05-08
 
 - Added local profile settings for support language, learning language, target level, and onboarding state.

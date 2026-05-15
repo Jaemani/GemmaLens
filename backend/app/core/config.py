@@ -6,7 +6,8 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     app_name: str = "PaperLens Core"
     database_url: str = "sqlite:///./paperlens.db"
-    model_provider: str = "mock"
+    app_demo_mode: bool = False
+    model_provider: str = "mlx"
     model_switching_enabled: bool = True
     model_runtime_config_path: str = "model_runtime.json"
     ollama_base_url: str = "http://localhost:11434"
