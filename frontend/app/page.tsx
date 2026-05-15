@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BookMarked, FileText, FlaskConical } from "lucide-react";
+import { BookMarked, FileQuestion, FileText, Languages, Video } from "lucide-react";
 import { ModelStatusCard } from "@/components/common/ModelStatusCard";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
@@ -15,46 +15,77 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <section className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <div className="rounded-lg border border-line bg-panel p-6 shadow-material">
-          <h1 className="text-3xl font-semibold tracking-normal">Turn difficult documents into personalized language lessons.</h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-700">
-            Analyze academic papers and reports by domain, vocabulary, sentence structure, and learning priority.
-          </p>
-          <Link href="/documents" className="mt-6 inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white">
-            Start analysis
-            <ArrowRight size={16} />
-          </Link>
-          <Link href="/analysis/demo" className="ml-3 mt-6 inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface">
-            Open demo result
-            <FlaskConical size={16} />
-          </Link>
-          <Link href="/experiments" className="ml-3 mt-6 inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface">
-            A/B dashboard
-          </Link>
-        </div>
-        <div className="grid gap-4">
-          <ModelStatusCard status={modelStatus} />
-          <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
-            <p className="text-sm font-medium text-neutral-500">Team testing</p>
-            <p className="mt-2 text-sm leading-6 text-neutral-700">
-              Vercel can show the UI demo now. Real Gemma analysis still needs a reachable backend connected to the local MLX/Ollama server.
-            </p>
+      <div className="space-y-5">
+        <section className="rounded-lg border border-line bg-panel p-5 shadow-material">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold uppercase text-accent">Reading workspace</p>
+              <h1 className="mt-2 text-2xl font-semibold">PaperLens</h1>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <PrimaryLink href="/documents" label="Analyze document" />
+              <SecondaryLink href="/video" label="Video transcript" />
+              <SecondaryLink href="/quiz" label="Quiz" />
+            </div>
           </div>
-          <Stat icon={<FileText size={20} />} label="Pipeline" value="Document to learning object" />
-          <Stat icon={<BookMarked size={20} />} label="Dictionary" value="Save terms and structures" />
-        </div>
-      </section>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ActionCard href="/documents" icon={<FileText size={19} />} title="Documents" detail="Upload PDF/text or paste a focused excerpt." />
+            <ActionCard href="/video" icon={<Video size={19} />} title="Video" detail="Fetch captions and analyze scenes or transcripts." />
+            <ActionCard href="/tools" icon={<Languages size={19} />} title="Translate" detail="Short passage translation workspace." />
+            <ActionCard href="/quiz" icon={<FileQuestion size={19} />} title="Quiz maker" detail="Build cached review prompts from analyzed sources." />
+          </div>
+          <ModelStatusCard status={modelStatus} />
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <Stat icon={<FileText size={18} />} label="Pipeline" value="Extract -> analyze -> save" />
+          <Stat icon={<BookMarked size={18} />} label="Dictionary" value="Terms, phrases, structures" />
+          <Stat icon={<FileQuestion size={18} />} label="Review" value="Quiz drafts from analysis" />
+        </section>
+      </div>
     </AppShell>
+  );
+}
+
+function PrimaryLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white">
+      {label}
+    </Link>
+  );
+}
+
+function SecondaryLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} className="rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface">
+      {label}
+    </Link>
+  );
+}
+
+function ActionCard({ href, icon, title, detail }: { href: string; icon: React.ReactNode; title: string; detail: string }) {
+  return (
+    <Link href={href} className="rounded-lg border border-line bg-panel p-4 shadow-material transition hover:bg-surface">
+      <div className="text-accent">{icon}</div>
+      <p className="mt-3 font-semibold">{title}</p>
+      <p className="mt-1 text-sm leading-6 text-neutral-600">{detail}</p>
+    </Link>
   );
 }
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
-      <div className="text-accent">{icon}</div>
-      <p className="mt-3 text-sm text-neutral-500">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
+    <div className="rounded-lg border border-line bg-panel p-4 shadow-material">
+      <div className="flex items-center gap-3">
+        <div className="text-accent">{icon}</div>
+        <div>
+          <p className="text-xs font-semibold uppercase text-neutral-500">{label}</p>
+          <p className="mt-1 text-sm font-semibold">{value}</p>
+        </div>
+      </div>
     </div>
   );
 }

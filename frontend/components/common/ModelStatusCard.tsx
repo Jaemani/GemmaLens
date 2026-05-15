@@ -31,17 +31,17 @@ export function ModelStatusCard({ status }: { status: ModelStatus | null }) {
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-panel p-5 shadow-material">
+    <div className="rounded-lg border border-line bg-panel p-4 shadow-material">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-neutral-500">Model preset</p>
-          <h2 className="mt-1 text-xl font-semibold text-ink">{current?.preset_label ?? "Backend offline"}</h2>
+          <p className="text-xs font-semibold uppercase text-neutral-500">Model preset</p>
+          <h2 className="mt-1 text-base font-semibold text-ink">{current?.preset_label ?? "Backend offline"}</h2>
         </div>
         {current ? <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase text-accent">{current.provider}</span> : null}
       </div>
 
       {current ? (
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-2">
           {presets.map((preset) => {
             const Icon = runtimeIcon[preset.runtime];
             const selected = current.preset_id === preset.id;
@@ -51,17 +51,17 @@ export function ModelStatusCard({ status }: { status: ModelStatus | null }) {
                 key={preset.id}
                 onClick={() => selectPreset(preset)}
                 disabled={disabled || busyPreset !== null}
-                className={`w-full rounded-2xl border p-4 text-left transition ${selected ? "border-accent bg-blue-50" : "border-line bg-white hover:bg-surface"} disabled:cursor-not-allowed disabled:opacity-55`}
+                className={`w-full rounded-lg border p-3 text-left transition ${selected ? "border-accent bg-blue-50" : "border-line bg-white hover:bg-surface"} disabled:cursor-not-allowed disabled:opacity-55`}
               >
                 <div className="flex items-start gap-3">
-                  <Icon size={20} className={selected ? "text-accent" : "text-neutral-500"} />
+                  <Icon size={18} className={selected ? "text-accent" : "text-neutral-500"} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold text-ink">{preset.label}</p>
-                      {selected ? <CheckCircle2 size={18} className="text-accent" /> : null}
+                      <p className="text-sm font-semibold text-ink">{preset.label}</p>
+                      {selected ? <CheckCircle2 size={16} className="text-accent" /> : null}
                     </div>
-                    <p className="mt-1 text-xs text-neutral-600">{preset.description}</p>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    <p className="mt-1 line-clamp-2 text-xs text-neutral-600">{preset.description}</p>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
                       <span className="rounded-full bg-surface px-2 py-1">{preset.size}</span>
                       <span className="rounded-full bg-surface px-2 py-1">{preset.speed}</span>
                       <span className={`rounded-full px-2 py-1 ${preset.availability === "ready" ? "bg-green-50 text-green-700" : preset.availability === "external" ? "bg-amber-50 text-amber" : "bg-red-50 text-red-700"}`}>
