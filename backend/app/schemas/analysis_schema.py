@@ -151,6 +151,7 @@ class PaperMapItem(BaseModel):
 
 class PaperMapResponse(BaseModel):
     document_id: str
+    total_sections: int = 0
     analyzed_sections: list[int] = Field(default_factory=list)
     top_concepts: list[PaperMapItem] = Field(default_factory=list)
     top_terms: list[PaperMapItem] = Field(default_factory=list)

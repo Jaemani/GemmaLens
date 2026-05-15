@@ -80,6 +80,7 @@ export type PaperMapItem = {
 
 export type PaperMap = {
   document_id: string;
+  total_sections: number;
   analyzed_sections: number[];
   top_concepts: PaperMapItem[];
   top_terms: PaperMapItem[];

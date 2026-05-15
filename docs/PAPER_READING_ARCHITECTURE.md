@@ -142,6 +142,21 @@ Normalization must use the text span that was actually analyzed. Re-normalizing 
 
 The paper map should be honest about coverage. If only sections 2 and 3 are analyzed, it should say so and aggregate only those sections. It should not produce a whole-paper conclusion until all major sections have been analyzed or a separate whole-paper merge step has run.
 
+Current implementation note: `GET /documents/{id}/paper-map` returns both `total_sections` and `analyzed_sections`. The frontend shows this as a coverage indicator and refreshes it after each section analysis, so the learner can tell whether the current map is only a first-section guide or a broader paper guide.
+
+UI priority for paper reading:
+
+```text
+original PDF/source
+-> current extracted section controls
+-> analyze current section
+-> cumulative paper map
+-> concept anchors
+-> vocabulary, expressions, summaries, sentence structures
+```
+
+The section controls should stay high in the workspace. If they are below all generated content, the product feels like a one-shot summarizer instead of a reading companion.
+
 ## MVP Decision
 
 For the next usable paper-reading MVP, implement:

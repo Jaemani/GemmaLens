@@ -184,6 +184,7 @@ def test_document_section_analysis_stays_on_parent_document(client):
 
     paper_map = client.get(f"/documents/{created.json()['id']}/paper-map")
     assert paper_map.status_code == 200
+    assert paper_map.json()["total_sections"] >= 2
     assert paper_map.json()["analyzed_sections"] == [2]
     assert paper_map.json()["section_summaries"][0]["text"] == "Section 2"
     assert paper_map.json()["top_terms"]

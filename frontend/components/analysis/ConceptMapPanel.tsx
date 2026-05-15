@@ -40,8 +40,8 @@ export function ConceptMapPanel({ analysis, sourceKind = "document" }: { analysi
           description: "Concepts explain what this segment is teaching. Terms and phrases below help you follow the spoken explanation."
         }
       : {
-          eyebrow: "Paper map",
-          title: "Concepts to understand before memorizing words",
+          eyebrow: "Concept anchors",
+          title: "Ideas to understand before memorizing words",
           description: "Concepts explain the argument of the paper. Terms and phrases below explain the language used to express those ideas."
         };
 

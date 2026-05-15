@@ -34,6 +34,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const [config, setConfig] = useState<AnalysisExperimentConfig>(DEFAULT_ANALYSIS_EXPERIMENT);
   const [autoSaveStatus, setAutoSaveStatus] = useState<string | null>(null);
   const [rerunning, setRerunning] = useState(false);
+  const [paperMapRefreshKey, setPaperMapRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -194,13 +195,15 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   ) : null;
   const guideContent = (
     <div className="space-y-6">
+      {isDocumentSource ? (
+        <DocumentPageReader documentId={documentId} onSectionAnalyzed={() => setPaperMapRefreshKey((value) => value + 1)} />
+      ) : null}
+      {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
       <ConceptMapPanel analysis={analysis} sourceKind={isVideoSource ? "video" : "document"} />
-      {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} /> : null}
       {config.resultLayout === "readingContextFirst" ? reader : null}
       {learningObjects}
       {summaries}
       {sentenceStructures}
-      {isDocumentSource ? <DocumentPageReader documentId={documentId} /> : null}
     </div>
   );
 

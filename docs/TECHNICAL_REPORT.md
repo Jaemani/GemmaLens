@@ -133,6 +133,9 @@ Important current policy:
 - Section analysis is now cached in SQLite. In the BERT paper smoke test, a cold section analysis took about 67.0 seconds on the current remote edge route; the cached repeat call returned in about 0.03 seconds.
 - Cached analysis normalization now uses the analyzed text span rather than the entire readable paper, reducing cross-section contamination where later-paper vocabulary could appear in the first-section guide.
 - Added a paper map endpoint, `GET /documents/{id}/paper-map`, built from analyzed section cache. It aggregates cumulative concepts, terms, reusable expressions, and section summaries while explicitly reflecting only analyzed sections.
+- The paper map now returns total section count and analyzed section numbers. The UI displays coverage such as `1 / 27 sections analyzed`, and refreshes automatically after a section lesson is generated.
+- Reordered the paper workspace so the section reader and "Analyze this section" action appear directly beside the PDF before the cumulative map and lower learning-object tables. This supports page-by-page study instead of forcing the user to scroll through a static analysis report before continuing.
+- Renamed the single-result concept panel to "Concept anchors" so it is not confused with the cumulative paper map.
 - Cached section lessons are re-normalized on read with the current guardrails. This lets older cached output improve when the validation layer improves, without forcing a slow model rerun.
 
 ### Video Learning
@@ -267,7 +270,7 @@ Recommended reading UX:
 
 - Start with a whole-paper map so the learner knows what the paper is trying to do.
 - Let the learner open one page or section at a time.
-- The current UI includes a page-slice reader with previous/next controls and an "Analyze this page" action. This is a bridge toward stored section analysis.
+- The current UI includes a section reader with previous/next controls and an "Analyze this section" action placed beside the PDF. This is now the primary paper-reading loop, while the paper map shows how much cumulative coverage exists.
 - Each page should show: concept anchors, must-know terms, reusable academic phrases, hard sentence structures, and a short Korean/support-language guide.
 - Save concepts separately from words. A concept such as "internal covariate shift" may have related terms, cited references, and repeated mentions across the paper.
 - Track repeated concepts and references so the learner sees which ideas are central instead of memorizing every extracted phrase.

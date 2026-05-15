@@ -54,6 +54,7 @@ class PaperMapService:
 
         return PaperMapResponse(
             document_id=document_id,
+            total_sections=len(section_texts or []),
             analyzed_sections=[index + 1 for index, _ in section_results],
             top_concepts=self._rank(concepts, 10),
             top_terms=self._rank(terms, 12),

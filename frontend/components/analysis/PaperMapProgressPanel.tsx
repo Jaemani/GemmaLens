@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { PaperMap } from "@/lib/types";
 
-export function PaperMapProgressPanel({ documentId }: { documentId: string }) {
+export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { documentId: string; refreshKey?: number }) {
   const [paperMap, setPaperMap] = useState<PaperMap | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -20,7 +20,7 @@ export function PaperMapProgressPanel({ documentId }: { documentId: string }) {
 
   useEffect(() => {
     load();
-  }, [documentId]);
+  }, [documentId, refreshKey]);
 
   if (!paperMap && loading) {
     return (
@@ -31,6 +31,10 @@ export function PaperMapProgressPanel({ documentId }: { documentId: string }) {
   }
   if (!paperMap) return null;
 
+  const analyzedCount = paperMap.analyzed_sections.length;
+  const totalSections = paperMap.total_sections || Math.max(analyzedCount, 1);
+  const progress = totalSections ? Math.min(100, Math.round((analyzedCount / totalSections) * 100)) : 0;
+
   return (
     <section className="rounded-lg border border-line bg-panel shadow-material">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line p-5">
@@ -40,6 +44,14 @@ export function PaperMapProgressPanel({ documentId }: { documentId: string }) {
           <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">
             Built from analyzed sections only. It grows as you analyze more sections, so it does not pretend the whole paper is complete.
           </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-neutral-600">
+            <span>
+              {analyzedCount} / {totalSections} sections analyzed
+            </span>
+            <span className="h-2 w-36 overflow-hidden rounded-full bg-surface">
+              <span className="block h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
+            </span>
+          </div>
         </div>
         <button
           type="button"

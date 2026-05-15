@@ -7,7 +7,7 @@ import type { AnalysisResult, DocumentRead } from "@/lib/types";
 
 const PAGE_CHARS = 1800;
 
-export function DocumentPageReader({ documentId }: { documentId: string }) {
+export function DocumentPageReader({ documentId, onSectionAnalyzed }: { documentId: string; onSectionAnalyzed?: () => void }) {
   const [document, setDocument] = useState<DocumentRead | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
@@ -46,6 +46,7 @@ export function DocumentPageReader({ documentId }: { documentId: string }) {
     try {
       const created = await api.analyzeDocumentSection(document.id, pageIndex);
       setSectionAnalysis(created);
+      onSectionAnalyzed?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not analyze this section.");
     } finally {
