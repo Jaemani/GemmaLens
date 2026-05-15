@@ -113,6 +113,7 @@ class MLXAdapter(ModelAdapter):
             "Every term and phrase must appear in its source_sentence. "
             "Use context-specific meanings, not generic dictionary-only meanings. "
             "If unsure, set confidence below 0.5 instead of omitting the item. "
+            "Prefer fewer high-confidence items over a long exhaustive list. "
             f"Use this exact JSON shape and key names:\n{schema_hint}\n"
             f"document_id: {document_id}\n{chunk_note}\n\nTEXT:\n{text[:12000]}"
         )

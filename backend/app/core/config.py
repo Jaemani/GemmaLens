@@ -12,8 +12,10 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "gemma3:4b"
     mlx_model_path: str = "~/Models/mlx/gemma-4-e4b-it-bf16"
-    mlx_max_tokens: int = 3200
+    mlx_max_tokens: int = 1800
     mlx_temperature: float = 0.1
+    analysis_model_input_chars: int = 6000
+    analysis_model_max_chunks: int = 6
     raw_model_output_path: str | None = None
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     cors_allow_origin_regex: str | None = None

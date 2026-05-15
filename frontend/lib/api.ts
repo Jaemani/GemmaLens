@@ -75,9 +75,15 @@ function normalizeRequestError(err: unknown, timeoutMs = REQUEST_TIMEOUT_MS, pha
 function apiBase() {
   if (typeof window === "undefined") return API_BASE;
   const { protocol, hostname } = window.location;
-  const localHosts = new Set(["localhost", "127.0.0.1", "192.168.219.110", "100.115.50.8"]);
-  if (localHosts.has(hostname)) return `${protocol}//${hostname}:8012`;
+  if (isLocalNetworkHost(hostname)) return `${protocol}//${hostname}:8012`;
   return API_BASE;
+}
+
+function isLocalNetworkHost(hostname: string) {
+  if (hostname === "localhost" || hostname === "127.0.0.1") return true;
+  if (hostname.startsWith("192.168.") || hostname.startsWith("10.") || hostname.startsWith("100.")) return true;
+  const match = hostname.match(/^172\.(\d+)\./);
+  return match ? Number(match[1]) >= 16 && Number(match[1]) <= 31 : false;
 }
 
 export const api = {
