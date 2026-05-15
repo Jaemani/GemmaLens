@@ -33,6 +33,7 @@ Local demo records currently include:
 - The main paper-reading action is now visible beside the PDF: previous/next extracted section plus `Analyze this section`.
 - The section reader now gets backend-cleaned sections from `GET /documents/{id}/sections`; it no longer duplicates splitting logic in the browser.
 - `Analyze this section` uses the same zero-based backend section index that the UI displays.
+- Backend section responses now include `analyzed`, and the reader shows analyzed count, section status chips, and a `Next unstudied` action.
 - The cumulative paper map refreshes after section analysis.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
 - The per-result concept block is called `Concept anchors`, while the cumulative cross-section block is called `Paper map`.
@@ -41,7 +42,7 @@ Local demo records currently include:
 ## Still Weak
 
 - PDF page navigation and extracted section navigation are not synced. The PDF can show page 1 while the extracted section index advances by backend text chunks.
-- Full-paper staged analysis is not automated yet. The user still has to analyze sections manually.
+- Full-paper staged analysis is not automated yet. The user still has to trigger section analysis manually, though the UI now helps move to the next unstudied section.
 - The lower analysis page still contains large report-style blocks. It is usable, but it is not yet a polished reading companion.
 - Some source extraction remains lossy for multi-column papers and equations.
 - Concept quality is improved by guardrails, but still needs real model-output contract tests across more papers.
@@ -49,12 +50,11 @@ Local demo records currently include:
 
 ## Next Product Fixes
 
-1. Add an `Analyze next section` flow after each section lesson so users can progress without searching for controls.
-2. Persist and display analyzed status per section in the section navigator.
-3. Add a background staged-analysis mode that processes sections sequentially and updates paper-map coverage.
-4. Add a final merge step that deduplicates concepts, terms, expressions, references, and summaries after enough sections are analyzed.
-5. Improve PDF page-to-text-section alignment. If exact alignment is not possible, make the mismatch explicit and avoid implying they are the same unit.
-6. Add real-paper quality fixtures for BERT, BatchNorm, and Transformer papers that reject generic fragments and verify expected concept/term separation.
+1. Add an `Analyze next section` action after each section lesson so users can continue without returning to the top controls.
+2. Add a background staged-analysis mode that processes sections sequentially and updates paper-map coverage.
+3. Add a final merge step that deduplicates concepts, terms, expressions, references, and summaries after enough sections are analyzed.
+4. Improve PDF page-to-text-section alignment. If exact alignment is not possible, make the mismatch explicit and avoid implying they are the same unit.
+5. Add real-paper quality fixtures for BERT, BatchNorm, and Transformer papers that reject generic fragments and verify expected concept/term separation.
 
 ## Current Verdict
 

@@ -23,6 +23,7 @@ export type DocumentSection = {
   text: string;
   preview: string;
   char_count: number;
+  analyzed: boolean;
 };
 
 export type AnalysisResult = {

@@ -6,7 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import not_found
 from app.db.session import get_db
+from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.document_repository import DocumentRepository
+from app.repositories.section_analysis_repository import SectionAnalysisRepository
 from app.schemas.document_schema import DocumentCreate, DocumentListItem, DocumentRead, DocumentSectionRead
 from app.services.academic_text_service import AcademicTextService
 from app.services.document_ingestion_service import DocumentIngestionError, DocumentIngestionService
@@ -87,7 +89,8 @@ def list_document_sections(document_id: str, db: Session = Depends(get_db)):
     if not document:
         raise not_found("Document not found")
     sections = _document_sections(document.content)
-    return [_read_section(index, section, len(sections)) for index, section in enumerate(sections)]
+    analyzed_indices = _analyzed_section_indices(document_id, db)
+    return [_read_section(index, section, len(sections), analyzed=index in analyzed_indices) for index, section in enumerate(sections)]
 
 
 @router.get("/{document_id}/sections/{section_index}", response_model=DocumentSectionRead)
@@ -98,7 +101,8 @@ def get_document_section(document_id: str, section_index: int, db: Session = Dep
     sections = _document_sections(document.content)
     if section_index < 0 or section_index >= len(sections):
         raise not_found("Document section not found")
-    return _read_section(section_index, sections[section_index], len(sections))
+    analyzed_indices = _analyzed_section_indices(document_id, db)
+    return _read_section(section_index, sections[section_index], len(sections), analyzed=section_index in analyzed_indices)
 
 
 @router.get("/{document_id}", response_model=DocumentRead)
@@ -133,7 +137,7 @@ def _document_sections(content: str) -> list[str]:
     return DocumentSectionService().split(readable_text)
 
 
-def _read_section(index: int, text: str, total: int) -> DocumentSectionRead:
+def _read_section(index: int, text: str, total: int, analyzed: bool = False) -> DocumentSectionRead:
     preview = " ".join(text.split())[:220]
     return DocumentSectionRead(
         index=index,
@@ -142,4 +146,12 @@ def _read_section(index: int, text: str, total: int) -> DocumentSectionRead:
         text=text,
         preview=preview,
         char_count=len(text),
+        analyzed=analyzed,
     )
+
+
+def _analyzed_section_indices(document_id: str, db: Session) -> set[int]:
+    indices = set(SectionAnalysisRepository(db).list_indices(document_id))
+    if AnalysisRepository(db).get_result(document_id):
+        indices.add(0)
+    return indices

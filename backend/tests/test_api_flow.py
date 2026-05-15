@@ -187,6 +187,7 @@ def test_document_section_analysis_stays_on_parent_document(client):
     assert sections.json()[1]["section_number"] == 2
     assert sections.json()[1]["total_sections"] == len(sections.json())
     assert sections.json()[1]["char_count"] == len(sections.json()[1]["text"])
+    assert sections.json()[1]["analyzed"] is False
 
     one_section = client.get(f"/documents/{created.json()['id']}/sections/1")
     assert one_section.status_code == 200
@@ -203,6 +204,10 @@ def test_document_section_analysis_stays_on_parent_document(client):
     cached = client.post(f"/documents/{created.json()['id']}/sections/1/analyze")
     assert cached.status_code == 200
     assert cached.json() == body
+
+    sections_after_analysis = client.get(f"/documents/{created.json()['id']}/sections")
+    assert sections_after_analysis.status_code == 200
+    assert sections_after_analysis.json()[1]["analyzed"] is True
 
     paper_map = client.get(f"/documents/{created.json()['id']}/paper-map")
     assert paper_map.status_code == 200

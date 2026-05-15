@@ -39,3 +39,4 @@ class DocumentSectionRead(BaseModel):
     text: str
     preview: str
     char_count: int
+    analyzed: bool = False

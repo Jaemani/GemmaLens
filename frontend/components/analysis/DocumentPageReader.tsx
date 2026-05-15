@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Paperclip, ScanText } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Paperclip, ScanText, SkipForward } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { AnalysisResult, DocumentRead, DocumentSection } from "@/lib/types";
@@ -17,6 +17,10 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
   const attachInputRef = useRef<HTMLInputElement>(null);
   const currentSection = sections[pageIndex];
   const page = currentSection?.text ?? "";
+  const analyzedCount = sections.filter((section) => section.analyzed).length;
+  const nextUnanalyzedIndex = sections.findIndex((section, index) => index > pageIndex && !section.analyzed);
+  const fallbackUnanalyzedIndex = sections.findIndex((section) => !section.analyzed);
+  const targetUnanalyzedIndex = nextUnanalyzedIndex >= 0 ? nextUnanalyzedIndex : fallbackUnanalyzedIndex;
 
   useEffect(() => {
     let cancelled = false;
@@ -47,6 +51,9 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
     try {
       const created = await api.analyzeDocumentSection(document.id, currentSection.index);
       setSectionAnalysis(created);
+      setSections((current) =>
+        current.map((section) => (section.index === currentSection.index ? { ...section, analyzed: true } : section))
+      );
       onSectionAnalyzed?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not analyze this section.");
@@ -79,6 +86,10 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
   }
   if (document.source_type === "transcript" || document.source_type === "video_segment") return null;
 
+  function goToNextUnanalyzed() {
+    if (targetUnanalyzedIndex >= 0) setPageIndex(targetUnanalyzedIndex);
+  }
+
   return (
     <section className="rounded-lg border border-line bg-panel shadow-material">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line p-5">
@@ -88,8 +99,20 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
           <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">
             Use this when the whole document is too long for one edge-model pass. These are model-input text sections, not rendered PDF pages.
           </p>
+          <p className="mt-2 text-xs font-semibold text-neutral-600">
+            {analyzedCount} / {sections.length || 1} sections analyzed
+          </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={goToNextUnanalyzed}
+            disabled={targetUnanalyzedIndex < 0}
+            className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
+          >
+            <SkipForward size={16} />
+            Next unstudied
+          </button>
           {document.source_type === "pdf" && !document.has_original_file ? (
             <>
               <button
@@ -121,10 +144,31 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
             className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
           >
             <ScanText size={16} />
-            {isAnalyzing ? "Analyzing section..." : "Analyze this section"}
+            {isAnalyzing ? "Analyzing section..." : currentSection?.analyzed ? "Re-analyze section" : "Analyze this section"}
           </button>
         </div>
       </div>
+      {sections.length ? (
+        <div className="flex gap-1 overflow-x-auto border-b border-line px-5 py-2">
+          {sections.map((section, index) => (
+            <button
+              key={section.index}
+              type="button"
+              onClick={() => setPageIndex(index)}
+              className={`flex h-8 min-w-10 items-center justify-center rounded-md border px-2 text-[11px] font-semibold ${
+                index === pageIndex
+                  ? "border-accent bg-accent text-white"
+                  : section.analyzed
+                    ? "border-green-200 bg-green-50 text-green-700"
+                    : "border-line bg-panel text-neutral-500 hover:bg-surface"
+              }`}
+              title={`Section ${section.section_number}${section.analyzed ? " analyzed" : " not analyzed"}`}
+            >
+              {section.analyzed && index !== pageIndex ? <CheckCircle2 size={13} /> : `S${section.section_number}`}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
         <button
           type="button"
@@ -140,6 +184,7 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
             Section {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
           </p>
           <p className="text-xs text-neutral-500">{(currentSection?.char_count ?? page.length).toLocaleString()} chars from backend-cleaned text</p>
+          {currentSection?.analyzed ? <p className="text-xs font-semibold text-green-700">Analyzed</p> : null}
         </div>
         <button
           type="button"

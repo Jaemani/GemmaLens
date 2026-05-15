@@ -44,3 +44,10 @@ class SectionAnalysisRepository:
             select(SectionAnalysis).where(SectionAnalysis.document_id == document_id).order_by(SectionAnalysis.section_index)
         ).all()
         return [(row.section_index, AnalysisResult.model_validate(json.loads(row.payload))) for row in rows]
+
+    def list_indices(self, document_id: str) -> list[int]:
+        return list(
+            self.db.scalars(
+                select(SectionAnalysis.section_index).where(SectionAnalysis.document_id == document_id).order_by(SectionAnalysis.section_index)
+            ).all()
+        )
