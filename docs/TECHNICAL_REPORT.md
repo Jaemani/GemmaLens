@@ -81,6 +81,7 @@ The model layer is provider-neutral:
 - `MockModelAdapter`: demo/deploy-only UI testing mode.
 - `MLXAdapter`: Apple Silicon local Gemma runtime.
 - `OllamaAdapter`: local Ollama-compatible runtime scaffold.
+- `RemoteGemmaAdapter`: HTTP adapter for a LAN/Tailscale Gemma server, currently tested against the ThinkPad server at `http://PRIVATE-GEMMA-SERVER:11444`.
 
 Important current policy:
 
@@ -89,6 +90,7 @@ Important current policy:
 - Real MLX failures must not silently return mock content.
 - MLX prompts use atomic JSON-only tasks with thinking disabled to reduce invalid structured output.
 - The loaded MLX model is cached in process and can be warmed up through `POST /models/warmup`.
+- Remote Gemma runtime can be selected through model presets for cases where the Mac GPU is occupied by another project.
 
 ## 4. Implemented Changes
 
@@ -142,8 +144,8 @@ Important current policy:
 
 ### Dashboard
 
-- Reworked the dashboard into a compact workspace view.
-- Removed duplicated action buttons and team-testing/deployment copy from the user-facing page.
+- Reworked the dashboard into a tighter workspace view with one primary document action, one video action, recent documents, runtime status, and a small learning-loop panel.
+- Removed team-testing/deployment copy from the user-facing page.
 - Model runtime status remains visible without presenting the app as a generic landing page.
 - Added model warmup control so demos can load Gemma before the first translation or analysis task.
 
@@ -151,14 +153,27 @@ Important current policy:
 
 - Added same-origin frontend proxy to avoid direct browser calls to `:8012`.
 - Added `scripts/run_local_stack.sh` to start backend and frontend together on stable ports.
+- Switched the local stack from Turbopack dev mode to webpack dev mode after repeated Turbopack panics caused browser refresh loops and aborted API requests.
 - Restricted demo data and demo result links to explicit `NEXT_PUBLIC_DEMO_MODE=true`.
 - Fixed the MLX warmup route to run async; the first implementation loaded MLX in a FastAPI worker thread and could fail later with a GPU stream/thread error.
+- Added ThinkPad remote Gemma presets:
+  - `Gemma 4 E2B (ThinkPad fp16)` -> remote model id `e2b`
+  - `Gemma 4 E4B (ThinkPad fp16)` -> remote model id `e4b`
+- Verified the remote server health endpoint and a model-backed English-to-Korean translation through the GemmaLens backend.
+- Changed Settings to server-prefetch the learner profile so it does not stay in a client-side loading state when the browser aborts or reloads requests.
 
 Observed warm local timings on E2B:
 
 - Model warmup: about 2.7 seconds in the latest local run.
 - Short translation: about 1.3 seconds after warmup.
 - Short structured analysis: about 15.3 seconds after warmup.
+
+Observed remote ThinkPad runtime:
+
+- Server: `http://PRIVATE-GEMMA-SERVER:11444`
+- Health: available with active model `e2b`
+- Models: Gemma 4 E2B fp16 and Gemma 4 E4B fp16
+- Current limitation: CPU generation is slow, so long analysis tasks need progress UI and staged chunking.
 
 ## 5. Current Technical Limitations
 

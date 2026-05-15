@@ -2,6 +2,7 @@ from app.llm.base import ModelAdapter
 from app.llm.mlx_adapter import MLXAdapter
 from app.llm.mock_adapter import MockModelAdapter
 from app.llm.ollama_adapter import OllamaAdapter
+from app.llm.remote_gemma_adapter import RemoteGemmaAdapter
 from app.services.model_runtime_service import ModelRuntimeService
 
 
@@ -11,4 +12,6 @@ def get_model_adapter() -> ModelAdapter:
         return OllamaAdapter()
     if provider == "mlx":
         return MLXAdapter()
+    if provider == "remote":
+        return RemoteGemmaAdapter()
     return MockModelAdapter()

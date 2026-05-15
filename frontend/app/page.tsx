@@ -1,61 +1,87 @@
 import Link from "next/link";
-import { BookMarked, Cpu, FileQuestion, FileText, Languages, Video, WifiOff } from "lucide-react";
+import { ArrowRight, BookMarked, Cpu, FileText, Languages, PlayCircle, Video, WifiOff } from "lucide-react";
 import { ModelStatusCard } from "@/components/common/ModelStatusCard";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
-import type { ModelStatus } from "@/lib/types";
+import type { DocumentListItem, ModelStatus } from "@/lib/types";
 
 export default async function DashboardPage() {
   let modelStatus: ModelStatus | null = null;
+  let documents: DocumentListItem[] = [];
   try {
     modelStatus = await api.getModelStatus();
   } catch {
     modelStatus = null;
   }
+  try {
+    documents = await api.listDocuments();
+  } catch {
+    documents = [];
+  }
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <header className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div>
+      <div className="mx-auto max-w-6xl space-y-5">
+        <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="rounded-lg border border-line bg-panel p-6 shadow-material">
             <p className="text-sm font-semibold text-accent">GemmaLens</p>
-            <h1 className="mt-2 max-w-4xl text-3xl font-semibold leading-tight text-ink">
+            <h1 className="mt-2 max-w-3xl text-3xl font-semibold leading-tight text-ink">
               Multimodal Language Learning from Any Content
             </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-600">
-              Turn papers, PDFs, video transcripts, and short passages into personalized language-learning material with local Gemma models.
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
+              Offline-first reading support for papers, PDFs, videos, and short passages. GemmaLens extracts the language signals that matter for the learner, not just a one-time translation.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-5 flex flex-wrap gap-2">
               <Signal icon={<WifiOff size={15} />} label="Offline-ready" />
-              <Signal icon={<Cpu size={15} />} label="Fast edge inference" />
-              <Signal icon={<BookMarked size={15} />} label="Personalized dictionary" />
-              <Signal icon={<Languages size={15} />} label="Translate + learn" />
+              <Signal icon={<Cpu size={15} />} label="Edge-device friendly" />
+              <Signal icon={<BookMarked size={15} />} label="Personalized study memory" />
+              <Signal icon={<Languages size={15} />} label="Translate when useful" />
             </div>
-          </div>
-          <div className="grid content-start gap-2 rounded-lg border border-line bg-panel p-4 shadow-material">
-            <p className="text-xs font-semibold text-neutral-500">Core loop</p>
-            <div className="grid gap-2 text-sm">
-              <LoopStep label="1" text="Extract content" />
-              <LoopStep label="2" text="Analyze language fit" />
-              <LoopStep label="3" text="Review what matters" />
+            <div className="mt-6 flex flex-wrap gap-3">
+              <PrimaryAction href="/documents" label="Analyze a document" icon={<FileText size={17} />} />
+              <SecondaryAction href="/video" label="Study a video" icon={<Video size={17} />} />
             </div>
-          </div>
-        </header>
-
-        <section className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <ActionCard href="/documents" icon={<FileText size={19} />} title="Documents" detail="Upload PDF/text or paste a focused excerpt." />
-            <ActionCard href="/video" icon={<Video size={19} />} title="Video" detail="Fetch captions and analyze scenes or transcripts." />
-            <ActionCard href="/tools" icon={<Languages size={19} />} title="Translate" detail="Short passage translation workspace." />
-            <ActionCard href="/quiz" icon={<FileQuestion size={19} />} title="Quiz maker" detail="Build cached review prompts from analyzed sources." />
           </div>
           <ModelStatusCard status={modelStatus} compact />
         </section>
 
+        <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-semibold">Recent documents</h2>
+              <Link href="/documents" className="inline-flex items-center gap-1 text-sm font-semibold text-accent">
+                Open <ArrowRight size={15} />
+              </Link>
+            </div>
+            <div className="mt-3 divide-y divide-line">
+              {documents.slice(0, 5).map((document) => (
+                <Link key={document.id} href={`/analysis/${document.id}`} className="block rounded-md py-3 text-sm hover:bg-surface">
+                  <span className="block font-semibold text-ink">{document.title}</span>
+                  <span className="mt-1 line-clamp-1 block text-neutral-600">{document.preview}</span>
+                </Link>
+              ))}
+              {!documents.length ? (
+                <div className="grid min-h-32 place-items-center rounded-md bg-surface px-4 py-6 text-center text-sm leading-6 text-neutral-600">
+                  <p>No documents yet. Add a PDF, paper excerpt, or transcript to see learning objects here.</p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
+            <h2 className="font-semibold">Current learning loop</h2>
+            <div className="mt-4 space-y-3">
+              <LoopStep label="1" title="Extract" text="PDF, text, markdown, or transcript" />
+              <LoopStep label="2" title="Analyze" text="Terms, phrases, syntax, summaries" />
+              <LoopStep label="3" title="Review" text="Save, translate, quiz, revisit" />
+            </div>
+          </div>
+        </section>
+
         <section className="grid gap-4 md:grid-cols-3">
-          <Stat icon={<FileText size={18} />} label="Any content" value="Document, video, text" />
-          <Stat icon={<BookMarked size={18} />} label="Personal fit" value="Terms, phrases, structures" />
-          <Stat icon={<FileQuestion size={18} />} label="Edge workflow" value="Extract -> analyze -> review" />
+          <Capability icon={<FileText size={18} />} title="Document-aware" text="Prioritizes vocabulary and structures by source context and domain." />
+          <Capability icon={<BookMarked size={18} />} title="Learner-fitted" text="Uses level, language pair, and saved items to guide what to show." />
+          <Capability icon={<PlayCircle size={18} />} title="Multimodal path" text="Documents first, video transcripts next, translation and quiz as tools." />
         </section>
       </div>
     </AppShell>
@@ -71,39 +97,46 @@ function Signal({ icon, label }: { icon: React.ReactNode; label: string }) {
   );
 }
 
-function LoopStep({ label, text }: { label: string; text: string }) {
+function LoopStep({ label, title, text }: { label: string; title: string; text: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-md bg-panel px-3 py-2">
+    <div className="flex items-start gap-3 rounded-md bg-surface px-3 py-3">
       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-accent">
         {label}
       </span>
-      <span className="text-neutral-700">{text}</span>
+      <span>
+        <span className="block text-sm font-semibold text-ink">{title}</span>
+        <span className="mt-1 block text-sm text-neutral-600">{text}</span>
+      </span>
     </div>
   );
 }
 
-function ActionCard({ href, icon, title, detail }: { href: string; icon: React.ReactNode; title: string; detail: string }) {
+function PrimaryAction({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
   return (
-    <Link href={href} className="group min-h-28 rounded-lg border border-line bg-panel p-4 shadow-material transition hover:border-blue-200 hover:bg-white">
-      <div className="flex items-start gap-3">
-        <div className="rounded-md bg-blue-50 p-2 text-accent transition group-hover:bg-blue-100">{icon}</div>
-        <div>
-          <p className="font-semibold">{title}</p>
-          <p className="mt-1 text-sm leading-6 text-neutral-600">{detail}</p>
-        </div>
-      </div>
+    <Link href={href} className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+      {icon}
+      {label}
     </Link>
   );
 }
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function SecondaryAction({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
   return (
-    <div className="min-h-24 rounded-lg border border-line bg-panel p-4 shadow-material">
-      <div className="flex items-center gap-3">
-        <div className="text-accent">{icon}</div>
+    <Link href={href} className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:bg-surface">
+      {icon}
+      {label}
+    </Link>
+  );
+}
+
+function Capability({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+  return (
+    <div className="rounded-lg border border-line bg-panel p-4 shadow-material">
+      <div className="flex items-start gap-3">
+        <div className="rounded-md bg-blue-50 p-2 text-accent">{icon}</div>
         <div>
-          <p className="text-xs font-semibold uppercase text-neutral-500">{label}</p>
-          <p className="mt-1 text-sm font-semibold">{value}</p>
+          <h3 className="font-semibold">{title}</h3>
+          <p className="mt-1 text-sm leading-6 text-neutral-600">{text}</p>
         </div>
       </div>
     </div>

@@ -49,6 +49,8 @@ This starts:
 
 The frontend uses a same-origin `/api/backend/*` proxy for private/local backend URLs. This avoids browser CORS and changed-IP failures when testing from Samsung Internet or another device on the same network.
 
+The local stack uses Next.js webpack dev mode for stability. Turbopack previously caused repeated dev-server panics and browser refresh loops in this project.
+
 ## Smoke Test
 
 ```bash
@@ -102,6 +104,29 @@ Run backend with MLX provider:
 Local MLX failures return explicit errors. Mock output is reserved for demo/deployment UI testing via `APP_DEMO_MODE=true`.
 
 The default E4B preset uses the full-precision MLX bf16 conversion at `~/Models/mlx/gemma-4-e4b-it-bf16`.
+
+## Optional Remote Gemma Runtime
+
+GemmaLens can also route model calls to a LAN/Tailscale Gemma server when the local GPU is busy. The current tested server is:
+
+```txt
+http://PRIVATE-GEMMA-SERVER:11444
+```
+
+Available presets:
+
+- `Gemma 4 E2B (ThinkPad fp16)`
+- `Gemma 4 E4B (ThinkPad fp16)`
+
+Select the preset from the dashboard model card under `Change model`, or call:
+
+```bash
+curl -X POST http://127.0.0.1:8012/models/config \
+  -H "Content-Type: application/json" \
+  -d '{"preset_id":"gemma4-e2b-thinkpad"}'
+```
+
+The backend reads the remote server from `REMOTE_GEMMA_BASE_URL`. `scripts/run_local_stack.sh` defaults that variable to the current ThinkPad Tailscale server for local testing.
 
 Run one local model smoke test and save normalized JSON:
 

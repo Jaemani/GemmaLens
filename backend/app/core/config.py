@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     model_runtime_config_path: str = "model_runtime.json"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "gemma3:4b"
+    remote_gemma_base_url: str = "http://127.0.0.1:11444"
+    remote_gemma_model: str = "e2b"
     mlx_model_path: str = "~/Models/mlx/gemma-4-e4b-it-bf16"
     mlx_max_tokens: int = 768
     mlx_temperature: float = 0.1

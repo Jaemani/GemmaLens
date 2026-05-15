@@ -3,6 +3,7 @@ from time import perf_counter
 from fastapi import APIRouter
 
 from app.llm.mlx_adapter import MLXAdapter
+from app.llm.remote_gemma_adapter import RemoteGemmaAdapter
 from app.schemas.model_schema import ModelConfigUpdate, ModelPreset, ModelStatus
 from app.services.model_runtime_service import ModelRuntimeService
 
@@ -31,4 +32,12 @@ async def warmup_model():
     if runtime["provider"] == "mlx":
         MLXAdapter().warmup()
         return {"status": "ready", "provider": "mlx", "elapsed_seconds": round(perf_counter() - start, 3)}
+    if runtime["provider"] == "remote":
+        health = await RemoteGemmaAdapter().warmup()
+        return {
+            "status": health.get("status", "ready"),
+            "provider": "remote",
+            "active_model": health.get("active_model", runtime["remote_gemma_model"]),
+            "elapsed_seconds": round(perf_counter() - start, 3),
+        }
     return {"status": "skipped", "provider": runtime["provider"], "elapsed_seconds": round(perf_counter() - start, 3)}

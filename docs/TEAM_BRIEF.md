@@ -8,7 +8,7 @@ GemmaLens turns academic or technical documents into personalized language-learn
 
 - Frontend: Next.js, TypeScript, Tailwind, Google-like Material-inspired UI.
 - Backend: FastAPI, SQLite, SQLAlchemy, Pydantic.
-- Model runtime: Mock, Ollama scaffold, MLX Gemma 4 presets.
+- Model runtime: Mock, Ollama scaffold, MLX Gemma 4 presets, and ThinkPad remote Gemma 4 presets over Tailscale.
 - Local models installed: Gemma 4 E2B bf16 and Gemma 4 E4B bf16 under `~/Models/mlx`.
 - Input: pasted text, text/markdown upload, basic PDF text extraction.
 - Output: domain, difficulty, terms, phrases, sentence decomposition, layered summaries.
@@ -47,6 +47,7 @@ The prototype now includes local profile settings for support language, learning
 - Repeated analysis with same selected MLX model reuses cached model.
 - Switching E2B/E4B loads a different model once.
 - Mock preset is best for fast UI demos.
+- ThinkPad remote presets are useful when the Mac GPU is already occupied. They keep the same GemmaLens backend/API path while routing generation to `http://PRIVATE-GEMMA-SERVER:11444`.
 - Vercel deployment is currently for team UI feedback only. It can open `/analysis/demo` without a backend, but real Gemma analysis still needs a reachable FastAPI backend connected to local MLX/Ollama.
 - Do not expose a personal Mac LLM server directly for team testing. Use local demos now, then decide on a controlled backend/runtime path later.
 - Next deployment step: deploy the backend in mock mode first. This makes the full product flow testable without model hosting, while preserving the same adapter layer for local Mac and future Android runtimes.
@@ -69,6 +70,14 @@ Near-term product stance: keep the document pipeline and schemas device-agnostic
 - How much Korean explanation remains in first public demo.
 - Whether to expose model runtime settings to users or keep them in developer settings.
 - Whether Android runs full analysis on-device or uses a companion/local network runtime first.
+
+## Latest Engineering Notes
+
+- Dashboard copy now uses `GemmaLens: Multimodal Language Learning from Any Content` as the product description.
+- Local dev stack uses webpack for Next.js dev mode because Turbopack was repeatedly panicking and forcing browser refresh loops.
+- Settings now loads the learner profile from the server-rendered page first, avoiding the previous endless loading state.
+- Model selector is still available from the dashboard runtime card under `Change model`, but it is collapsed by default so the dashboard stays cleaner.
+- Current active test runtime can be switched to `Gemma 4 E2B (ThinkPad fp16)` or `Gemma 4 E4B (ThinkPad fp16)` for remote CPU testing.
 
 ## Active Team Discussion Docs
 

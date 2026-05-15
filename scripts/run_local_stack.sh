@@ -27,6 +27,7 @@ MODEL_PROVIDER=mlx \
 MODEL_SWITCHING_ENABLED=true \
 MODEL_RUNTIME_CONFIG_PATH="${RUNTIME_CONFIG}" \
 DATABASE_URL="${DATABASE_URL}" \
+REMOTE_GEMMA_BASE_URL="${REMOTE_GEMMA_BASE_URL:-http://PRIVATE-GEMMA-SERVER:11444}" \
 CORS_ALLOW_ORIGIN_REGEX='https?://(localhost|127\.0\.0\.1|10\..*|192\.168\..*|100\..*|172\.(1[6-9]|2[0-9]|3[0-1])\..*)?(:[0-9]+)?' \
 .venv-mlx/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port "${BACKEND_PORT}" &
 BACKEND_PID=$!
@@ -34,7 +35,7 @@ BACKEND_PID=$!
 cd "${ROOT}/frontend"
 BACKEND_INTERNAL_URL="${BACKEND_URL}" \
 NEXT_PUBLIC_API_BASE_URL="${BACKEND_URL}" \
-npm run dev -- --hostname 0.0.0.0 --port "${FRONTEND_PORT}" &
+npm run dev -- --webpack --hostname 0.0.0.0 --port "${FRONTEND_PORT}" &
 FRONTEND_PID=$!
 
 trap 'kill ${BACKEND_PID} ${FRONTEND_PID} 2>/dev/null || true' INT TERM EXIT

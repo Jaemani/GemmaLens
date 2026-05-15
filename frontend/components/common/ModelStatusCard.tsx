@@ -8,7 +8,8 @@ import type { ModelPreset, ModelStatus } from "@/lib/types";
 const runtimeIcon = {
   mock: FlaskConical,
   mlx: Cpu,
-  ollama: Cloud
+  ollama: Cloud,
+  remote: Cloud
 };
 
 export function ModelStatusCard({ status, compact = false }: { status: ModelStatus | null; compact?: boolean }) {
@@ -53,20 +54,31 @@ export function ModelStatusCard({ status, compact = false }: { status: ModelStat
 
       {compact ? (
         current ? (
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
             <button
               type="button"
               onClick={warmup}
-              disabled={current.provider !== "mlx" || warmupStatus === "Loading model..."}
+              disabled={!["mlx", "remote"].includes(current.provider) || warmupStatus === "Loading model..."}
               className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Zap size={16} />
               {warmupStatus === "Loading model..." ? "Loading model..." : "Warm up model"}
             </button>
-            {warmupStatus ? <p className="mt-3 text-xs leading-5 text-neutral-600">{warmupStatus}</p> : null}
-            <p className="mt-3 text-xs leading-5 text-neutral-500">
-              Model switching is available in the runtime preset list.
-            </p>
+            {warmupStatus ? <p className="text-xs leading-5 text-neutral-600">{warmupStatus}</p> : null}
+            <details className="rounded-md border border-line bg-white">
+              <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-ink">Change model</summary>
+              <div className="space-y-2 border-t border-line p-2">
+                {presets.map((preset) => (
+                  <PresetButton
+                    key={preset.id}
+                    preset={preset}
+                    selected={current.preset_id === preset.id}
+                    busy={busyPreset !== null}
+                    onSelect={selectPreset}
+                  />
+                ))}
+              </div>
+            </details>
           </div>
         ) : (
           <p className="mt-3 text-sm text-neutral-600">Start the backend to use local model features.</p>
@@ -78,48 +90,67 @@ export function ModelStatusCard({ status, compact = false }: { status: ModelStat
           <button
             type="button"
             onClick={warmup}
-            disabled={current.provider !== "mlx" || warmupStatus === "Loading model..."}
+            disabled={!["mlx", "remote"].includes(current.provider) || warmupStatus === "Loading model..."}
             className="mb-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Zap size={16} />
             {warmupStatus === "Loading model..." ? "Loading model..." : "Warm up model"}
           </button>
           {warmupStatus ? <p className="mb-3 text-xs leading-5 text-neutral-600">{warmupStatus}</p> : null}
-          {presets.map((preset) => {
-            const Icon = runtimeIcon[preset.runtime];
-            const selected = current.preset_id === preset.id;
-            const disabled = preset.availability === "missing";
-            return (
-              <button
-                key={preset.id}
-                onClick={() => selectPreset(preset)}
-                disabled={disabled || busyPreset !== null}
-                className={`w-full rounded-lg border p-3 text-left transition ${selected ? "border-accent bg-blue-50" : "border-line bg-white hover:bg-surface"} disabled:cursor-not-allowed disabled:opacity-55`}
-              >
-                <div className="flex items-start gap-3">
-                  <Icon size={18} className={selected ? "text-accent" : "text-neutral-500"} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-ink">{preset.label}</p>
-                      {selected ? <CheckCircle2 size={16} className="text-accent" /> : null}
-                    </div>
-                    <p className="mt-1 line-clamp-2 text-xs text-neutral-600">{preset.description}</p>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-full bg-surface px-2 py-1">{preset.size}</span>
-                      <span className="rounded-full bg-surface px-2 py-1">{preset.speed}</span>
-                      <span className={`rounded-full px-2 py-1 ${preset.availability === "ready" ? "bg-green-50 text-green-700" : preset.availability === "external" ? "bg-amber-50 text-amber" : "bg-red-50 text-red-700"}`}>
-                        {preset.availability}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+          {presets.map((preset) => (
+            <PresetButton
+              key={preset.id}
+              preset={preset}
+              selected={current.preset_id === preset.id}
+              busy={busyPreset !== null}
+              onSelect={selectPreset}
+            />
+          ))}
         </div>
       ) : !compact ? (
         <p className="mt-3 text-sm text-neutral-600">Start the backend to select a model.</p>
       ) : null}
     </div>
+  );
+}
+
+function PresetButton({
+  preset,
+  selected,
+  busy,
+  onSelect
+}: {
+  preset: ModelPreset;
+  selected: boolean;
+  busy: boolean;
+  onSelect: (preset: ModelPreset) => void;
+}) {
+  const Icon = runtimeIcon[preset.runtime];
+  const disabled = preset.availability === "missing";
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(preset)}
+      disabled={disabled || busy}
+      className={`w-full rounded-lg border p-3 text-left transition ${selected ? "border-accent bg-blue-50" : "border-line bg-white hover:bg-surface"} disabled:cursor-not-allowed disabled:opacity-55`}
+    >
+      <div className="flex items-start gap-3">
+        <Icon size={18} className={selected ? "text-accent" : "text-neutral-500"} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-ink">{preset.label}</p>
+            {selected ? <CheckCircle2 size={16} className="text-accent" /> : null}
+          </div>
+          <p className="mt-1 line-clamp-2 text-xs text-neutral-600">{preset.description}</p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <span className="rounded-full bg-surface px-2 py-1">{preset.size}</span>
+            <span className="rounded-full bg-surface px-2 py-1">{preset.speed}</span>
+            <span className={`rounded-full px-2 py-1 ${preset.availability === "ready" ? "bg-green-50 text-green-700" : preset.availability === "external" ? "bg-amber-50 text-amber" : "bg-red-50 text-red-700"}`}>
+              {preset.availability}
+            </span>
+          </div>
+        </div>
+      </div>
+    </button>
   );
 }

@@ -37,6 +37,22 @@ PRESETS: dict[str, dict[str, str]] = {
         "speed": "External",
         "description": "Use Ollama on localhost. Requires `ollama pull gemma4:e4b`.",
     },
+    "gemma4-e2b-thinkpad": {
+        "label": "Gemma 4 E2B (ThinkPad fp16)",
+        "provider": "remote",
+        "remote_gemma_model": "e2b",
+        "size": "E2B",
+        "speed": "Remote CPU",
+        "description": "Use the Tailscale ThinkPad Gemma 4 E2B fp16 server.",
+    },
+    "gemma4-e4b-thinkpad": {
+        "label": "Gemma 4 E4B (ThinkPad fp16)",
+        "provider": "remote",
+        "remote_gemma_model": "e4b",
+        "size": "E4B",
+        "speed": "Remote quality",
+        "description": "Use the Tailscale ThinkPad Gemma 4 E4B fp16 server.",
+    },
 }
 
 
@@ -56,6 +72,8 @@ class ModelRuntimeService:
             preset_label=preset["label"],
             ollama_model=config["ollama_model"],
             ollama_base_url=config["ollama_base_url"],
+            remote_gemma_model=config["remote_gemma_model"],
+            remote_gemma_base_url=config["remote_gemma_base_url"],
             mlx_model_path=str(mlx_path),
             mlx_model_available=mlx_path.exists(),
             mock_fallback=self.settings.app_demo_mode,
@@ -79,7 +97,7 @@ class ModelRuntimeService:
         presets: list[ModelPreset] = []
         for preset_id, preset in self._available_presets().items():
             runtime = preset["provider"]
-            availability = "external" if runtime == "ollama" else "ready"
+            availability = "external" if runtime in {"ollama", "remote"} else "ready"
             if runtime == "mlx":
                 path = Path(preset["mlx_model_path"]).expanduser()
                 availability = "ready" if path.exists() else "missing"
@@ -107,6 +125,8 @@ class ModelRuntimeService:
             "provider": self.settings.model_provider,
             "ollama_model": self.settings.ollama_model,
             "ollama_base_url": self.settings.ollama_base_url,
+            "remote_gemma_model": self.settings.remote_gemma_model,
+            "remote_gemma_base_url": self.settings.remote_gemma_base_url,
             "mlx_model_path": self.settings.mlx_model_path,
         }
         if self.config_path.exists():
@@ -137,6 +157,8 @@ class ModelRuntimeService:
             "provider": preset["provider"],
             "ollama_model": preset.get("ollama_model", self.settings.ollama_model),
             "ollama_base_url": self.settings.ollama_base_url,
+            "remote_gemma_model": preset.get("remote_gemma_model", self.settings.remote_gemma_model),
+            "remote_gemma_base_url": self.settings.remote_gemma_base_url,
             "mlx_model_path": preset.get("mlx_model_path", self.settings.mlx_model_path),
         }
 

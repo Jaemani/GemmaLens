@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 
 from app.llm.mlx_adapter import MLXAdapter
+from app.llm.remote_gemma_adapter import RemoteGemmaAdapter
 from app.schemas.translation_schema import TranslationRequest, TranslationResponse
 from app.services.model_runtime_service import ModelRuntimeService
 
@@ -16,8 +17,14 @@ class TranslationService:
                 target_language=payload.target_language,
                 text=payload.text,
             )
+        if provider == "remote":
+            return await RemoteGemmaAdapter().translate_text(
+                source_language=payload.source_language,
+                target_language=payload.target_language,
+                text=payload.text,
+            )
 
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Translation requires an MLX model runtime in the current prototype.",
+            detail="Translation requires an MLX or remote Gemma model runtime in the current prototype.",
         )
