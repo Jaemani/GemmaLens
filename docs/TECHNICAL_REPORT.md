@@ -71,6 +71,7 @@ This is not legal advice; it is an engineering compliance checklist based on the
   - profile endpoints
   - model preset endpoints
   - video transcript endpoints
+  - translation endpoint
 
 ### Model Layer
 
@@ -85,6 +86,7 @@ Important current policy:
 - Local development should use real local model runtime.
 - Mock is only for deployed UI/demo mode.
 - Real MLX failures must not silently return mock content.
+- MLX prompts use atomic JSON-only tasks with thinking disabled to reduce invalid structured output.
 
 ## 4. Implemented Changes
 
@@ -101,7 +103,8 @@ Important current policy:
 
 - Structured result includes domain, difficulty, terms, phrases, sentence decomposition, summaries, and warnings.
 - Added A/B controls for save behavior, labels, layout, item detail, review state, and user-fit mode.
-- Added quality warnings when analysis is section-limited.
+- Added user-facing section-level status when analysis is section-limited.
+- Hid internal validator warnings from the result UI because they are debugging signals, not learning content.
 - Prevented silent mock fallback on MLX failure.
 
 ### Video Learning
@@ -118,7 +121,8 @@ Important current policy:
 - Added independent Translate route.
 - Added searchable source/target language selectors.
 - Added character limit, Clear, Translate, and Copy controls.
-- Model-backed translation call is still a planned backend task.
+- Added backend `POST /translate` endpoint for real MLX translation.
+- Removed fake echo output; the UI now shows real model output or an explicit runtime error.
 
 ### Quiz
 
@@ -131,7 +135,14 @@ Important current policy:
 
 - Replaced fixed five-language buttons with searchable language selection.
 - Added broad language catalog for Gemma-family multilingual coverage.
+- Collapsed the language list until the user opens it, with the current selection duplicated at the top for fast confirmation.
 - Backend profile schema now accepts arbitrary language strings.
+
+### Dashboard
+
+- Reworked the dashboard into a compact workspace view.
+- Removed duplicated action buttons and team-testing/deployment copy from the user-facing page.
+- Model runtime status remains visible without presenting the app as a generic landing page.
 
 ## 5. Current Technical Limitations
 
@@ -167,7 +178,7 @@ This staged approach is better for edge devices than sending a full paper in one
 
 ### Translation
 
-The UI is ready but backend model-backed translation is not implemented yet.
+Translation is implemented as a short atomic model task. It is intentionally character-limited so it can run on an edge device without competing with full-document analysis. The next quality step is streaming progress plus optional dictionary extraction from the translated result.
 
 ### Quiz
 
@@ -200,14 +211,13 @@ Useful references:
 
 1. Implement staged full-document analysis.
 2. Add section result storage schema.
-3. Add backend translation endpoint.
-4. Add backend quiz generation endpoint.
-5. Add model output contract tests with real Gemma samples.
-6. Add streaming progress events for long jobs.
-7. Add model runtime health and memory status.
-8. Add exportable hackathon report and demo script.
-9. Add reproducible setup instructions for MLX and Ollama.
-10. Decide mobile edge target: LiteRT, llama.cpp, or companion-server mode.
+3. Add backend quiz generation endpoint.
+4. Add model output contract tests with real Gemma samples.
+5. Add streaming progress events for long jobs.
+6. Add model runtime health and memory status.
+7. Add exportable hackathon report and demo script.
+8. Add reproducible setup instructions for MLX and Ollama.
+9. Decide mobile edge target: LiteRT, llama.cpp, or companion-server mode.
 
 ## 8. Demo Script
 
@@ -220,4 +230,3 @@ Useful references:
 7. Generate quiz from analyzed source.
 8. Show translation panel.
 9. Explain full-paper staged analysis roadmap.
-

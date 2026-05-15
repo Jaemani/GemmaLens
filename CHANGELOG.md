@@ -10,7 +10,12 @@
 - Added document/video history deletion.
 - Added YouTube transcript fallback through `yt-dlp`.
 - Collapsed manual subtitle fallback in video learning.
-- Added section-level analysis warning for long documents.
+- Added real backend translation endpoint for MLX runtime and removed fake echo translation output.
+- Added no-thinking atomic MLX generation prompts for more reliable JSON output.
+- Hid internal analysis validation warnings from the user-facing result page.
+- Reworked dashboard into a compact workspace view and removed duplicate action buttons.
+- Collapsed language lists by default while keeping the selected language pinned at the top.
+- Added section-level analysis status for long documents without exposing internal validator labels.
 
 ## 2026-05-08
 

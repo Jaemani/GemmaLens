@@ -54,7 +54,7 @@ Uploads support `.txt`, `.md`, `.markdown`, and basic text-extractable `.pdf` fi
 
 ## Prototype Scope
 
-This slice supports pasted text or uploaded text/markdown/PDF files, local structured document analysis, transcript learning, dictionary saving, translation UI, and quiz draft generation. Full-paper staged analysis, model-backed translation, auth, sync, and multi-document RAG are roadmap items.
+This slice supports pasted text or uploaded text/markdown/PDF files, local structured document analysis, transcript learning, dictionary saving, short model-backed translation, and quiz draft generation. Full-paper staged analysis, model-backed quiz generation, auth, sync, and multi-document RAG are roadmap items.
 
 ## Optional Gemma 4 MLX Runtime
 

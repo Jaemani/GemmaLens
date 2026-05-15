@@ -125,3 +125,11 @@ export type TranscriptResponse = {
   plain_text: string;
   warning: string | null;
 };
+
+export type TranslationResponse = {
+  source_language: string;
+  target_language: string;
+  source_text: string;
+  translated_text: string;
+  notes: string[];
+};

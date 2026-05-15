@@ -9,6 +9,7 @@ from app.llm.base import ModelAdapter
 from app.llm.json_utils import extract_json_object
 from app.llm.mock_adapter import MockModelAdapter
 from app.schemas.analysis_schema import AnalysisResult
+from app.schemas.translation_schema import TranslationResponse
 from app.services.analysis_normalization_service import AnalysisNormalizationService
 from app.services.model_runtime_service import ModelRuntimeService
 
@@ -53,6 +54,42 @@ class MLXAdapter(ModelAdapter):
         except (ImportError, FileNotFoundError, ValidationError, Exception) as exc:
             logger.exception("MLX analysis failed")
             raise RuntimeError(f"MLX analysis failed: {exc}") from exc
+
+    async def translate_text(self, source_language: str, target_language: str, text: str) -> TranslationResponse:
+        try:
+            model, tokenizer = self._load()
+            prompt = self._build_translation_prompt(source_language, target_language, text)
+            messages = [
+                {"role": "system", "content": "Return only valid JSON. Do not use markdown. Do not output thoughts, analysis, or commentary."},
+                {"role": "user", "content": prompt},
+            ]
+            formatted_prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False)
+            from mlx_lm import generate
+
+            output = generate(
+                model,
+                tokenizer,
+                prompt=formatted_prompt,
+                max_tokens=min(self.settings.mlx_max_tokens, 768),
+                verbose=False,
+            )
+            payload = extract_json_object(output)
+            translated_text = str(payload.get("translated_text", "")).strip()
+            if not translated_text:
+                raise ValueError("translated_text was empty")
+            notes = payload.get("notes", [])
+            if not isinstance(notes, list):
+                notes = []
+            return TranslationResponse(
+                source_language=source_language,
+                target_language=target_language,
+                source_text=text,
+                translated_text=translated_text,
+                notes=[str(note) for note in notes[:3]],
+            )
+        except (ImportError, FileNotFoundError, ValueError, Exception) as exc:
+            logger.exception("MLX translation failed")
+            raise RuntimeError(f"MLX translation failed: {exc}") from exc
 
     def _load(self):
         model_path = str(Path(self.runtime_config["mlx_model_path"]).expanduser())
@@ -116,4 +153,16 @@ class MLXAdapter(ModelAdapter):
             "Prefer fewer high-confidence items over a long exhaustive list. "
             f"Use this exact JSON shape and key names:\n{schema_hint}\n"
             f"document_id: {document_id}\n{chunk_note}\n\nTEXT:\n{text[: self.settings.analysis_model_input_chars]}"
+        )
+
+    def _build_translation_prompt(self, source_language: str, target_language: str, text: str) -> str:
+        return (
+            "Return JSON only. No reasoning. No markdown. "
+            "Translate the input faithfully for a language learner. "
+            "Preserve technical terms when they are normally used in the target language, but translate surrounding explanation naturally. "
+            "Do not add commentary inside translated_text. "
+            "Use this exact JSON shape: {\"translated_text\":\"string\",\"notes\":[\"optional short learner note\"]}\n"
+            f"Source language: {source_language}\n"
+            f"Target language: {target_language}\n\n"
+            f"TEXT:\n{text[:1200]}"
         )

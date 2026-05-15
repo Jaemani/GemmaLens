@@ -6,6 +6,7 @@ import type {
   ModelConfigUpdate,
   ModelPreset,
   ModelStatus,
+  TranslationResponse,
   TranscriptResponse,
   UserProfile
 } from "./types";
@@ -15,6 +16,7 @@ const REQUEST_TIMEOUT_MS = 30000;
 const PROFILE_TIMEOUT_MS = 8000;
 const UPLOAD_TIMEOUT_MS = 300000;
 const ANALYSIS_TIMEOUT_MS = 300000;
+const TRANSLATION_TIMEOUT_MS = 180000;
 
 type ApiRequestInit = RequestInit & {
   timeoutMs?: number;
@@ -137,6 +139,8 @@ export const api = {
   getProfile: () => request<UserProfile>("/profile", { timeoutMs: PROFILE_TIMEOUT_MS }),
   updateProfile: (payload: Partial<Omit<UserProfile, "id" | "created_at">>) =>
     request<UserProfile>("/profile", { method: "PATCH", body: JSON.stringify(payload) }),
+  translateText: (payload: { source_language: string; target_language: string; text: string }) =>
+    request<TranslationResponse>("/translate", { method: "POST", body: JSON.stringify(payload), timeoutMs: TRANSLATION_TIMEOUT_MS }),
   parseTranscript: (payload: { content: string; source_name: string }) =>
     request<TranscriptResponse>("/video/transcripts/parse", { method: "POST", body: JSON.stringify(payload) }),
   fetchYouTubeTranscript: (payload: { url: string; languages?: string[] }) =>

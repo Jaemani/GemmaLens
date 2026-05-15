@@ -4,6 +4,7 @@ import { Clipboard, Languages, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { LanguageSelect } from "@/components/common/LanguageSelect";
 import { AppShell } from "@/components/layout/AppShell";
+import { api } from "@/lib/api";
 
 const LIMIT = 1200;
 
@@ -12,12 +13,31 @@ export default function ToolsPage() {
   const [targetLanguage, setTargetLanguage] = useState("Korean");
   const [text, setText] = useState("");
   const [result, setResult] = useState("");
+  const [notes, setNotes] = useState<string[]>([]);
+  const [error, setError] = useState("");
+  const [isTranslating, setIsTranslating] = useState(false);
   const clipped = text.slice(0, LIMIT);
   const sentenceCount = useMemo(() => clipped.split(/[.!?\n]/).filter((line) => line.trim()).length, [clipped]);
 
-  function translate() {
+  async function translate() {
     if (!clipped.trim()) return;
-    setResult(`[${sourceLanguage} -> ${targetLanguage}]\n\n${clipped}`);
+    setIsTranslating(true);
+    setError("");
+    setResult("");
+    setNotes([]);
+    try {
+      const response = await api.translateText({
+        source_language: sourceLanguage,
+        target_language: targetLanguage,
+        text: clipped
+      });
+      setResult(response.translated_text);
+      setNotes(response.notes);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Translation failed.");
+    } finally {
+      setIsTranslating(false);
+    }
   }
 
   async function copyResult() {
@@ -27,6 +47,8 @@ export default function ToolsPage() {
   function reset() {
     setText("");
     setResult("");
+    setNotes([]);
+    setError("");
   }
 
   return (
@@ -61,14 +83,19 @@ export default function ToolsPage() {
               <button
                 type="button"
                 onClick={translate}
-                disabled={!clipped.trim()}
+                disabled={!clipped.trim() || isTranslating}
                 className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
               >
                 <Languages size={16} />
-                Translate
+                {isTranslating ? "Translating..." : "Translate"}
               </button>
             </div>
           </div>
+          {error ? (
+            <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          ) : null}
         </div>
         <aside className="rounded-lg border border-line bg-panel p-5 shadow-material">
           <div className="flex items-center justify-between gap-3">
@@ -84,8 +111,18 @@ export default function ToolsPage() {
             </button>
           </div>
           <pre className="mt-4 min-h-64 whitespace-pre-wrap rounded-md bg-surface p-4 text-sm leading-6 text-neutral-800">
-            {result || ""}
+            {isTranslating ? "Running local model translation..." : result}
           </pre>
+          {notes.length ? (
+            <div className="mt-4 space-y-2">
+              <h3 className="text-xs font-semibold uppercase text-neutral-500">Notes</h3>
+              {notes.map((note) => (
+                <p key={note} className="rounded-md bg-surface px-3 py-2 text-sm leading-6 text-neutral-700">
+                  {note}
+                </p>
+              ))}
+            </div>
+          ) : null}
         </aside>
       </section>
     </AppShell>

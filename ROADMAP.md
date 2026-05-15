@@ -3,7 +3,7 @@
 ## Near Term
 
 - Implement staged full-document analysis: page/section analysis, stored section results, merged paper map, and whole-paper summary.
-- Add backend model-backed translation endpoint.
+- Improve backend translation with streaming progress, dictionary extraction, and optional per-language style controls.
 - Add backend quiz generation endpoint with distractors and level-aware question types.
 - Improve PDF extraction quality and section detection.
 - Add repeated-structure tracking.
