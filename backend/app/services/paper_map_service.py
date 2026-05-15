@@ -23,7 +23,8 @@ class PaperMapService:
             ]
         base = self.analyses.get_result(document_id)
         if base and not section_results:
-            section_results = [(0, base)]
+            base_text = section_texts[0] if section_texts else ""
+            section_results = [(0, self.normalizer.normalize_result(base, base_text))]
 
         concepts: OrderedDict[str, dict[str, Any]] = OrderedDict()
         terms: OrderedDict[str, dict[str, Any]] = OrderedDict()

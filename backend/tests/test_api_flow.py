@@ -111,6 +111,16 @@ def test_document_analysis_and_dictionary_flow(client):
     assert len(analysis["concepts"]) >= 1
     assert analysis["concepts"][0]["concept"]
 
+    paper_map = client.get(f"/documents/{document['id']}/paper-map")
+    assert paper_map.status_code == 200
+    mapped_items = {
+        item["text"].lower()
+        for bucket in ("top_concepts", "top_terms")
+        for item in paper_map.json()[bucket]
+    }
+    assert "training deep neural networks" not in mapped_items
+    assert "inputs changes during training" not in mapped_items
+
     saved = client.post(
         "/dictionary/items",
         json={
