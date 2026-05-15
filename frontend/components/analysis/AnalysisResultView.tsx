@@ -123,6 +123,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const learningObjects = <TermTable analysis={analysis} config={config} />;
   const summaries = <LayeredSummaryPanel analysis={analysis} />;
   const reader = <ReadingContextPanel analysis={analysis} />;
+  const isSectionLevel = analysis.quality_warnings?.some((warning) => warning.includes("section-level analysis"));
 
   return (
     <div className="space-y-6">
@@ -143,12 +144,12 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       {autoSaveStatus ? (
         <div className="rounded-lg border border-line bg-blue-50 px-4 py-3 text-sm font-medium text-accent">{autoSaveStatus}</div>
       ) : null}
-      {analysis.quality_warnings?.length ? (
-        <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-          <p className="font-semibold">Analysis scope</p>
-          {analysis.quality_warnings.map((warning) => (
-            <p key={warning} className="mt-1">{warning}</p>
-          ))}
+      {isSectionLevel ? (
+        <section className="rounded-lg border border-line bg-panel p-4 text-sm leading-6 text-neutral-700 shadow-material">
+          <p className="font-semibold text-ink">Scope</p>
+          <p className="mt-1">
+            This result covers the first readable section only. Full-paper staged analysis is planned so each section can be analyzed and then merged into a whole-paper view.
+          </p>
         </section>
       ) : null}
       <DomainOverviewCard analysis={analysis} />
