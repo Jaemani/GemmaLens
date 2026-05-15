@@ -15,10 +15,10 @@ const items = [
 
 export function Sidebar() {
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-line bg-panel px-4 py-5 md:block">
-      <div className="mb-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">GemmaLens</p>
-        <h1 className="mt-2 text-xl font-semibold">Edge learning</h1>
+    <aside className="hidden w-60 shrink-0 border-r border-line bg-panel px-4 py-5 md:block">
+      <div className="mb-7">
+        <p className="text-base font-semibold text-accent">GemmaLens</p>
+        <h1 className="mt-1 text-sm font-medium text-neutral-600">Edge language learning</h1>
       </div>
       <nav className="space-y-1">
         {items.map((item) => {

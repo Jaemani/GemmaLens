@@ -15,13 +15,15 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="space-y-5">
-        <section className="rounded-lg border border-line bg-panel p-5 shadow-material">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-3xl">
-              <p className="text-sm font-semibold uppercase text-accent">GemmaLens</p>
-              <h1 className="mt-2 text-2xl font-semibold">Multimodal Language Learning from Any Content</h1>
-              <p className="mt-3 text-sm leading-6 text-neutral-600">
+      <div className="space-y-4">
+        <section className="rounded-lg border border-line bg-panel p-5 shadow-material lg:p-6">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
+            <div>
+              <p className="text-sm font-semibold text-accent">GemmaLens</p>
+              <h1 className="mt-2 max-w-4xl text-3xl font-semibold leading-tight text-ink">
+                Multimodal Language Learning from Any Content
+              </h1>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-600">
                 Turn papers, PDFs, video transcripts, and short passages into personalized language-learning material with local Gemma models.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -31,10 +33,18 @@ export default async function DashboardPage() {
                 <Signal icon={<Languages size={15} />} label="Translate + learn" />
               </div>
             </div>
+            <div className="grid content-start gap-2 rounded-lg border border-line bg-surface p-4">
+              <p className="text-xs font-semibold text-neutral-500">Core loop</p>
+              <div className="grid gap-2 text-sm">
+                <LoopStep label="1" text="Extract from document, video, or text" />
+                <LoopStep label="2" text="Analyze level, terms, syntax, and domain" />
+                <LoopStep label="3" text="Save only useful items for review" />
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="grid gap-4 sm:grid-cols-2">
             <ActionCard href="/documents" icon={<FileText size={19} />} title="Documents" detail="Upload PDF/text or paste a focused excerpt." />
             <ActionCard href="/video" icon={<Video size={19} />} title="Video" detail="Fetch captions and analyze scenes or transcripts." />
@@ -63,12 +73,27 @@ function Signal({ icon, label }: { icon: React.ReactNode; label: string }) {
   );
 }
 
+function LoopStep({ label, text }: { label: string; text: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-md bg-panel px-3 py-2">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-accent">
+        {label}
+      </span>
+      <span className="text-neutral-700">{text}</span>
+    </div>
+  );
+}
+
 function ActionCard({ href, icon, title, detail }: { href: string; icon: React.ReactNode; title: string; detail: string }) {
   return (
-    <Link href={href} className="rounded-lg border border-line bg-panel p-4 shadow-material transition hover:bg-surface">
-      <div className="text-accent">{icon}</div>
-      <p className="mt-3 font-semibold">{title}</p>
-      <p className="mt-1 text-sm leading-6 text-neutral-600">{detail}</p>
+    <Link href={href} className="group rounded-lg border border-line bg-panel p-4 shadow-material transition hover:border-blue-200 hover:bg-white">
+      <div className="flex items-start gap-3">
+        <div className="rounded-md bg-blue-50 p-2 text-accent transition group-hover:bg-blue-100">{icon}</div>
+        <div>
+          <p className="font-semibold">{title}</p>
+          <p className="mt-1 text-sm leading-6 text-neutral-600">{detail}</p>
+        </div>
+      </div>
     </Link>
   );
 }
