@@ -45,6 +45,15 @@ PRESETS: dict[str, dict[str, str]] = {
         "speed": "Remote CPU",
         "description": "Use the Tailscale ThinkPad Gemma 4 E2B fp16 server.",
     },
+    "gemma4-e2b-thinkpad-q4": {
+        "label": "Gemma 4 E2B (ThinkPad Q4)",
+        "provider": "remote",
+        "remote_gemma_model": "e2b-q4",
+        "remote_gemma_base_url": "http://PRIVATE-GEMMA-SERVER:11445",
+        "size": "E2B Q4",
+        "speed": "Fast remote test",
+        "description": "Quantized Q4_K_M llama.cpp server for fast functional testing.",
+    },
     "gemma4-e4b-thinkpad": {
         "label": "Gemma 4 E4B (ThinkPad fp16)",
         "provider": "remote",
@@ -158,7 +167,7 @@ class ModelRuntimeService:
             "ollama_model": preset.get("ollama_model", self.settings.ollama_model),
             "ollama_base_url": self.settings.ollama_base_url,
             "remote_gemma_model": preset.get("remote_gemma_model", self.settings.remote_gemma_model),
-            "remote_gemma_base_url": self.settings.remote_gemma_base_url,
+            "remote_gemma_base_url": preset.get("remote_gemma_base_url", self.settings.remote_gemma_base_url),
             "mlx_model_path": preset.get("mlx_model_path", self.settings.mlx_model_path),
         }
 

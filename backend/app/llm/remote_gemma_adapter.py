@@ -35,16 +35,28 @@ class RemoteGemmaAdapter(ModelAdapter):
             prompt = (
                 "Return JSON only. No markdown. "
                 "Translate faithfully for a language learner. "
-                "Use this exact shape: {\"translated_text\":\"string\",\"notes\":[\"optional short learner note\"]}\n"
+                "Do not copy placeholder words from this instruction. "
+                "The translated_text value must be the actual translation of TEXT. "
+                "Use this JSON shape: {\"translated_text\":\"actual translation\",\"notes\":[\"short learner note\"]}\n"
                 f"Source language: {source_language}\n"
                 f"Target language: {target_language}\n\n"
                 f"TEXT:\n{text[:1200]}"
             )
             output = await self._generate(prompt, json_mode=True, max_tokens=256)
-            payload = extract_json_object(output)
+            try:
+                payload = extract_json_object(output)
+            except ValueError:
+                translated_text = await self._translate_plain(source_language, target_language, text)
+                return TranslationResponse(
+                    source_language=source_language,
+                    target_language=target_language,
+                    source_text=text,
+                    translated_text=translated_text,
+                    notes=[],
+                )
             translated_text = str(payload.get("translated_text", "")).strip()
-            if not translated_text:
-                raise ValueError("translated_text was empty")
+            if translated_text.lower() in {"", "string", "actual translation"}:
+                translated_text = await self._translate_plain(source_language, target_language, text)
             notes = payload.get("notes", [])
             if not isinstance(notes, list):
                 notes = []
@@ -58,6 +70,18 @@ class RemoteGemmaAdapter(ModelAdapter):
         except (httpx.HTTPError, ValueError, Exception) as exc:
             logger.exception("Remote Gemma translation failed")
             raise RuntimeError(f"Remote Gemma translation failed: {exc}") from exc
+
+    async def _translate_plain(self, source_language: str, target_language: str, text: str) -> str:
+        prompt = (
+            f"Translate the following {source_language} text into {target_language}. "
+            "Return only the translated sentence, with no labels and no explanation.\n\n"
+            f"{text[:1200]}"
+        )
+        output = await self._generate(prompt, json_mode=False, max_tokens=192)
+        cleaned = output.strip().strip('"')
+        if not cleaned:
+            raise ValueError("translated_text was empty")
+        return cleaned
 
     async def warmup(self) -> dict:
         async with httpx.AsyncClient(timeout=20) as client:

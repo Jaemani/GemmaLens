@@ -116,6 +116,7 @@ http://PRIVATE-GEMMA-SERVER:11444
 Available presets:
 
 - `Gemma 4 E2B (ThinkPad fp16)`
+- `Gemma 4 E2B (ThinkPad Q4)`
 - `Gemma 4 E4B (ThinkPad fp16)`
 
 Select the preset from the dashboard model card under `Change model`, or call:
@@ -127,6 +128,8 @@ curl -X POST http://127.0.0.1:8012/models/config \
 ```
 
 The backend reads the remote server from `REMOTE_GEMMA_BASE_URL`. `scripts/run_local_stack.sh` defaults that variable to the current ThinkPad Tailscale server for local testing.
+
+For fast functional testing, prefer the Q4 preset. It uses the ThinkPad llama.cpp server on `http://PRIVATE-GEMMA-SERVER:11445` and leaves the fp16 server on `:11444` untouched.
 
 Run one local model smoke test and save normalized JSON:
 

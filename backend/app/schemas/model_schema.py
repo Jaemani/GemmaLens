@@ -8,6 +8,7 @@ ModelPresetId = Literal[
     "gemma4-e4b-mlx",
     "gemma4-e4b-ollama",
     "gemma4-e2b-thinkpad",
+    "gemma4-e2b-thinkpad-q4",
     "gemma4-e4b-thinkpad",
 ]
 

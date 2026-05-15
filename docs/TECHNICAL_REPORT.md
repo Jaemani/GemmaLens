@@ -158,6 +158,7 @@ Important current policy:
 - Fixed the MLX warmup route to run async; the first implementation loaded MLX in a FastAPI worker thread and could fail later with a GPU stream/thread error.
 - Added ThinkPad remote Gemma presets:
   - `Gemma 4 E2B (ThinkPad fp16)` -> remote model id `e2b`
+  - `Gemma 4 E2B (ThinkPad Q4)` -> llama.cpp Q4_K_M server on port `11445`
   - `Gemma 4 E4B (ThinkPad fp16)` -> remote model id `e4b`
 - Verified the remote server health endpoint and a model-backed English-to-Korean translation through the GemmaLens backend.
 - Changed Settings to server-prefetch the learner profile so it does not stay in a client-side loading state when the browser aborts or reloads requests.
@@ -174,6 +175,7 @@ Observed remote ThinkPad runtime:
 - Health: available with active model `e2b`
 - Models: Gemma 4 E2B fp16 and Gemma 4 E4B fp16
 - Current limitation: CPU generation is slow, so long analysis tasks need progress UI and staged chunking.
+- Q4 result: the ThinkPad Q4 E2B server is much faster for functional testing than CPU fp16. A short batch-normalization explanation returned 38 output tokens in 5.63s, about 6.75 tok/s.
 
 ## 5. Current Technical Limitations
 

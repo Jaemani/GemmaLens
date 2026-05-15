@@ -48,6 +48,7 @@ The prototype now includes local profile settings for support language, learning
 - Switching E2B/E4B loads a different model once.
 - Mock preset is best for fast UI demos.
 - ThinkPad remote presets are useful when the Mac GPU is already occupied. They keep the same GemmaLens backend/API path while routing generation to `http://PRIVATE-GEMMA-SERVER:11444`.
+- ThinkPad Q4 preset is preferred for fast functional testing. It uses a separate llama.cpp server on `http://PRIVATE-GEMMA-SERVER:11445`, leaving the fp16 server on `:11444` untouched.
 - Vercel deployment is currently for team UI feedback only. It can open `/analysis/demo` without a backend, but real Gemma analysis still needs a reachable FastAPI backend connected to local MLX/Ollama.
 - Do not expose a personal Mac LLM server directly for team testing. Use local demos now, then decide on a controlled backend/runtime path later.
 - Next deployment step: deploy the backend in mock mode first. This makes the full product flow testable without model hosting, while preserving the same adapter layer for local Mac and future Android runtimes.

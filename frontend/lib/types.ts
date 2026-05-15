@@ -85,7 +85,14 @@ export type UserProfile = {
 
 export type ModelStatus = {
   provider: "mock" | "mlx" | "ollama" | "remote";
-  preset_id: "mock" | "gemma4-e2b-mlx" | "gemma4-e4b-mlx" | "gemma4-e4b-ollama" | "gemma4-e2b-thinkpad" | "gemma4-e4b-thinkpad";
+  preset_id:
+    | "mock"
+    | "gemma4-e2b-mlx"
+    | "gemma4-e4b-mlx"
+    | "gemma4-e4b-ollama"
+    | "gemma4-e2b-thinkpad"
+    | "gemma4-e2b-thinkpad-q4"
+    | "gemma4-e4b-thinkpad";
   preset_label: string;
   ollama_model: string;
   ollama_base_url: string;
