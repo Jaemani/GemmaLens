@@ -70,6 +70,8 @@ pytest
 ```
 
 Uploads support `.txt`, `.md`, `.markdown`, `.docx`, and basic text-extractable `.pdf` files through `POST /documents/upload`. Legacy `.doc` files should be exported to `.docx`, `.pdf`, or `.txt` first. Scanned/image-only PDFs need OCR before GemmaLens can analyze them.
+Uploaded originals are stored locally so PDF uploads can be opened through `GET /documents/{id}/file` and rendered in the analysis workspace. Existing documents created before this storage change will not have an original file attached.
+For existing demo documents, attach the original source later with `POST /documents/{id}/file`; the document id and existing analysis can remain in place.
 
 ## Prototype Scope
 

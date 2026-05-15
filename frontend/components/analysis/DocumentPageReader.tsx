@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ScanText } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Paperclip, ScanText } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { DocumentRead } from "@/lib/types";
 
@@ -12,7 +12,9 @@ export function DocumentPageReader({ documentId }: { documentId: string }) {
   const [pageIndex, setPageIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isAttaching, setIsAttaching] = useState(false);
   const [error, setError] = useState("");
+  const attachInputRef = useRef<HTMLInputElement>(null);
   const pages = useMemo(() => splitPages(document?.content ?? ""), [document?.content]);
   const page = pages[pageIndex] ?? "";
 
@@ -49,6 +51,21 @@ export function DocumentPageReader({ documentId }: { documentId: string }) {
     }
   }
 
+  async function attachSourceFile(file: File) {
+    if (!document) return;
+    setIsAttaching(true);
+    setError("");
+    try {
+      const updated = await api.attachDocumentFile(document.id, file);
+      setDocument(updated);
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not attach source file.");
+    } finally {
+      setIsAttaching(false);
+    }
+  }
+
   if (!document) {
     return (
       <section className="rounded-lg border border-line bg-panel p-5 text-sm text-neutral-600 shadow-material">
@@ -69,6 +86,30 @@ export function DocumentPageReader({ documentId }: { documentId: string }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {document.source_type === "pdf" && !document.has_original_file ? (
+            <>
+              <button
+                type="button"
+                onClick={() => attachInputRef.current?.click()}
+                disabled={isAttaching}
+                className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-50"
+              >
+                <Paperclip size={16} />
+                {isAttaching ? "Attaching..." : "Attach original PDF"}
+              </button>
+              <input
+                ref={attachInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) attachSourceFile(file);
+                  event.target.value = "";
+                }}
+              />
+            </>
+          ) : null}
           <button
             type="button"
             onClick={() => setExpanded((value) => !value)}

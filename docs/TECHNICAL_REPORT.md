@@ -108,6 +108,7 @@ Important current policy:
 - Added separate upload and paste modes.
 - Added PDF/DOCX/text/markdown upload. Legacy `.doc` files return an actionable conversion message.
 - Text extraction has an explicit failure path: scanned or image-only PDFs require OCR, and image-only DOCX files should be exported or pasted as text.
+- Uploaded originals are now stored locally. PDF originals can be served back to the frontend and rendered in the analysis workspace beside the learning guide.
 - Added upload progress and phase-specific status.
 - Added delete buttons for document/video history.
 - Added backend `DELETE /documents/{id}` with analysis cleanup.

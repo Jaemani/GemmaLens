@@ -25,3 +25,9 @@ def migrate_sqlite() -> None:
             connection.execute(text("ALTER TABLE user_profiles ADD COLUMN learning_language VARCHAR(32) DEFAULT 'English'"))
         if "onboarding_completed" not in profile_columns:
             connection.execute(text("ALTER TABLE user_profiles ADD COLUMN onboarding_completed BOOLEAN DEFAULT 0"))
+
+        document_columns = {row[1] for row in connection.execute(text("PRAGMA table_info(documents)"))}
+        if "original_file_path" not in document_columns:
+            connection.execute(text("ALTER TABLE documents ADD COLUMN original_file_path VARCHAR(1024)"))
+        if "original_mime_type" not in document_columns:
+            connection.execute(text("ALTER TABLE documents ADD COLUMN original_mime_type VARCHAR(255)"))

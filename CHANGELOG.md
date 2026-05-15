@@ -3,6 +3,9 @@
 ## 2026-05-15
 
 - Added DOCX upload support, including paragraph and simple table extraction.
+- Stored uploaded original files locally and added `GET /documents/{id}/file`.
+- Added source-file attachment for existing documents, so demo documents created before file storage can attach the original PDF without losing the existing analysis id.
+- Added an original PDF pane in the analysis workspace when a PDF upload has a stored source file.
 - Added explicit legacy `.doc` rejection with conversion guidance.
 - Improved text decoding for TXT/Markdown uploads, including Korean encodings.
 - Added clearer OCR guidance for scanned/image-only PDFs.

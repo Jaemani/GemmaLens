@@ -3,6 +3,8 @@ export type DocumentRead = {
   title: string;
   source_type: string;
   content: string;
+  has_original_file: boolean;
+  original_mime_type: string | null;
   created_at: string;
 };
 

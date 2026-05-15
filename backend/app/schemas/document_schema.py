@@ -8,6 +8,8 @@ class DocumentCreate(BaseModel):
     title: str = Field(default="Untitled document", max_length=255)
     content: str = Field(min_length=1)
     source_type: Literal["text", "markdown", "pdf", "docx", "transcript", "video_segment", "unknown"] = "text"
+    original_file_path: str | None = None
+    original_mime_type: str | None = None
 
 
 class DocumentRead(BaseModel):
@@ -15,6 +17,8 @@ class DocumentRead(BaseModel):
     title: str
     source_type: str
     content: str
+    has_original_file: bool = False
+    original_mime_type: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -172,6 +172,11 @@ def test_upload_document_uses_ingestion_service(client):
     assert body["title"] == "notes.md"
     assert body["source_type"] == "markdown"
     assert "longitudinal study logs" in body["content"]
+    assert body["has_original_file"] is True
+
+    original = client.get(f"/documents/{body['id']}/file")
+    assert original.status_code == 200
+    assert b"We analyze longitudinal study logs." in original.content
 
     empty = client.post(
         "/documents/upload",
@@ -206,6 +211,7 @@ def test_upload_docx_document_uses_ingestion_service(client):
     body = uploaded.json()
     assert body["title"] == "notes.docx"
     assert body["source_type"] == "docx"
+    assert body["has_original_file"] is True
     assert "Batch Normalization" in body["content"]
     assert "term | meaning" in body["content"]
 
@@ -217,6 +223,27 @@ def test_upload_legacy_doc_returns_actionable_error(client):
     )
     assert uploaded.status_code == 400
     assert ".doc files are not directly supported" in uploaded.json()["detail"]
+
+
+def test_attach_original_file_to_existing_document(client):
+    created = client.post(
+        "/documents",
+        json={"title": "Existing PDF text", "content": "Extracted text only", "source_type": "pdf"},
+    )
+    assert created.status_code == 200
+    assert created.json()["has_original_file"] is False
+
+    attached = client.post(
+        f"/documents/{created.json()['id']}/file",
+        files={"file": ("paper.pdf", b"%PDF-demo-bytes", "application/pdf")},
+    )
+    assert attached.status_code == 200
+    assert attached.json()["has_original_file"] is True
+    assert attached.json()["source_type"] == "pdf"
+
+    original = client.get(f"/documents/{created.json()['id']}/file")
+    assert original.status_code == 200
+    assert original.content == b"%PDF-demo-bytes"
 
 
 def test_missing_resources_return_404(client):

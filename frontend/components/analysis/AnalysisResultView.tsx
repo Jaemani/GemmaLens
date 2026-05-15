@@ -21,6 +21,7 @@ import { AnalysisProgress } from "./AnalysisProgress";
 import { ConceptMapPanel } from "./ConceptMapPanel";
 import { DocumentPageReader } from "./DocumentPageReader";
 import { ExperimentSwitchPanel } from "./ExperimentSwitchPanel";
+import { PdfSourcePane } from "./PdfSourcePane";
 import { ErrorState } from "../common/ErrorState";
 
 export function AnalysisResultView({ documentId }: { documentId: string }) {
@@ -163,6 +164,17 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const isSectionLevel = analysis.quality_warnings?.some((warning) => warning.includes("section-level analysis"));
   const isVideoSource = document?.source_type === "transcript" || document?.source_type === "video_segment";
   const isDocumentSource = documentId !== DEMO_DOCUMENT_ID && !isVideoSource;
+  const hasPdfViewer = Boolean(document?.source_type === "pdf" && document.has_original_file);
+  const guideContent = (
+    <div className="space-y-6">
+      <ConceptMapPanel analysis={analysis} sourceKind={isVideoSource ? "video" : "document"} />
+      {config.resultLayout === "readingContextFirst" ? reader : null}
+      {learningObjects}
+      {summaries}
+      {sentenceStructures}
+      {isDocumentSource ? <DocumentPageReader documentId={documentId} /> : null}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -206,32 +218,15 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
         </section>
       ) : null}
       <DomainOverviewCard analysis={analysis} />
-      {isDocumentSource ? (
-        <>
-          <ConceptMapPanel analysis={analysis} sourceKind="document" />
-          {config.resultLayout === "readingContextFirst" ? reader : null}
-          {learningObjects}
-          {summaries}
-          {sentenceStructures}
-          <DocumentPageReader documentId={documentId} />
-        </>
+      {hasPdfViewer && document ? (
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(520px,0.95fr)_minmax(0,1.05fr)]">
+          <div className="xl:sticky xl:top-4">
+            <PdfSourcePane document={document} />
+          </div>
+          {guideContent}
+        </div>
       ) : (
-        <>
-          <ConceptMapPanel analysis={analysis} sourceKind={isVideoSource ? "video" : "document"} />
-          {config.resultLayout === "tableFirst" ? (
-            <>
-              {learningObjects}
-              {summaries}
-            </>
-          ) : (
-            <>
-              {reader}
-              {learningObjects}
-              {summaries}
-            </>
-          )}
-          {sentenceStructures}
-        </>
+        guideContent
       )}
     </div>
   );

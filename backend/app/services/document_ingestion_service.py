@@ -1,5 +1,9 @@
+from pathlib import Path
+from uuid import uuid4
+
 from fastapi import UploadFile
 
+from app.core.config import get_settings
 from app.schemas.document_schema import DocumentCreate
 
 
@@ -8,6 +12,9 @@ class DocumentIngestionError(ValueError):
 
 
 class DocumentIngestionService:
+    def __init__(self) -> None:
+        self.settings = get_settings()
+
     def normalize_text(self, text: str) -> str:
         return "\n".join(line.strip() for line in text.replace("\r\n", "\n").splitlines() if line.strip())
 
@@ -43,7 +50,24 @@ class DocumentIngestionService:
                     "No readable paragraphs found in this DOCX. It may contain only images, drawings, or unsupported embedded objects. Try exporting to PDF/TXT or paste the text."
                 )
             raise DocumentIngestionError("No extractable text found in uploaded document")
-        return DocumentCreate(title=name, content=normalized, source_type=source_type)
+        saved_path = self.save_original_file(raw, extension)
+        return DocumentCreate(
+            title=name,
+            content=normalized,
+            source_type=source_type,
+            original_file_path=saved_path,
+            original_mime_type=file.content_type,
+        )
+
+    def save_original_file(self, raw: bytes, extension: str) -> str | None:
+        if not raw:
+            return None
+        storage_dir = Path(self.settings.upload_storage_dir)
+        storage_dir.mkdir(parents=True, exist_ok=True)
+        safe_extension = "".join(ch for ch in extension.lower() if ch.isalnum())[:12] or "bin"
+        path = storage_dir / f"{uuid4()}.{safe_extension}"
+        path.write_bytes(raw)
+        return str(path)
 
     def _decode_text(self, raw: bytes) -> str:
         for encoding in ("utf-8-sig", "utf-8", "cp949", "euc-kr", "latin-1"):

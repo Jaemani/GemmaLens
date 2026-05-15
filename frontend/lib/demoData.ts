@@ -8,6 +8,8 @@ export const demoDocument: DocumentRead = {
   source_type: "demo",
   content:
     "Although previous studies have suggested a correlation between sleep deprivation and reduced cognitive performance, the extent to which these findings generalize across real-world learning environments remains unclear. To address this gap, we analyze longitudinal study logs collected from undergraduate students over a six-week period.",
+  has_original_file: false,
+  original_mime_type: null,
   created_at: new Date(0).toISOString()
 };
 

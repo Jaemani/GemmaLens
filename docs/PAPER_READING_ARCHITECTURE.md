@@ -78,7 +78,7 @@ Generic local context such as "the best performing models" should not become a s
 - phrase: reusable academic wording or discourse function;
 - sentence: structure worth practicing.
 
-The current reader uses extracted text slices. It is not a rendered PDF viewer yet. A future PDF viewer should preserve page geometry on the left while the right panel shows page-specific learning guidance.
+New PDF uploads preserve the original file locally. When available, the analysis workspace can render the original PDF on the left while the right panel shows page-specific learning guidance. Extracted text slices remain a source/debug tool because OCR, equations, and multi-column layout can damage model-input text.
 
 ## Ingestion Policy
 

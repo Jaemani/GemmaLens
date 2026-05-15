@@ -101,6 +101,7 @@ export const api = {
     request<ModelStatus>("/models/config", { method: "POST", body: JSON.stringify(payload) }),
   listDocuments: () => request<DocumentListItem[]>("/documents"),
   getDocument: (documentId: string) => request<DocumentRead>(`/documents/${documentId}`),
+  documentFileUrl: (documentId: string) => `${apiBase()}/documents/${documentId}/file`,
   createDocument: (payload: { title: string; content: string; source_type: string }) =>
     request<DocumentRead>("/documents", { method: "POST", body: JSON.stringify(payload) }),
   uploadDocument: async (file: File) => {
@@ -118,6 +119,25 @@ export const api = {
       return response.json() as Promise<DocumentRead>;
     } catch (err) {
       throw normalizeRequestError(err, UPLOAD_TIMEOUT_MS, "Upload and PDF extraction");
+    } finally {
+      timeout.clear();
+    }
+  },
+  attachDocumentFile: async (documentId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const timeout = timeoutSignal(UPLOAD_TIMEOUT_MS);
+    try {
+      const response = await fetch(`${apiBase()}/documents/${documentId}/file`, {
+        method: "POST",
+        body: formData,
+        signal: timeout.signal,
+        cache: "no-store"
+      });
+      if (!response.ok) throw new Error(await responseErrorMessage(response));
+      return response.json() as Promise<DocumentRead>;
+    } catch (err) {
+      throw normalizeRequestError(err, UPLOAD_TIMEOUT_MS, "Source file attachment");
     } finally {
       timeout.clear();
     }
