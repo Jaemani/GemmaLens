@@ -17,9 +17,7 @@ export default function ToolsPage() {
 
   function translate() {
     if (!clipped.trim()) return;
-    setResult(
-      `[${sourceLanguage} -> ${targetLanguage}]\n\n${clipped}\n\nModel-backed offline translation will replace this draft. Current interaction keeps the character limit, language pair, copy, and reset flow stable.`
-    );
+    setResult(`[${sourceLanguage} -> ${targetLanguage}]\n\n${clipped}`);
   }
 
   async function copyResult() {
@@ -33,12 +31,12 @@ export default function ToolsPage() {
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <p className="text-sm font-semibold uppercase text-accent">Focused tool</p>
-        <h1 className="mt-2 text-2xl font-semibold">Translate</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
-          Short-passage translation for reading flow. Keep it bounded so edge-device model calls stay fast and predictable.
-        </p>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold uppercase text-accent">Focused tool</p>
+          <h1 className="mt-2 text-2xl font-semibold">Translate</h1>
+        </div>
+        <p className="text-xs font-medium text-neutral-500">{LIMIT} character limit</p>
       </div>
       <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
@@ -86,7 +84,7 @@ export default function ToolsPage() {
             </button>
           </div>
           <pre className="mt-4 min-h-64 whitespace-pre-wrap rounded-md bg-surface p-4 text-sm leading-6 text-neutral-800">
-            {result || "Translation output appears here after you run Translate."}
+            {result || ""}
           </pre>
         </aside>
       </section>
