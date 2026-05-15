@@ -149,10 +149,19 @@ class PaperMapItem(BaseModel):
     count: int = 0
 
 
+class PaperMapGuide(BaseModel):
+    title: str = "Reading guide"
+    thesis_so_far: str = ""
+    coverage_note: str = ""
+    reading_focus: list[str] = Field(default_factory=list)
+    next_steps: list[str] = Field(default_factory=list)
+
+
 class PaperMapResponse(BaseModel):
     document_id: str
     total_sections: int = 0
     analyzed_sections: list[int] = Field(default_factory=list)
+    guide: PaperMapGuide = Field(default_factory=PaperMapGuide)
     top_concepts: list[PaperMapItem] = Field(default_factory=list)
     top_terms: list[PaperMapItem] = Field(default_factory=list)
     top_phrases: list[PaperMapItem] = Field(default_factory=list)

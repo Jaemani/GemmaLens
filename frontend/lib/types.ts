@@ -93,6 +93,13 @@ export type PaperMap = {
   document_id: string;
   total_sections: number;
   analyzed_sections: number[];
+  guide?: {
+    title: string;
+    thesis_so_far: string;
+    coverage_note: string;
+    reading_focus: string[];
+    next_steps: string[];
+  };
   top_concepts: PaperMapItem[];
   top_terms: PaperMapItem[];
   top_phrases: PaperMapItem[];

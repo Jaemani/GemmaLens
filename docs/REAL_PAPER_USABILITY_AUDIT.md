@@ -42,6 +42,7 @@ Local demo records currently include:
 - Auto-study progress is persisted per document in browser localStorage. A reload can restore the last status message and keep the continuation path visible.
 - A completed section lesson now includes `Analyze next unstudied`, keeping the reading loop moving after the user finishes a section.
 - The cumulative paper map refreshes after section analysis.
+- The cumulative paper map now starts with a reading guide: thesis so far, honest coverage note, reading focus, and next steps. This makes it behave more like a reading companion than three isolated lists.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
 - Added real-paper normalization fixtures for BatchNorm and BERT snippets so generic fragments and PDF split artifacts are rejected in tests.
 - Added an Attention/Transformer fixture so `the best performing models` is handled as a discourse signal rather than a saveable term/concept, while Transformer, self-attention, sequence transduction, and parallelization remain learnable.
@@ -53,6 +54,7 @@ Local demo records currently include:
 - PDF page navigation and extracted section navigation are partially aligned for new uploads. Section-to-PDF and PDF-to-section movement both work when source labels are available.
 - Full-paper staged analysis is partly automated. The user can trigger `Auto-study next 3`, and the backend analyzes the next unstudied sections sequentially, but there is no durable background job queue or full-paper final merge.
 - The lower analysis page still contains large report-style blocks. It is usable, but it is not yet a polished reading companion.
+- The paper-map guide is deterministic and source-grounded, but it is still a light synthesis. It does not yet perform model-backed final argument reconstruction across all analyzed sections.
 - Some source extraction remains lossy for multi-column papers and equations.
 - Concept quality is improved by guardrails, but still needs broader real model-output contract tests across more papers and sections.
 - Paper map is cumulative from analyzed sections only; it does not yet perform a final whole-paper merge after all major sections are complete.

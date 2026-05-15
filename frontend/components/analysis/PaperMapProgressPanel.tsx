@@ -34,6 +34,13 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
   const analyzedCount = paperMap.analyzed_sections.length;
   const totalSections = paperMap.total_sections || Math.max(analyzedCount, 1);
   const progress = totalSections ? Math.min(100, Math.round((analyzedCount / totalSections) * 100)) : 0;
+  const guide = paperMap.guide ?? {
+    title: "Reading guide",
+    thesis_so_far: analyzedCount ? "This map is built from analyzed sections only." : "No section has been analyzed yet.",
+    coverage_note: `${analyzedCount} / ${totalSections} sections analyzed.`,
+    reading_focus: [],
+    next_steps: ["Analyze the next unstudied section."]
+  };
 
   return (
     <section className="rounded-lg border border-line bg-panel shadow-material">
@@ -64,6 +71,15 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
         </button>
       </div>
       <div className="grid gap-4 p-5 lg:grid-cols-3">
+        <div className="rounded-md border border-line bg-surface p-4 lg:col-span-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{guide.title}</p>
+          <p className="mt-2 text-sm leading-6 text-ink">{guide.thesis_so_far}</p>
+          <p className="mt-2 text-xs leading-5 text-neutral-600">{guide.coverage_note}</p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <GuideList title="Reading focus" rows={guide.reading_focus} />
+            <GuideList title="Next steps" rows={guide.next_steps} />
+          </div>
+        </div>
         <MapList title="Concepts" rows={paperMap.top_concepts} />
         <MapList title="Terms" rows={paperMap.top_terms} />
         <MapList title="Expressions" rows={paperMap.top_phrases} />
@@ -84,6 +100,25 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
         )}
       </div>
     </section>
+  );
+}
+
+function GuideList({ title, rows }: { title: string; rows: string[] }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
+      {rows.length ? (
+        <ul className="mt-2 space-y-2">
+          {rows.map((row) => (
+            <li key={row} className="text-xs leading-5 text-neutral-700">
+              {row}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-xs leading-5 text-neutral-600">Analyze more sections to build this guide.</p>
+      )}
+    </div>
   );
 }
 

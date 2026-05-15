@@ -144,6 +144,8 @@ The paper map should be honest about coverage. If only sections 2 and 3 are anal
 
 Current implementation note: `GET /documents/{id}/paper-map` returns both `total_sections` and `analyzed_sections`. The frontend shows this as a coverage indicator and refreshes it after each section analysis, so the learner can tell whether the current map is only a first-section guide or a broader paper guide.
 
+The same endpoint also returns a deterministic reading guide with `thesis_so_far`, `coverage_note`, `reading_focus`, and `next_steps`. This is intentionally not a final whole-paper summary. It is a source-grounded synthesis of analyzed sections that tells the learner what to focus on next.
+
 The frontend should not duplicate section-splitting logic. The reader requests backend-cleaned sections from `GET /documents/{id}/sections`, and `Analyze this section` sends the same zero-based section index to `POST /documents/{id}/sections/{section_index}/analyze`. This keeps displayed text, cache keys, paper-map coverage, and model input aligned.
 
 `POST /documents/{id}/staged-analysis` analyzes the next unstudied sections in backend order. The current endpoint is synchronous, which is acceptable for local functional testing, but the release version should become a durable job with pause/resume, cancellation, and status polling. This matters for edge devices because a slow model should not make the browser responsible for remembering which sections succeeded.

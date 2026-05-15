@@ -3,7 +3,7 @@ from typing import Any
 
 from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.section_analysis_repository import SectionAnalysisRepository
-from app.schemas.analysis_schema import PaperMapResponse
+from app.schemas.analysis_schema import PaperMapGuide, PaperMapResponse
 from app.services.analysis_normalization_service import AnalysisNormalizationService
 
 
@@ -53,13 +53,19 @@ class PaperMapService:
             for phrase in result.phrases:
                 self._add(phrases, phrase.phrase, phrase.explanation, section_number)
 
+        top_concepts = self._rank(concepts, 10)
+        top_terms = self._rank(terms, 12)
+        top_phrases = self._rank(phrases, 12)
+        analyzed_sections = [index + 1 for index, _ in section_results]
+
         return PaperMapResponse(
             document_id=document_id,
             total_sections=len(section_texts or []),
-            analyzed_sections=[index + 1 for index, _ in section_results],
-            top_concepts=self._rank(concepts, 10),
-            top_terms=self._rank(terms, 12),
-            top_phrases=self._rank(phrases, 12),
+            analyzed_sections=analyzed_sections,
+            guide=self._guide(len(section_texts or []), analyzed_sections, top_concepts, top_terms, top_phrases, summaries),
+            top_concepts=top_concepts,
+            top_terms=top_terms,
+            top_phrases=top_phrases,
             section_summaries=summaries[:20],
         )
 
@@ -78,3 +84,62 @@ class PaperMapService:
 
     def _rank(self, rows: OrderedDict[str, dict[str, Any]], limit: int) -> list[dict[str, Any]]:
         return sorted(rows.values(), key=lambda row: (-row["count"], row["sections"][0], row["text"].lower()))[:limit]
+
+    def _guide(
+        self,
+        total_sections: int,
+        analyzed_sections: list[int],
+        top_concepts: list[dict[str, Any]],
+        top_terms: list[dict[str, Any]],
+        top_phrases: list[dict[str, Any]],
+        summaries: list[dict[str, Any]],
+    ) -> PaperMapGuide:
+        analyzed_count = len(analyzed_sections)
+        if analyzed_count == 0:
+            return PaperMapGuide(
+                thesis_so_far="No section has been analyzed yet.",
+                coverage_note="Analyze the first readable section to start a source-grounded paper map.",
+                reading_focus=["Start with one section rather than asking the edge model to summarize the whole paper at once."],
+                next_steps=["Analyze the current section.", "Then continue section by section and watch repeated concepts emerge."],
+            )
+
+        concept_names = [str(item["text"]) for item in top_concepts[:3]]
+        term_names = [str(item["text"]) for item in top_terms[:4]]
+        phrase_names = [str(item["text"]) for item in top_phrases[:3]]
+        first_summary = str(summaries[0]["meaning"]) if summaries else ""
+        latest_summary = str(summaries[-1]["meaning"]) if summaries else first_summary
+        if concept_names:
+            thesis = f"So far, the paper is organized around {', '.join(concept_names)}."
+            if first_summary:
+                thesis = f"{thesis} First analyzed signal: {first_summary}"
+        else:
+            thesis = latest_summary or "Analyzed sections are available, but no stable concept anchor has emerged yet."
+
+        if total_sections:
+            coverage = f"{analyzed_count} of {total_sections} sections analyzed. This is a partial reading guide, not a whole-paper conclusion."
+        else:
+            coverage = f"{analyzed_count} analyzed section(s). This guide only reflects analyzed text."
+
+        focus: list[str] = []
+        if concept_names:
+            focus.append(f"Concept path: understand {concept_names[0]} before memorizing surrounding vocabulary.")
+        if term_names:
+            focus.append(f"Vocabulary path: save recurring/high-signal terms such as {', '.join(term_names[:3])}.")
+        if phrase_names:
+            focus.append(f"Academic-expression path: notice how phrases like {', '.join(phrase_names[:2])} move the argument.")
+        if latest_summary and latest_summary != first_summary:
+            focus.append(f"Latest section signal: {latest_summary}")
+
+        next_steps = ["Analyze the next unstudied section before trusting the map as a whole-paper view."]
+        if top_concepts:
+            repeated = [str(item["text"]) for item in top_concepts if int(item.get("count") or 0) > 1]
+            if repeated:
+                next_steps.append(f"Review repeated concept(s): {', '.join(repeated[:3])}.")
+        next_steps.append("Save concepts separately from vocabulary; discourse signals belong in expressions, not dictionary terms.")
+
+        return PaperMapGuide(
+            thesis_so_far=thesis,
+            coverage_note=coverage,
+            reading_focus=focus[:4],
+            next_steps=next_steps[:4],
+        )
