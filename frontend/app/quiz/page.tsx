@@ -65,15 +65,16 @@ export default function QuizPage() {
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <p className="text-sm font-semibold uppercase text-accent">Experimental</p>
-        <h1 className="mt-2 text-2xl font-semibold">Quiz maker</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
-          Build review prompts from analyzed documents and video transcripts. Drafts are cached in this browser.
-        </p>
-      </div>
-      <section className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="rounded-lg border border-line bg-panel p-5 shadow-material">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-5">
+          <p className="text-sm font-semibold text-accent">Experimental</p>
+          <h1 className="mt-2 text-2xl font-semibold">Quiz maker</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
+            Build review prompts from analyzed documents and video transcripts. Drafts are cached in this browser.
+          </p>
+        </div>
+        <section className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <aside className="rounded-lg border border-line bg-panel p-5 shadow-material">
           <h2 className="font-semibold">Analyzed sources</h2>
           <p className="mt-2 text-sm leading-6 text-neutral-600">{status}</p>
           <div className="mt-4 space-y-2">
@@ -91,8 +92,8 @@ export default function QuizPage() {
               </button>
             ))}
           </div>
-        </aside>
-        <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
+          </aside>
+          <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-semibold">{selected?.document.title ?? "No source selected"}</h2>
@@ -118,8 +119,9 @@ export default function QuizPage() {
               </details>
             ))}
           </div>
-        </div>
-      </section>
+          </div>
+        </section>
+      </div>
     </AppShell>
   );
 }

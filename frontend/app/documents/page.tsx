@@ -16,15 +16,17 @@ export default async function DocumentsPage() {
 
   return (
     <AppShell>
-      <div className="mb-6">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-5">
         <h1 className="text-2xl font-semibold">Document input</h1>
         <p className="mt-2 text-sm text-neutral-600">
           Upload a document or paste a focused excerpt, then generate structured learning objects.
         </p>
-      </div>
-      <div className="space-y-6">
-        <DocumentInputPanel />
-        {documents.length > 0 ? <DocumentPreview documents={documents} /> : null}
+        </div>
+        <div className="space-y-6">
+          <DocumentInputPanel />
+          {documents.length > 0 ? <DocumentPreview documents={documents} /> : null}
+        </div>
       </div>
     </AppShell>
   );

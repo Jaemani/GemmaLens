@@ -53,15 +53,16 @@ export default function ToolsPage() {
 
   return (
     <AppShell>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold uppercase text-accent">Focused tool</p>
-          <h1 className="mt-2 text-2xl font-semibold">Translate</h1>
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-accent">Focused tool</p>
+            <h1 className="mt-2 text-2xl font-semibold">Translate</h1>
+          </div>
+          <p className="text-xs font-medium text-neutral-500">{LIMIT} character limit</p>
         </div>
-        <p className="text-xs font-medium text-neutral-500">{LIMIT} character limit</p>
-      </div>
-      <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
+        <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
           <div className="grid gap-3 sm:grid-cols-2">
             <LanguageSelect label="From" value={sourceLanguage} onChange={setSourceLanguage} />
             <LanguageSelect label="To" value={targetLanguage} onChange={setTargetLanguage} />
@@ -96,8 +97,8 @@ export default function ToolsPage() {
               {error}
             </div>
           ) : null}
-        </div>
-        <aside className="rounded-lg border border-line bg-panel p-5 shadow-material">
+          </div>
+          <aside className="rounded-lg border border-line bg-panel p-5 shadow-material">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold">Result</h2>
             <button
@@ -123,8 +124,9 @@ export default function ToolsPage() {
               ))}
             </div>
           ) : null}
-        </aside>
-      </section>
+          </aside>
+        </section>
+      </div>
     </AppShell>
   );
 }

@@ -41,23 +41,24 @@ export default function SettingsPage() {
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <p className="text-sm font-semibold uppercase text-accent">Local learner profile</p>
-        <h1 className="mt-2 text-3xl font-semibold text-ink">Settings</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-700">
-          Set the language you are learning and the language used for explanations. These settings prepare the pipeline for multilingual prompts and study memory.
-        </p>
-      </div>
-
-      {error ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm leading-6 text-amber-900 shadow-material">
-          {error}
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-5">
+          <p className="text-sm font-semibold text-accent">Local learner profile</p>
+          <h1 className="mt-2 text-2xl font-semibold text-ink">Settings</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-700">
+            Set the language you are learning and the language used for explanations. These settings prepare the pipeline for multilingual prompts and study memory.
+          </p>
         </div>
-      ) : !profile ? (
-        <div className="rounded-2xl border border-line bg-panel p-6 shadow-material">Loading profile...</div>
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <section className="rounded-2xl border border-line bg-panel p-6 shadow-material">
+
+        {error ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900 shadow-material">
+            {error}
+          </div>
+        ) : !profile ? (
+          <div className="rounded-lg border border-line bg-panel p-5 shadow-material">Loading profile...</div>
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-2">
+            <section className="rounded-lg border border-line bg-panel p-5 shadow-material">
             <h2 className="text-xl font-semibold">Language pair</h2>
             <Field label="Learning language">
               <LanguageSelect
@@ -75,22 +76,23 @@ export default function SettingsPage() {
                 disabled={busy}
               />
             </Field>
-            <p className="mt-4 rounded-2xl bg-surface p-4 text-sm leading-6 text-neutral-700">
+            <p className="mt-4 rounded-lg bg-surface p-4 text-sm leading-6 text-neutral-700">
               Gemma-family docs describe broad multilingual support across 140+ languages. Quality may vary by language pair, model size, and prompt.
             </p>
-          </section>
+            </section>
 
-          <section className="rounded-2xl border border-line bg-panel p-6 shadow-material">
+            <section className="rounded-lg border border-line bg-panel p-5 shadow-material">
             <h2 className="text-xl font-semibold">Reading level</h2>
             <Field label="Target level">
               <Segmented items={levels} value={profile.target_level} onChange={(target_level) => save({ target_level })} disabled={busy} />
             </Field>
-            <div className="mt-5 rounded-2xl bg-surface p-4 text-sm leading-6 text-neutral-700">
+            <div className="mt-5 rounded-lg bg-surface p-4 text-sm leading-6 text-neutral-700">
               Fresh users start with a simple profile. GemmaLens can later infer learning focus from saved terms, viewed items, and repeated document domains.
             </div>
-          </section>
-        </div>
-      )}
+            </section>
+          </div>
+        )}
+      </div>
     </AppShell>
   );
 }

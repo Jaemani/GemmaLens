@@ -82,9 +82,9 @@ export function DocumentInputPanel() {
   }
 
   return (
-    <section className="grid max-w-7xl gap-5 xl:grid-cols-[minmax(0,820px)_360px]">
-      <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
-        <div className="grid w-full max-w-sm grid-cols-2 gap-1 rounded-lg bg-surface p-1">
+    <section className="grid w-full gap-5 xl:grid-cols-[minmax(0,760px)_340px]">
+      <div className="rounded-lg border border-line bg-panel p-5 shadow-material sm:p-6">
+        <div className="mx-auto grid w-full max-w-md grid-cols-2 gap-1 rounded-lg bg-surface p-1">
           {(["upload", "paste"] as const).map((item) => (
             <button
               key={item}
@@ -100,7 +100,7 @@ export function DocumentInputPanel() {
           ))}
         </div>
         {mode === "paste" ? (
-          <>
+          <div className="mx-auto mt-6 max-w-3xl">
             <label className="mt-5 block text-sm font-semibold" htmlFor="title">Title</label>
             <input
               id="title"
@@ -118,16 +118,16 @@ export function DocumentInputPanel() {
               placeholder="Paste the text you want to analyze."
               className="mt-2 w-full resize-y rounded-md border border-line px-3 py-2 leading-6"
             />
-          </>
+          </div>
         ) : (
-          <div className="mt-5 space-y-4">
+          <div className="mx-auto mt-6 max-w-3xl space-y-4">
             <DocumentUploadCard disabled={busy} onFile={uploadAndAnalyze} />
             <div className="rounded-lg border border-line bg-surface p-4 text-sm leading-6 text-neutral-700">
               After extraction, the local model analyzes the first safe section. Full staged paper analysis is planned next.
             </div>
           </div>
         )}
-        <div className="mt-4 flex justify-end">
+        <div className="mx-auto mt-4 flex max-w-3xl justify-end">
           <div className="flex flex-wrap justify-end gap-3">
             {mode === "paste" ? (
               <>
@@ -160,15 +160,18 @@ export function DocumentInputPanel() {
           </div>
         ) : null}
       </div>
-      <div className="space-y-5">
+      <aside className="space-y-5">
         {!busy && status ? <p className="rounded-lg border border-line bg-panel px-4 py-3 text-sm font-medium text-neutral-700 shadow-material">{status}</p> : null}
         {busy ? <AnalysisProgress step={step} elapsed={elapsed} title={progressTitle} currentLabel={status} /> : null}
         {!busy && !status ? (
-          <div className="rounded-lg border border-line bg-panel p-4 text-sm leading-6 text-neutral-600 shadow-material">
-            Choose an input type, then GemmaLens will create learning objects for vocabulary, expressions, summaries, and sentence structures.
+          <div className="rounded-lg border border-line bg-panel p-5 text-sm leading-6 text-neutral-600 shadow-material">
+            <p className="font-semibold text-ink">Learning output</p>
+            <p className="mt-2">
+              GemmaLens creates vocabulary, expressions, summaries, and sentence-structure notes from the selected content.
+            </p>
           </div>
         ) : null}
-      </div>
+      </aside>
     </section>
   );
 }

@@ -15,34 +15,32 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="space-y-4">
-        <section className="rounded-lg border border-line bg-panel p-5 shadow-material lg:p-6">
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
-            <div>
-              <p className="text-sm font-semibold text-accent">GemmaLens</p>
-              <h1 className="mt-2 max-w-4xl text-3xl font-semibold leading-tight text-ink">
-                Multimodal Language Learning from Any Content
-              </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-600">
-                Turn papers, PDFs, video transcripts, and short passages into personalized language-learning material with local Gemma models.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Signal icon={<WifiOff size={15} />} label="Offline-ready" />
-                <Signal icon={<Cpu size={15} />} label="Fast edge inference" />
-                <Signal icon={<BookMarked size={15} />} label="Personalized dictionary" />
-                <Signal icon={<Languages size={15} />} label="Translate + learn" />
-              </div>
-            </div>
-            <div className="grid content-start gap-2 rounded-lg border border-line bg-surface p-4">
-              <p className="text-xs font-semibold text-neutral-500">Core loop</p>
-              <div className="grid gap-2 text-sm">
-                <LoopStep label="1" text="Extract from document, video, or text" />
-                <LoopStep label="2" text="Analyze level, terms, syntax, and domain" />
-                <LoopStep label="3" text="Save only useful items for review" />
-              </div>
+      <div className="space-y-6">
+        <header className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div>
+            <p className="text-sm font-semibold text-accent">GemmaLens</p>
+            <h1 className="mt-2 max-w-4xl text-3xl font-semibold leading-tight text-ink">
+              Multimodal Language Learning from Any Content
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-600">
+              Turn papers, PDFs, video transcripts, and short passages into personalized language-learning material with local Gemma models.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Signal icon={<WifiOff size={15} />} label="Offline-ready" />
+              <Signal icon={<Cpu size={15} />} label="Fast edge inference" />
+              <Signal icon={<BookMarked size={15} />} label="Personalized dictionary" />
+              <Signal icon={<Languages size={15} />} label="Translate + learn" />
             </div>
           </div>
-        </section>
+          <div className="grid content-start gap-2 rounded-lg border border-line bg-panel p-4 shadow-material">
+            <p className="text-xs font-semibold text-neutral-500">Core loop</p>
+            <div className="grid gap-2 text-sm">
+              <LoopStep label="1" text="Extract content" />
+              <LoopStep label="2" text="Analyze language fit" />
+              <LoopStep label="3" text="Review what matters" />
+            </div>
+          </div>
+        </header>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="grid gap-4 sm:grid-cols-2">
