@@ -18,16 +18,17 @@ export function DocumentInputPanel() {
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [progressTitle, setProgressTitle] = useState("Preparing document");
 
   async function runWithProgress(action: () => Promise<void>) {
     setBusy(true);
     setError(null);
     setStatus(null);
+    setProgressTitle("Preparing document");
     setElapsed(0);
     setStep(0);
     const timer = window.setInterval(() => {
       setElapsed((value) => value + 1);
-      setStep((value) => Math.min(value + 1, 3));
     }, 1000);
     try {
       await action();
@@ -42,11 +43,16 @@ export function DocumentInputPanel() {
 
   async function submit() {
     await runWithProgress(async () => {
+      setProgressTitle("Preparing document");
+      setStep(0);
       setStatus("Creating document record...");
       const document = await api.createDocument({ title, content, source_type: "text" });
       setStep(2);
+      setProgressTitle("Analyzing document");
       setStatus("Running model analysis...");
       await api.analyzeDocument(document.id);
+      setStep(4);
+      setProgressTitle("Opening result");
       setStatus("Opening result...");
       router.push(`/analysis/${document.id}`);
     });
@@ -54,11 +60,16 @@ export function DocumentInputPanel() {
 
   async function uploadAndAnalyze(file: File) {
     await runWithProgress(async () => {
+      setProgressTitle("Uploading document");
+      setStep(1);
       setStatus(`Uploading ${file.name} and extracting text...`);
       const document = await api.uploadDocument(file);
       setStep(2);
+      setProgressTitle("Analyzing document");
       setStatus(`Text extracted from ${file.name}. Running model analysis...`);
       await api.analyzeDocument(document.id);
+      setStep(4);
+      setProgressTitle("Opening result");
       setStatus("Opening result...");
       router.push(`/analysis/${document.id}`);
     });
@@ -90,8 +101,8 @@ export function DocumentInputPanel() {
       </div>
       <div className="space-y-5">
         <DocumentUploadCard disabled={busy} onFile={uploadAndAnalyze} />
-        {status ? <p className="rounded-lg border border-line bg-panel px-4 py-3 text-sm font-medium text-neutral-700 shadow-material">{status}</p> : null}
-        {busy ? <AnalysisProgress step={step} elapsed={elapsed} /> : null}
+        {!busy && status ? <p className="rounded-lg border border-line bg-panel px-4 py-3 text-sm font-medium text-neutral-700 shadow-material">{status}</p> : null}
+        {busy ? <AnalysisProgress step={step} elapsed={elapsed} title={progressTitle} currentLabel={status} /> : null}
       </div>
     </section>
   );

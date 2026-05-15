@@ -8,8 +8,18 @@ const labels = [
   "Opening result"
 ];
 
-export function AnalysisProgress({ step, elapsed }: { step: number; elapsed: number }) {
-  const currentLabel = labels[Math.min(step, labels.length - 1)];
+export function AnalysisProgress({
+  step,
+  elapsed,
+  title = "Analyzing document",
+  currentLabel
+}: {
+  step: number;
+  elapsed: number;
+  title?: string;
+  currentLabel?: string | null;
+}) {
+  const activeLabel = currentLabel ?? labels[Math.min(step, labels.length - 1)];
   const hint =
     step >= 2
       ? "Local model analysis can take time on the first run. On Vercel, this step needs a reachable backend or demo mode."
@@ -20,9 +30,9 @@ export function AnalysisProgress({ step, elapsed }: { step: number; elapsed: num
       <div className="flex items-center gap-3">
         <Loader2 size={20} className="animate-spin text-accent" />
         <div>
-          <h2 className="font-semibold text-ink">Analyzing document</h2>
+          <h2 className="font-semibold text-ink">{title}</h2>
           <p className="text-sm text-neutral-600">
-            {elapsed}s elapsed · {currentLabel}
+            {elapsed}s elapsed · {activeLabel}
           </p>
         </div>
       </div>
