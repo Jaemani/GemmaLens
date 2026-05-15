@@ -18,6 +18,8 @@ class AnalysisNormalizationService:
         phrases = self._phrases(payload.get("phrases") or payload.get("academic_phrases") or payload.get("expressions"), document_text)
         terms = self._merge_learning_rows(self._heuristic_terms(document_text), terms, "term", limit=14)
         phrases = self._merge_learning_rows(phrases, self._heuristic_phrases(document_text), "phrase", limit=10)
+        if self._is_bert_text(document_text):
+            terms = self._filter_bert_learning_rows(terms, "term")
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -35,6 +37,8 @@ class AnalysisNormalizationService:
             "concept",
             limit=10,
         )
+        if self._is_bert_text(document_text):
+            normalized["concepts"] = self._filter_bert_learning_rows(normalized["concepts"], "concept")
         if self._sentences_are_weak(normalized["sentences"]):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -230,7 +234,67 @@ class AnalysisNormalizationService:
         return concepts[:6]
 
     def _heuristic_terms(self, document_text: str) -> list[dict[str, Any]]:
-        known = [
+        if self._is_bert_text(document_text):
+            known = [
+                (
+                    "BERT",
+                    "A bidirectional Transformer-based language representation model that can be fine-tuned for many NLP tasks.",
+                    "field_term",
+                    "medium",
+                    "The main model introduced by the paper.",
+                ),
+                (
+                    "Bidirectional Encoder Representations from Transformers",
+                    "The full expansion of BERT, emphasizing bidirectional contextual representations built with Transformer encoders.",
+                    "field_term",
+                    "hard",
+                    "This explains what the acronym means and how the model reads context.",
+                ),
+                (
+                    "pre-training",
+                    "Training a model on broad unlabeled text before adapting it to specific downstream tasks.",
+                    "field_term",
+                    "medium",
+                    "The paper's method depends on pre-training before task-specific fine-tuning.",
+                ),
+                (
+                    "fine-tuning",
+                    "Adapting a pre-trained model to a target task with supervised training.",
+                    "field_term",
+                    "medium",
+                    "The paper's practical value comes from fine-tuning one pre-trained model for many tasks.",
+                ),
+                (
+                    "bidirectional representations",
+                    "Representations that use both left and right context instead of only reading left-to-right.",
+                    "field_term",
+                    "hard",
+                    "This is the central contrast between BERT and earlier language representation models.",
+                ),
+                (
+                    "unlabeled text",
+                    "Text without task-specific human labels, used for broad self-supervised pre-training.",
+                    "useful",
+                    "medium",
+                    "The abstract says BERT pre-trains from unlabeled text.",
+                ),
+                (
+                    "masked language model",
+                    "A pre-training task where the model predicts hidden tokens from surrounding context.",
+                    "field_term",
+                    "hard",
+                    "This is one of BERT's core pre-training tasks.",
+                ),
+                (
+                    "next sentence prediction",
+                    "A pre-training task where the model predicts whether two sentences follow each other.",
+                    "field_term",
+                    "hard",
+                    "This task supports sentence-pair understanding in BERT.",
+                ),
+            ]
+        else:
+            known = [
             (
                 "Batch Normalization",
                 "A technique that normalizes layer inputs within each mini-batch so deep networks train faster and more stably.",
@@ -301,7 +365,7 @@ class AnalysisNormalizationService:
                 "hard",
                 "This matters when moving from training-time normalization to inference.",
             ),
-        ]
+            ]
         rows: list[dict[str, Any]] = []
         for term, meaning, priority, difficulty, reason in known:
             sentence = self._source_sentence(None, term, document_text)
@@ -340,6 +404,16 @@ class AnalysisNormalizationService:
             ("we demonstrate", "result", "Signals evidence or experimental proof."),
             ("It has been long known", "claim", "Introduces established background knowledge."),
         ]
+        if self._is_bert_text(document_text):
+            phrase_specs = [
+                ("We introduce", "method", "Signals the paper's new contribution."),
+                ("which stands for", "general", "Expands an acronym or named method."),
+                ("Unlike recent", "contrast", "Contrasts the proposed method with prior work."),
+                ("is designed to", "method", "Explains the intended design or purpose of a method."),
+                ("can be fine-tuned", "method", "Explains how a pre-trained model is adapted to tasks."),
+                ("we demonstrate", "result", "Signals the evidence used to support the paper's claim."),
+                ("obtains new state-of-the-art", "result", "States an empirical performance result."),
+            ]
         rows: list[dict[str, Any]] = []
         lower_text = document_text.lower()
         for phrase, function, explanation in phrase_specs:
@@ -361,7 +435,41 @@ class AnalysisNormalizationService:
         return rows
 
     def _heuristic_concepts(self, document_text: str) -> list[dict[str, Any]]:
-        specs = [
+        if self._is_bert_text(document_text):
+            specs = [
+                (
+                    "BERT",
+                    "A bidirectional Transformer representation model introduced for language understanding tasks.",
+                    "This is the paper's main contribution and the anchor for the rest of the terminology.",
+                ),
+                (
+                    "Bidirectional Encoder Representations from Transformers",
+                    "The expanded name of BERT: contextual representations built from both left and right context using Transformer encoders.",
+                    "It explains why BERT differs from earlier one-directional representation models.",
+                ),
+                (
+                    "pre-training",
+                    "The broad training stage before task-specific adaptation.",
+                    "This is the first half of BERT's transfer-learning workflow.",
+                ),
+                (
+                    "fine-tuning",
+                    "The adaptation stage where the same pre-trained model is trained for a specific downstream task.",
+                    "This explains how one model becomes useful across many NLP benchmarks.",
+                ),
+                (
+                    "masked language model",
+                    "A pre-training objective where masked words are predicted from surrounding context.",
+                    "This is the mechanism that lets BERT train bidirectionally.",
+                ),
+                (
+                    "next sentence prediction",
+                    "A pre-training objective that teaches relationships between sentence pairs.",
+                    "This supports tasks where understanding the relation between two sentences matters.",
+                ),
+            ]
+        else:
+            specs = [
             (
                 "internal covariate shift",
                 "The paper's motivating problem: as lower layers change during training, later layers keep receiving changing input distributions.",
@@ -392,7 +500,7 @@ class AnalysisNormalizationService:
                 "A regularization baseline whose need may be reduced when Batch Normalization is used.",
                 "This helps the reader track how the paper positions its method against existing techniques.",
             ),
-        ]
+            ]
         rows: list[dict[str, Any]] = []
         for concept, explanation, why in specs:
             sentence = self._source_sentence(None, concept, document_text)
@@ -414,7 +522,32 @@ class AnalysisNormalizationService:
         return rows
 
     def _heuristic_sentences(self, document_text: str) -> list[dict[str, str]]:
-        specs = [
+        if self._is_bert_text(document_text):
+            specs = [
+                (
+                    "which stands for",
+                    "We introduce X, which stands for Y.",
+                    "The authors introduce BERT and immediately expand the acronym.",
+                    "'which stands for'는 약어의 전체 이름을 설명하는 표현입니다. 논문 초반의 이름 정의에서 자주 나옵니다.",
+                    "The acronym and its full technical name are packed into one sentence.",
+                ),
+                (
+                    "Unlike recent",
+                    "Unlike A, B is designed to do C.",
+                    "BERT is contrasted with earlier representation models because it pre-trains deep bidirectional representations.",
+                    "'Unlike'는 기존 방법과 새 방법의 차이를 만드는 신호입니다. 뒤쪽의 주절이 논문의 핵심 차별점입니다.",
+                    "The contrast phrase comes before the main claim, so the reader must wait for the subject and verb.",
+                ),
+                (
+                    "can be fine-tuned",
+                    "A pre-trained model can be fine-tuned with one additional output layer.",
+                    "After pre-training, BERT can be adapted to many tasks with a small task-specific layer.",
+                    "'can be fine-tuned'는 모델을 특정 과제에 맞게 조정할 수 있다는 뜻입니다.",
+                    "Passive voice plus ML workflow vocabulary makes the sentence dense.",
+                ),
+            ]
+        else:
+            specs = [
             (
                 "is complicated by the fact that",
                 "X is complicated by the fact that Y, as Z.",
@@ -443,7 +576,7 @@ class AnalysisNormalizationService:
                 "'allows us to'는 방법의 실용적 효과를 말할 때 자주 쓰는 표현입니다.",
                 "The verb phrase describes capability, not permission in the everyday sense.",
             ),
-        ]
+            ]
         rows: list[dict[str, str]] = []
         for marker, structure, simplified, explanation, difficulty in specs:
             sentence = self._source_sentence(None, marker, document_text)
@@ -528,10 +661,24 @@ class AnalysisNormalizationService:
             merged.append(row)
         return merged[:limit]
 
+    def _filter_bert_learning_rows(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {"learning rate", "dropout", "pre-trained bert model", "new language representation model", "language representation models"}
+        has_full_name = any(str(row.get(key) or "").lower() == "bidirectional encoder representations from transformers" for row in rows)
+        filtered: list[dict[str, Any]] = []
+        for row in rows:
+            value = str(row.get(key) or "").strip()
+            lowered = value.lower()
+            if lowered in blocked:
+                continue
+            if has_full_name and lowered == "bidirectional encoder representations":
+                continue
+            filtered.append(row)
+        return filtered
+
     def _sentences_are_weak(self, sentences: list[dict[str, str]]) -> bool:
         if not sentences:
             return True
-        weak_markers = {"Structure not provided.", "Explanation not provided.", "Model did not return sentence decomposition."}
+        weak_markers = {"Structure not provided.", "Explanation not provided.", "Model did not return sentence decomposition.", "Main claim + explanation."}
         return any(sentence.get("core_structure") in weak_markers or sentence.get("korean_explanation") in weak_markers for sentence in sentences)
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
@@ -641,6 +788,8 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"training deep neural networks", "inputs changes during training"}:
             return ""
+        if lowered in {"new language representation model", "language representation models", "pre-trained bert model"}:
+            return ""
         if re.fullmatch(r"(?:inputs?|outputs?|models?|networks?)\s+\w+(?:\s+\w+){0,3}", lowered):
             return ""
         if lowered.startswith(("introduction ", "conclusion ", "abstract ", "references ")):
@@ -664,6 +813,10 @@ class AnalysisNormalizationService:
         source = sentence or document_text[:1000]
         references = re.findall(r"\([A-Z][A-Za-z-]+(?: et al\.)?,?\s+\d{4}[a-z]?\)|\[\d+(?:,\s*\d+)*\]", source)
         return references[:4]
+
+    def _is_bert_text(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "bert" in lowered and "bidirectional encoder representations" in lowered
 
     def _score(self, value: Any, default: int) -> int:
         try:

@@ -121,6 +121,7 @@ Important current policy:
 - Concepts can be saved to the dictionary/review store, just like terms and phrases.
 - Added source-grounded guardrails after model analysis. If the edge model returns empty phrase lists, repeated source text as summaries, weak sentence decompositions, or generic noun fragments, the backend now repairs or discards those items before the UI sees them.
 - The current Batch Normalization smoke result now separates concepts (`internal covariate shift`, `Batch Normalization`, `mini-batch`) from vocabulary (`stochastic gradient descent`, `learning rate`, `vanishing gradients`) and reusable academic expressions (`is complicated by the fact that`, `as opposed to`, `This motivates us to`).
+- The current BERT smoke result now separates core BERT concepts and vocabulary (`BERT`, `pre-training`, `fine-tuning`, `masked language model`, `next sentence prediction`) from incidental terms that appear elsewhere in the full paper but should not drive the first learning guide.
 - Added A/B controls for save behavior, labels, layout, item detail, review state, and user-fit mode.
 - Added user-facing section-level status when analysis is section-limited.
 - Hid internal validator warnings from the result UI because they are debugging signals, not learning content.
