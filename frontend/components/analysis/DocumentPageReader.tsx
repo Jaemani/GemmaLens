@@ -5,7 +5,15 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { AnalysisResult, DocumentRead, DocumentSection } from "@/lib/types";
 
-export function DocumentPageReader({ documentId, onSectionAnalyzed }: { documentId: string; onSectionAnalyzed?: () => void }) {
+export function DocumentPageReader({
+  documentId,
+  onSectionAnalyzed,
+  onSourcePageChange
+}: {
+  documentId: string;
+  onSectionAnalyzed?: () => void;
+  onSourcePageChange?: (page: number | null) => void;
+}) {
   const [document, setDocument] = useState<DocumentRead | null>(null);
   const [sections, setSections] = useState<DocumentSection[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
@@ -43,6 +51,10 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
     setSectionAnalysis(null);
     setError("");
   }, [pageIndex]);
+
+  useEffect(() => {
+    onSourcePageChange?.(pdfPageFromLabel(currentSection?.source_label ?? null));
+  }, [currentSection?.source_label, onSourcePageChange]);
 
   async function analyzeSectionAt(index: number) {
     const section = sections[index];
@@ -315,4 +327,9 @@ function MiniList({ title, rows }: { title: string; rows: Array<[string, string]
       )}
     </div>
   );
+}
+
+function pdfPageFromLabel(label: string | null) {
+  const match = label?.match(/^PDF page (\d+)$/);
+  return match ? Number(match[1]) : null;
 }

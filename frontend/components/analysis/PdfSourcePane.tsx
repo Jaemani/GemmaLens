@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { DocumentRead } from "@/lib/types";
 
-export function PdfSourcePane({ document }: { document: DocumentRead }) {
+export function PdfSourcePane({ document, requestedPage }: { document: DocumentRead; requestedPage?: number | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -15,6 +15,12 @@ export function PdfSourcePane({ document }: { document: DocumentRead }) {
 
   if (document.source_type !== "pdf" || !document.has_original_file) return null;
   const fileUrl = api.documentFileUrl(document.id);
+
+  useEffect(() => {
+    if (requestedPage && requestedPage > 0) {
+      setPageNumber(requestedPage);
+    }
+  }, [requestedPage]);
 
   useEffect(() => {
     let cancelled = false;

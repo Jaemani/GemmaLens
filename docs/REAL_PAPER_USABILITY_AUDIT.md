@@ -35,6 +35,7 @@ Local demo records currently include:
 - `Analyze this section` uses the same zero-based backend section index that the UI displays.
 - Backend section responses now include `analyzed`, and the reader shows analyzed count, section status chips, and a `Next unstudied` action.
 - New PDF uploads preserve internal page markers during extraction, allowing section responses to include labels such as `PDF page 2`. Older existing demo records may not have these markers.
+- The PDF viewer now follows section selection when source labels are available. In the BatchNorm smoke check, selecting section 4 moved the left preview to `PDF page 2 / 11`.
 - A completed section lesson now includes `Analyze next unstudied`, keeping the reading loop moving after the user finishes a section.
 - The cumulative paper map refreshes after section analysis.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
@@ -44,7 +45,7 @@ Local demo records currently include:
 
 ## Still Weak
 
-- PDF page navigation and extracted section navigation are only partially aligned. New uploads can label extracted text by source PDF page, but the PDF viewer and section navigator are not yet locked together.
+- PDF page navigation and extracted section navigation are partially aligned. Section-to-PDF movement works when source labels are available; PDF-to-section reverse navigation is not implemented yet.
 - Full-paper staged analysis is not automated yet. The user still has to trigger section analysis manually, though the UI now helps move to the next unstudied section.
 - The lower analysis page still contains large report-style blocks. It is usable, but it is not yet a polished reading companion.
 - Some source extraction remains lossy for multi-column papers and equations.

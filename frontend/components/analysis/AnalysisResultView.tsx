@@ -35,6 +35,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const [autoSaveStatus, setAutoSaveStatus] = useState<string | null>(null);
   const [rerunning, setRerunning] = useState(false);
   const [paperMapRefreshKey, setPaperMapRefreshKey] = useState(0);
+  const [requestedPdfPage, setRequestedPdfPage] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -196,7 +197,11 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const guideContent = (
     <div className="space-y-6">
       {isDocumentSource ? (
-        <DocumentPageReader documentId={documentId} onSectionAnalyzed={() => setPaperMapRefreshKey((value) => value + 1)} />
+        <DocumentPageReader
+          documentId={documentId}
+          onSectionAnalyzed={() => setPaperMapRefreshKey((value) => value + 1)}
+          onSourcePageChange={setRequestedPdfPage}
+        />
       ) : null}
       {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
       <ConceptMapPanel analysis={analysis} sourceKind={isVideoSource ? "video" : "document"} />
@@ -230,7 +235,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       {hasPdfViewer && document ? (
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(520px,0.95fr)_minmax(0,1.05fr)]">
           <div className="xl:sticky xl:top-4">
-            <PdfSourcePane document={document} />
+            <PdfSourcePane document={document} requestedPage={requestedPdfPage} />
           </div>
           {guideContent}
         </div>

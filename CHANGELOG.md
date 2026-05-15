@@ -13,6 +13,7 @@
 - Added an inline `Analyze next unstudied` action below a section lesson so the user can continue the paper-reading loop without returning to the top controls.
 - Added real-paper normalization fixtures for BatchNorm and BERT snippets, covering generic fragments and PDF split artifacts such as `tion model` and `sentation models`.
 - New PDF uploads now preserve internal PDF page markers during text extraction, and section responses can expose `source_label` values such as `PDF page 2`.
+- The PDF viewer now follows section selection when a section has a PDF page label; selecting a section from `PDF page 2` moves the left source preview to page 2.
 - Replaced the native embedded PDF iframe with a PDF.js canvas preview, so the demo reliably shows the original PDF and supports PDF page Previous/Next controls.
 - Promoted extracted-section navigation so section Previous/Next and "Analyze this section" are visible without opening a hidden debug text block.
 - Added BERT-family learning guardrails after testing the BERT paper: BERT results now prioritize BERT, pre-training, fine-tuning, masked language model, and next sentence prediction instead of unrelated terms that merely appear elsewhere in the paper.
