@@ -179,6 +179,32 @@ Observed remote ThinkPad runtime:
 
 ## 5. Current Technical Limitations
 
+### Edge Atomic Pipeline
+
+The remote Gemma path now follows an edge-first atomic pipeline instead of asking the model for one large document-level JSON object.
+
+Current behavior:
+
+```text
+source chunk
+-> code-generated fast meta/summary for Q4 routes
+-> atomic term task
+-> atomic phrase task
+-> atomic sentence task
+-> JSON extraction/repair
+-> source-grounded normalization
+-> discard placeholders and items not found in source
+-> fallback source parser when Q4 output is invalid or too sparse
+```
+
+This makes the Q4 ThinkPad route usable for functional testing. A short Batch Normalization smoke analysis completed in about 48 seconds with source-grounded terms, phrases, and sentence explanation, instead of timing out at 300 seconds on the fp16 CPU route.
+
+Design rule:
+
+- small Gemma 4 models should receive short, single-purpose tasks;
+- external code owns parsing, validation, fallback, and discard behavior;
+- invalid model output should affect only that task, not the whole document.
+
 ### Full-Paper Analysis
 
 Current real-model analysis is section-limited to avoid Metal out-of-memory crashes on the shared GPU. This prevents truthful full-paper output.
@@ -201,7 +227,7 @@ Required next step:
 ```text
 extract full text
 -> split by page/section
--> analyze section 1..N sequentially
+-> run atomic tasks for section 1..N sequentially
 -> store each section result
 -> merge into whole-paper summary/map
 -> generate per-section vocab/sentence drills

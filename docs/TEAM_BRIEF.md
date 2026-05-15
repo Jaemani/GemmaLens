@@ -79,6 +79,8 @@ Near-term product stance: keep the document pipeline and schemas device-agnostic
 - Settings now loads the learner profile from the server-rendered page first, avoiding the previous endless loading state.
 - Model selector is still available from the dashboard runtime card under `Change model`, but it is collapsed by default so the dashboard stays cleaner.
 - Current active test runtime can be switched to `Gemma 4 E2B (ThinkPad fp16)` or `Gemma 4 E4B (ThinkPad fp16)` for remote CPU testing.
+- Q4 remote analysis now uses atomic tasks. The system asks Gemma for small term/phrase/sentence jobs, then code parses, validates, discards ungrounded items, and fills sparse outputs with source-grounded fallback candidates.
+- This is the intended edge-device principle: Gemma handles language judgment; deterministic code handles reliability.
 
 ## Active Team Discussion Docs
 

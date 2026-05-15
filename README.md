@@ -131,6 +131,8 @@ The backend reads the remote server from `REMOTE_GEMMA_BASE_URL`. `scripts/run_l
 
 For fast functional testing, prefer the Q4 preset. It uses the ThinkPad llama.cpp server on `http://PRIVATE-GEMMA-SERVER:11445` and leaves the fp16 server on `:11444` untouched.
 
+The Q4 route uses an atomic analysis path: separate small calls for learning terms, phrases, and sentence explanation, followed by parser/validator cleanup and source-grounded fallback. This is the recommended path for CPU or mobile-class edge testing.
+
 Run one local model smoke test and save normalized JSON:
 
 ```bash

@@ -112,3 +112,22 @@ def test_normalizer_scales_decimal_difficulty_scores():
     assert result.difficulty.syntax_difficulty == 8
     assert result.difficulty.domain_difficulty == 9
     assert result.summaries.one_line.startswith("Although previous studies")
+
+
+def test_normalizer_discards_items_not_grounded_in_source():
+    payload = {
+        "terms": [
+            {"term": "sleep deprivation", "meaning": "not enough sleep"},
+            {"term": "Stochastic Gradient Descent", "meaning": "not in this passage"},
+            {"term": "string", "meaning": "placeholder"},
+        ],
+        "phrases": [
+            {"phrase": "remains unclear", "explanation": "marks uncertainty"},
+            {"phrase": "to summarize the above", "explanation": "not in this passage"},
+        ],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "doc-4", DOCUMENT_TEXT)
+
+    assert [term.term for term in result.terms] == ["sleep deprivation"]
+    assert [phrase.phrase for phrase in result.phrases] == ["remains unclear"]

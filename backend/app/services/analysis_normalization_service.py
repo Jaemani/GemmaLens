@@ -63,6 +63,10 @@ class AnalysisNormalizationService:
             term = str(row.get("term") or row.get("text") or "").strip()
             if not term:
                 continue
+            if term.lower() in {"string", "term", "actual term"}:
+                continue
+            if not self._appears_in_text(term, document_text):
+                continue
             key = term.lower()
             if key in seen:
                 continue
@@ -98,6 +102,10 @@ class AnalysisNormalizationService:
                 continue
             phrase = str(row.get("phrase") or row.get("text") or "").strip()
             if not phrase:
+                continue
+            if phrase.lower() in {"string", "phrase", "actual phrase"}:
+                continue
+            if not self._appears_in_text(phrase, document_text):
                 continue
             key = phrase.lower()
             if key in seen:
@@ -201,6 +209,9 @@ class AnalysisNormalizationService:
 
     def _sentences_from_text(self, text: str) -> list[str]:
         return [part.strip() for part in re.split(r"(?<=[.!?])\s+", text.strip()) if part.strip()]
+
+    def _appears_in_text(self, value: str, text: str) -> bool:
+        return " ".join(value.lower().split()) in " ".join(text.lower().split())
 
     def _priority_from_relevance(self, value: Any) -> str:
         value = str(value or "").lower()
