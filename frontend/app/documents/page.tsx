@@ -18,7 +18,7 @@ export default async function DocumentsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Document input</h1>
         <p className="mt-2 text-sm text-neutral-600">
-          Paste an academic excerpt, generate structured learning objects, then compare A/B cleanup flows in the result page.
+          Upload a document or paste a focused excerpt, then generate structured learning objects.
         </p>
       </div>
       <div className="space-y-6">

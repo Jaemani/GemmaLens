@@ -143,6 +143,14 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       {autoSaveStatus ? (
         <div className="rounded-lg border border-line bg-blue-50 px-4 py-3 text-sm font-medium text-accent">{autoSaveStatus}</div>
       ) : null}
+      {analysis.quality_warnings?.length ? (
+        <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+          <p className="font-semibold">Analysis scope</p>
+          {analysis.quality_warnings.map((warning) => (
+            <p key={warning} className="mt-1">{warning}</p>
+          ))}
+        </section>
+      ) : null}
       <DomainOverviewCard analysis={analysis} />
       {config.resultLayout === "tableFirst" ? (
         <>

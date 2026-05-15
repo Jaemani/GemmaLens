@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { BookOpen, FileText, FlaskConical, HelpCircle, LayoutDashboard, Settings, Video } from "lucide-react";
+import { BookOpen, FileText, FlaskConical, HelpCircle, Languages, LayoutDashboard, Settings, Video } from "lucide-react";
 
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/video", label: "Video", icon: Video },
+  { href: "/tools", label: "Tools", icon: Languages },
   { href: "/experiments", label: "Experiments", icon: FlaskConical },
   { href: "/dictionary", label: "Dictionary", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings },

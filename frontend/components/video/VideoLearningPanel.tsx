@@ -185,7 +185,8 @@ export function VideoLearningPanel() {
           {videoId ? <div key={videoId} id={playerElementId} className="h-full w-full" /> : <EmptyPlayer />}
         </div>
 
-        <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
+        {!transcript ? (
+          <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <FileText size={17} className="text-accent" />
             Subtitle fallback
@@ -205,24 +206,6 @@ export function VideoLearningPanel() {
           <div className="mt-3 flex flex-wrap justify-end gap-3">
             <button
               type="button"
-              onClick={analyzeCurrentScene}
-              disabled={busy || !sceneText.trim()}
-              className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-50"
-            >
-              <BookOpenCheck size={16} />
-              Analyze current scene
-            </button>
-            <button
-              type="button"
-              onClick={analyzeTranscript}
-              disabled={busy || !transcript?.plain_text.trim()}
-              className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-50"
-            >
-              <BookOpenCheck size={16} />
-              Analyze transcript
-            </button>
-            <button
-              type="button"
               onClick={parseSubtitle}
               disabled={busy || !subtitleText.trim()}
               className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
@@ -232,6 +215,34 @@ export function VideoLearningPanel() {
           </div>
           {error ? <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">{error}</p> : null}
         </div>
+        ) : (
+          <div className="rounded-lg border border-line bg-panel p-4 shadow-material">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-semibold">Transcript ready</p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={analyzeCurrentScene}
+                  disabled={busy || !sceneText.trim()}
+                  className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-50"
+                >
+                  <BookOpenCheck size={16} />
+                  Analyze current scene
+                </button>
+                <button
+                  type="button"
+                  onClick={analyzeTranscript}
+                  disabled={busy || !transcript.plain_text.trim()}
+                  className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  <BookOpenCheck size={16} />
+                  Analyze transcript
+                </button>
+              </div>
+            </div>
+            {error ? <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">{error}</p> : null}
+          </div>
+        )}
       </section>
 
       <aside className="rounded-lg border border-line bg-panel shadow-material">

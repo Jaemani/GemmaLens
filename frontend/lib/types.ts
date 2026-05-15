@@ -56,6 +56,7 @@ export type AnalysisResult = {
     academic: string;
     study_notes: string[];
   };
+  quality_warnings?: string[];
 };
 
 export type DictionaryItem = {

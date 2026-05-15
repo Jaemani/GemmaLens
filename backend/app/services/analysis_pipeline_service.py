@@ -25,6 +25,10 @@ class AnalysisPipelineService:
         analysis_chunks = chunks[: self.settings.analysis_model_max_chunks]
         result = await self.adapter.analyze_document(document.id, analysis_text, analysis_chunks)
         result = self.normalizer.normalize_result(result, document.content)
+        if len(" ".join(document.content.split())) > len(analysis_text):
+            result.quality_warnings.append(
+                "This is a section-level analysis from the beginning of the document. Full-document staged analysis is not implemented yet."
+            )
         self.analyses.upsert(result)
         return result
 

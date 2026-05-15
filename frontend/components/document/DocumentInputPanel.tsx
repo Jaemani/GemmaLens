@@ -7,12 +7,13 @@ import { api } from "@/lib/api";
 import { AnalysisProgress } from "@/components/analysis/AnalysisProgress";
 import { DocumentUploadCard } from "./DocumentUploadCard";
 
-const SAMPLE_TEXT = "Although previous studies have suggested a correlation between sleep deprivation and reduced cognitive performance, the extent to which these findings generalize across real-world learning environments remains unclear. To address this gap, we analyze longitudinal study logs collected from undergraduate students over a six-week period.";
+type InputMode = "upload" | "paste";
 
 export function DocumentInputPanel() {
   const router = useRouter();
-  const [title, setTitle] = useState("Sleep and learning excerpt");
-  const [content, setContent] = useState(SAMPLE_TEXT);
+  const [mode, setMode] = useState<InputMode>("upload");
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [step, setStep] = useState(0);
@@ -82,28 +83,68 @@ export function DocumentInputPanel() {
   return (
     <section className="grid gap-5 lg:grid-cols-[1fr_320px]">
       <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
-        <label className="text-sm font-semibold" htmlFor="title">Title</label>
-        <input id="title" value={title} onChange={(event) => setTitle(event.target.value)} className="mt-2 w-full rounded-md border border-line px-3 py-2" />
-        <label className="mt-5 block text-sm font-semibold" htmlFor="content">Document text</label>
-        <textarea id="content" value={content} onChange={(event) => setContent(event.target.value)} rows={14} className="mt-2 w-full resize-y rounded-md border border-line px-3 py-2 leading-6" />
+        <div className="flex gap-2 rounded-lg bg-surface p-1">
+          {(["upload", "paste"] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              disabled={busy}
+              onClick={() => setMode(item)}
+              className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold capitalize ${
+                mode === item ? "bg-panel text-accent shadow-sm" : "text-neutral-600 hover:bg-white"
+              } disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              {item === "upload" ? "Upload file" : "Paste text"}
+            </button>
+          ))}
+        </div>
+        {mode === "paste" ? (
+          <>
+            <label className="mt-5 block text-sm font-semibold" htmlFor="title">Title</label>
+            <input
+              id="title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Untitled document"
+              className="mt-2 w-full rounded-md border border-line px-3 py-2"
+            />
+            <label className="mt-5 block text-sm font-semibold" htmlFor="content">Document text</label>
+            <textarea
+              id="content"
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              rows={14}
+              placeholder="Paste the text you want to analyze."
+              className="mt-2 w-full resize-y rounded-md border border-line px-3 py-2 leading-6"
+            />
+          </>
+        ) : (
+          <div className="mt-5 rounded-lg border border-line bg-surface p-5 text-sm leading-6 text-neutral-700">
+            Upload a PDF, text, or markdown file. After extraction, the local model analyzes a safe section of the document first. Full staged paper analysis is planned next.
+          </div>
+        )}
         <div className="mt-4 flex justify-end">
           <div className="flex flex-wrap justify-end gap-3">
-            <Link
-              href={busy ? "#" : "/analysis/demo"}
-              aria-disabled={busy}
-              className={`rounded-md border border-line px-4 py-2 text-sm font-semibold ${
-                busy ? "pointer-events-none cursor-not-allowed text-neutral-400 opacity-50" : "text-ink hover:bg-surface"
-              }`}
-            >
-              Open demo result
-            </Link>
-            <button
-              disabled={busy || !content.trim()}
-              onClick={submit}
-              className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-600"
-            >
-              {busy ? "Processing..." : "Analyze document"}
-            </button>
+            {mode === "paste" ? (
+              <>
+                <Link
+                  href={busy ? "#" : "/analysis/demo"}
+                  aria-disabled={busy}
+                  className={`rounded-md border border-line px-4 py-2 text-sm font-semibold ${
+                    busy ? "pointer-events-none cursor-not-allowed text-neutral-400 opacity-50" : "text-ink hover:bg-surface"
+                  }`}
+                >
+                  Open demo result
+                </Link>
+                <button
+                  disabled={busy || !content.trim()}
+                  onClick={submit}
+                  className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-600"
+                >
+                  {busy ? "Processing..." : "Analyze pasted text"}
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
         {error ? (

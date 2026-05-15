@@ -109,11 +109,11 @@ class MLXAdapter(ModelAdapter):
         return (
             "Analyze this academic text for language learning. Return one complete JSON object only. "
             "Do not omit any top-level key. Do not use markdown. "
-            "Select 5-12 terms, 3-8 academic phrases, 1-4 difficult sentence structures, and all summary fields. "
+            "Select 4-8 terms, 2-5 academic phrases, 1-3 difficult sentence structures, and all summary fields. "
             "Every term and phrase must appear in its source_sentence. "
             "Use context-specific meanings, not generic dictionary-only meanings. "
             "If unsure, set confidence below 0.5 instead of omitting the item. "
             "Prefer fewer high-confidence items over a long exhaustive list. "
             f"Use this exact JSON shape and key names:\n{schema_hint}\n"
-            f"document_id: {document_id}\n{chunk_note}\n\nTEXT:\n{text[:12000]}"
+            f"document_id: {document_id}\n{chunk_note}\n\nTEXT:\n{text[: self.settings.analysis_model_input_chars]}"
         )
