@@ -22,11 +22,6 @@ export default async function DashboardPage() {
               <p className="text-sm font-semibold uppercase text-accent">Reading workspace</p>
               <h1 className="mt-2 text-2xl font-semibold">PaperLens</h1>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <PrimaryLink href="/documents" label="Analyze document" />
-              <SecondaryLink href="/video" label="Video transcript" />
-              <SecondaryLink href="/quiz" label="Quiz" />
-            </div>
           </div>
         </section>
 
@@ -47,22 +42,6 @@ export default async function DashboardPage() {
         </section>
       </div>
     </AppShell>
-  );
-}
-
-function PrimaryLink({ href, label }: { href: string; label: string }) {
-  return (
-    <Link href={href} className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white">
-      {label}
-    </Link>
-  );
-}
-
-function SecondaryLink({ href, label }: { href: string; label: string }) {
-  return (
-    <Link href={href} className="rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface">
-      {label}
-    </Link>
   );
 }
 

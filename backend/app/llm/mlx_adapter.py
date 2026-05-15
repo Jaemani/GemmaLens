@@ -34,7 +34,7 @@ class MLXAdapter(ModelAdapter):
                 {"role": "system", "content": "Return only valid JSON. Do not use markdown. Do not output thoughts, analysis, or commentary."},
                 {"role": "user", "content": prompt},
             ]
-            formatted_prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
+            formatted_prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False)
             from mlx_lm import generate
 
             output = generate(
@@ -107,9 +107,9 @@ class MLXAdapter(ModelAdapter):
 """
         chunk_note = f"Document chunks: {len(chunks)}"
         return (
-            "Analyze this academic text for language learning. Return one complete JSON object only. "
-            "Do not omit any top-level key. Do not use markdown. "
-            "Select 4-8 terms, 2-5 academic phrases, 1-3 difficult sentence structures, and all summary fields. "
+            "Return JSON only. No reasoning. No markdown. "
+            "Analyze this academic text for language learning. "
+            "Select 3-5 terms, 2-3 academic phrases, 1-2 difficult sentence structures, and short summaries. "
             "Every term and phrase must appear in its source_sentence. "
             "Use context-specific meanings, not generic dictionary-only meanings. "
             "If unsure, set confidence below 0.5 instead of omitting the item. "

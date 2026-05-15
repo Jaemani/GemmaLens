@@ -39,6 +39,7 @@ export function DocumentInputPanel() {
       setStep(4);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis or upload failed.");
+      setStatus(null);
     } finally {
       window.clearInterval(timer);
       processingRef.current = false;
