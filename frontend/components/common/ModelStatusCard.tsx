@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Cloud, Cpu, FlaskConical } from "lucide-react";
+import { CheckCircle2, Cloud, Cpu, FlaskConical, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { ModelPreset, ModelStatus } from "@/lib/types";
@@ -15,6 +15,7 @@ export function ModelStatusCard({ status }: { status: ModelStatus | null }) {
   const [current, setCurrent] = useState(status);
   const [presets, setPresets] = useState<ModelPreset[]>([]);
   const [busyPreset, setBusyPreset] = useState<string | null>(null);
+  const [warmupStatus, setWarmupStatus] = useState("");
 
   useEffect(() => {
     api.listModelPresets().then(setPresets).catch(() => setPresets([]));
@@ -30,6 +31,16 @@ export function ModelStatusCard({ status }: { status: ModelStatus | null }) {
     }
   }
 
+  async function warmup() {
+    setWarmupStatus("Loading model...");
+    try {
+      const result = await api.warmupModel();
+      setWarmupStatus(result.status === "ready" ? `Model ready in ${result.elapsed_seconds}s` : `Warmup skipped for ${result.provider}`);
+    } catch (err) {
+      setWarmupStatus(err instanceof Error ? err.message : "Warmup failed.");
+    }
+  }
+
   return (
     <div className="rounded-lg border border-line bg-panel p-4 shadow-material">
       <div className="flex items-start justify-between gap-3">
@@ -42,6 +53,16 @@ export function ModelStatusCard({ status }: { status: ModelStatus | null }) {
 
       {current ? (
         <div className="mt-4 space-y-2">
+          <button
+            type="button"
+            onClick={warmup}
+            disabled={current.provider !== "mlx" || warmupStatus === "Loading model..."}
+            className="mb-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Zap size={16} />
+            {warmupStatus === "Loading model..." ? "Loading model..." : "Warm up model"}
+          </button>
+          {warmupStatus ? <p className="mb-3 text-xs leading-5 text-neutral-600">{warmupStatus}</p> : null}
           {presets.map((preset) => {
             const Icon = runtimeIcon[preset.runtime];
             const selected = current.preset_id === preset.id;

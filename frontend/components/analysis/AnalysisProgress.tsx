@@ -22,7 +22,7 @@ export function AnalysisProgress({
   const activeLabel = currentLabel ?? labels[Math.min(step, labels.length - 1)];
   const hint =
     step >= 2
-      ? "Local model analysis can take time on the first run. On Vercel, this step needs a reachable backend or demo mode."
+      ? "Local model analysis is running. Warmed-up short tasks are faster; long documents still need staged analysis."
       : "Preparing the document before model analysis starts.";
 
   return (

@@ -32,6 +32,21 @@ Frontend app: `http://localhost:3000`
 
 Set `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` if the backend runs elsewhere.
 
+## Run Local Demo Stack
+
+For phone/team testing on the local network, use the fixed demo ports:
+
+```bash
+./scripts/run_local_stack.sh
+```
+
+This starts:
+
+- Backend: `http://127.0.0.1:8012`
+- Frontend: `http://localhost:3003`
+
+The frontend uses a same-origin `/api/backend/*` proxy for private/local backend URLs. This avoids browser CORS and changed-IP failures when testing from Samsung Internet or another device on the same network.
+
 ## Smoke Test
 
 ```bash
@@ -54,7 +69,7 @@ Uploads support `.txt`, `.md`, `.markdown`, and basic text-extractable `.pdf` fi
 
 ## Prototype Scope
 
-This slice supports pasted text or uploaded text/markdown/PDF files, local structured document analysis, transcript learning, dictionary saving, short model-backed translation, and quiz draft generation. Full-paper staged analysis, model-backed quiz generation, auth, sync, and multi-document RAG are roadmap items.
+This slice supports pasted text or uploaded text/markdown/PDF files, local structured document analysis, transcript learning, dictionary saving, short model-backed translation, and quiz draft generation. Mock/demo content is only shown when `NEXT_PUBLIC_DEMO_MODE=true`. Full-paper staged analysis, model-backed quiz generation, auth, sync, and multi-document RAG are roadmap items.
 
 ## Optional Gemma 4 MLX Runtime
 

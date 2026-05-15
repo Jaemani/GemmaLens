@@ -11,6 +11,7 @@ import {
   stringifyAnalysisExperiment,
   type AnalysisExperimentConfig
 } from "@/lib/experiments";
+import { demoModeEnabled } from "@/lib/demoMode";
 
 const candidates = [
   {
@@ -69,14 +70,16 @@ export function ExperimentDashboard() {
           <div>
             <h1 className="text-2xl font-semibold">Experiment dashboard</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-700">
-              Switch all documented A/B candidates here, then open the demo result and collect team feedback on cleanup time,
+              Switch all documented A/B candidates here, then open an analyzed result and collect team feedback on cleanup time,
               saved item quality, and reading flow.
             </p>
           </div>
-          <Link href="/analysis/demo" className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white">
-            Test demo result
-            <ArrowRight size={16} />
-          </Link>
+          {demoModeEnabled ? (
+            <Link href="/analysis/demo" className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white">
+              Test demo result
+              <ArrowRight size={16} />
+            </Link>
+          ) : null}
         </div>
       </section>
 

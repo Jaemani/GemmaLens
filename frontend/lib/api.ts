@@ -11,7 +11,8 @@ import type {
   UserProfile
 } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+const SERVER_API_BASE = process.env.BACKEND_INTERNAL_URL ?? PUBLIC_API_BASE ?? "http://127.0.0.1:8012";
 const REQUEST_TIMEOUT_MS = 30000;
 const PROFILE_TIMEOUT_MS = 8000;
 const UPLOAD_TIMEOUT_MS = 300000;
@@ -75,22 +76,27 @@ function normalizeRequestError(err: unknown, timeoutMs = REQUEST_TIMEOUT_MS, pha
 }
 
 function apiBase() {
-  if (typeof window === "undefined") return API_BASE;
-  const { protocol, hostname } = window.location;
-  if (isLocalNetworkHost(hostname)) return `${protocol}//${hostname}:8012`;
-  return API_BASE;
+  if (typeof window === "undefined") return SERVER_API_BASE;
+  if (PUBLIC_API_BASE && !isPrivateBackendUrl(PUBLIC_API_BASE)) return PUBLIC_API_BASE;
+  return "/api/backend";
 }
 
-function isLocalNetworkHost(hostname: string) {
-  if (hostname === "localhost" || hostname === "127.0.0.1") return true;
-  if (hostname.startsWith("192.168.") || hostname.startsWith("10.") || hostname.startsWith("100.")) return true;
-  const match = hostname.match(/^172\.(\d+)\./);
-  return match ? Number(match[1]) >= 16 && Number(match[1]) <= 31 : false;
+function isPrivateBackendUrl(value: string) {
+  try {
+    const hostname = new URL(value).hostname;
+    if (hostname === "localhost" || hostname === "127.0.0.1") return true;
+    if (hostname.startsWith("192.168.") || hostname.startsWith("10.") || hostname.startsWith("100.")) return true;
+    const match = hostname.match(/^172\.(\d+)\./);
+    return match ? Number(match[1]) >= 16 && Number(match[1]) <= 31 : false;
+  } catch {
+    return true;
+  }
 }
 
 export const api = {
   getModelStatus: () => request<ModelStatus>("/models/status"),
   listModelPresets: () => request<ModelPreset[]>("/models/presets"),
+  warmupModel: () => request<{ status: string; provider: string; elapsed_seconds: number }>("/models/warmup", { method: "POST", timeoutMs: 300000 }),
   updateModelConfig: (payload: ModelConfigUpdate) =>
     request<ModelStatus>("/models/config", { method: "POST", body: JSON.stringify(payload) }),
   listDocuments: () => request<DocumentListItem[]>("/documents"),

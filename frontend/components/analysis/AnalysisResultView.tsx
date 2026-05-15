@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { AnalysisResult } from "@/lib/types";
+import { demoModeEnabled } from "@/lib/demoMode";
 import { demoAnalysis, DEMO_DOCUMENT_ID } from "@/lib/demoData";
 import {
   ANALYSIS_EXPERIMENT_STORAGE_KEY,
@@ -38,6 +39,10 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
     async function loadOrAnalyze() {
       try {
         if (documentId === DEMO_DOCUMENT_ID) {
+          if (!demoModeEnabled) {
+            setError("Demo result is disabled in local real-model mode.");
+            return;
+          }
           if (!cancelled) {
             setAnalysis(demoAnalysis);
             setStep(4);

@@ -41,6 +41,7 @@ This is not legal advice; it is an engineering compliance checklist based on the
 - TypeScript
 - Tailwind CSS
 - Material-inspired layout
+- Same-origin `/api/backend/*` proxy for local backend access from phones and non-Chrome browsers
 - Main routes:
   - `/documents`: upload or paste text
   - `/analysis/[documentId]`: structured result
@@ -87,6 +88,7 @@ Important current policy:
 - Mock is only for deployed UI/demo mode.
 - Real MLX failures must not silently return mock content.
 - MLX prompts use atomic JSON-only tasks with thinking disabled to reduce invalid structured output.
+- The loaded MLX model is cached in process and can be warmed up through `POST /models/warmup`.
 
 ## 4. Implemented Changes
 
@@ -143,6 +145,20 @@ Important current policy:
 - Reworked the dashboard into a compact workspace view.
 - Removed duplicated action buttons and team-testing/deployment copy from the user-facing page.
 - Model runtime status remains visible without presenting the app as a generic landing page.
+- Added model warmup control so demos can load Gemma before the first translation or analysis task.
+
+### Runtime Stability
+
+- Added same-origin frontend proxy to avoid direct browser calls to `:8012`.
+- Added `scripts/run_local_stack.sh` to start backend and frontend together on stable ports.
+- Restricted demo data and demo result links to explicit `NEXT_PUBLIC_DEMO_MODE=true`.
+- Fixed the MLX warmup route to run async; the first implementation loaded MLX in a FastAPI worker thread and could fail later with a GPU stream/thread error.
+
+Observed warm local timings on E2B:
+
+- Model warmup: about 2.7 seconds in the latest local run.
+- Short translation: about 1.3 seconds after warmup.
+- Short structured analysis: about 15.3 seconds after warmup.
 
 ## 5. Current Technical Limitations
 

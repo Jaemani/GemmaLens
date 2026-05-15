@@ -27,6 +27,9 @@ class MLXAdapter(ModelAdapter):
         self.fallback = MockModelAdapter()
         self.normalizer = AnalysisNormalizationService()
 
+    def warmup(self) -> None:
+        self._load()
+
     async def analyze_document(self, document_id: str, text: str, chunks: list[str]) -> AnalysisResult:
         try:
             model, tokenizer = self._load()

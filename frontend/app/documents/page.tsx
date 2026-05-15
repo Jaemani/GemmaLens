@@ -2,6 +2,7 @@ import { DocumentInputPanel } from "@/components/document/DocumentInputPanel";
 import { DocumentPreview } from "@/components/document/DocumentPreview";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
+import { demoModeEnabled } from "@/lib/demoMode";
 import { demoDocuments } from "@/lib/demoData";
 import type { DocumentListItem } from "@/lib/types";
 
@@ -10,7 +11,7 @@ export default async function DocumentsPage() {
   try {
     documents = await api.listDocuments();
   } catch {
-    documents = demoDocuments;
+    documents = demoModeEnabled ? demoDocuments : [];
   }
 
   return (

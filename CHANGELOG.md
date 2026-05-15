@@ -11,6 +11,10 @@
 - Added YouTube transcript fallback through `yt-dlp`.
 - Collapsed manual subtitle fallback in video learning.
 - Added real backend translation endpoint for MLX runtime and removed fake echo translation output.
+- Added same-origin frontend proxy for backend calls so local phones/browsers do not depend on direct `:8012` CORS access.
+- Added model warmup endpoint/button to load Gemma before demo tasks and reuse the loaded model for atomic calls.
+- Added local stack runner for stable `8012` backend + `3003` frontend startup.
+- Restricted demo/sample result fallbacks to explicit `NEXT_PUBLIC_DEMO_MODE=true`.
 - Added no-thinking atomic MLX generation prompts for more reliable JSON output.
 - Hid internal analysis validation warnings from the user-facing result page.
 - Reworked dashboard into a compact workspace view and removed duplicate action buttons.
