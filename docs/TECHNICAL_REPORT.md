@@ -106,7 +106,8 @@ Important current policy:
 
 - Removed prefilled sample text.
 - Added separate upload and paste modes.
-- Added PDF/text/markdown upload.
+- Added PDF/DOCX/text/markdown upload. Legacy `.doc` files return an actionable conversion message.
+- Text extraction has an explicit failure path: scanned or image-only PDFs require OCR, and image-only DOCX files should be exported or pasted as text.
 - Added upload progress and phase-specific status.
 - Added delete buttons for document/video history.
 - Added backend `DELETE /documents/{id}` with analysis cleanup.

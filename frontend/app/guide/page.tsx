@@ -26,11 +26,11 @@ export default function GuidePage() {
       </div>
 
       <div className="space-y-6">
-        <section className="rounded-2xl border border-line bg-panel p-6 shadow-material">
+        <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
           <h2 className="text-xl font-semibold">Current flow</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-5">
             {["Input", "Chunk", "Analyze", "Structure", "Save"].map((item, index) => (
-              <div key={item} className="rounded-2xl bg-surface p-4">
+              <div key={item} className="rounded-lg bg-surface p-4">
                 <p className="text-xs font-semibold text-accent">Step {index + 1}</p>
                 <p className="mt-2 font-semibold">{item}</p>
               </div>
@@ -38,11 +38,11 @@ export default function GuidePage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-line bg-panel p-6 shadow-material">
+        <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
           <h2 className="text-xl font-semibold">Learning levels</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {levels.map((level) => (
-              <div key={level.label} className="rounded-2xl border border-line p-4">
+              <div key={level.label} className="rounded-lg border border-line p-4">
                 <p className="font-semibold text-accent">{level.label}</p>
                 <p className="mt-2 text-sm leading-6 text-neutral-700">{level.detail}</p>
               </div>
@@ -50,12 +50,12 @@ export default function GuidePage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-line bg-panel p-6 shadow-material">
+        <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
           <h2 className="text-xl font-semibold">Difficulty scores</h2>
           <p className="mt-2 text-sm text-neutral-700">Scores use a 0-10 scale. They are learning-priority signals, not official exam grades.</p>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {scores.map((score) => (
-              <div key={score.label} className="rounded-2xl bg-surface p-4">
+              <div key={score.label} className="rounded-lg bg-surface p-4">
                 <p className="font-semibold">{score.label}</p>
                 <p className="mt-2 text-sm leading-6 text-neutral-700">{score.detail}</p>
               </div>
@@ -63,7 +63,7 @@ export default function GuidePage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-line bg-panel p-6 shadow-material">
+        <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
           <h2 className="text-xl font-semibold">Language direction</h2>
           <p className="mt-2 text-sm leading-6 text-neutral-700">
             The prototype began with Korean learners reading English papers, but the interface now supports searchable language selection for broad Gemma-family multilingual coverage.
@@ -73,7 +73,7 @@ export default function GuidePage() {
           </p>
         </section>
 
-        <section className="rounded-2xl border border-line bg-panel p-6 shadow-material">
+        <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
           <h2 className="text-xl font-semibold">What is saved</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <GuideItem title="Terms" detail="Important vocabulary, domain terms, and multi-word technical expressions." />
@@ -88,7 +88,7 @@ export default function GuidePage() {
 
 function GuideItem({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="rounded-2xl border border-line p-4">
+    <div className="rounded-lg border border-line p-4">
       <p className="font-semibold">{title}</p>
       <p className="mt-2 text-sm leading-6 text-neutral-700">{detail}</p>
     </div>

@@ -69,7 +69,7 @@ ruff check app tests
 pytest
 ```
 
-Uploads support `.txt`, `.md`, `.markdown`, and basic text-extractable `.pdf` files through `POST /documents/upload`.
+Uploads support `.txt`, `.md`, `.markdown`, `.docx`, and basic text-extractable `.pdf` files through `POST /documents/upload`. Legacy `.doc` files should be exported to `.docx`, `.pdf`, or `.txt` first. Scanned/image-only PDFs need OCR before GemmaLens can analyze them.
 
 ## Prototype Scope
 

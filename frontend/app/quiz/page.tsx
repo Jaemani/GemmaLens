@@ -65,7 +65,7 @@ export default function QuizPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-6xl">
+      <div className="w-full">
         <div className="mb-5">
           <p className="text-sm font-semibold text-accent">Experimental</p>
           <h1 className="mt-2 text-2xl font-semibold">Quiz maker</h1>
@@ -73,7 +73,7 @@ export default function QuizPage() {
             Build review prompts from analyzed documents and video transcripts. Drafts are cached in this browser.
           </p>
         </div>
-        <section className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <section className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
           <aside className="rounded-lg border border-line bg-panel p-5 shadow-material">
           <h2 className="font-semibold">Analyzed sources</h2>
           <p className="mt-2 text-sm leading-6 text-neutral-600">{status}</p>

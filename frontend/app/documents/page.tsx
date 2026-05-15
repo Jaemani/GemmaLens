@@ -17,12 +17,12 @@ export default async function DocumentsPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-6xl">
+      <div className="w-full">
         <div className="mb-5">
-        <h1 className="text-2xl font-semibold">Document input</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          Upload a document or paste a focused excerpt, then generate structured learning objects.
-        </p>
+          <h1 className="text-2xl font-semibold">Document input</h1>
+          <p className="mt-2 max-w-3xl text-sm text-neutral-600">
+            Upload a document or paste a focused excerpt, then generate structured learning objects. Original PDF rendering is a separate viewer step; current analysis uses extracted text.
+          </p>
         </div>
         <div className="space-y-6">
           <DocumentInputPanel />

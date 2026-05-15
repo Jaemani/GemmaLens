@@ -80,6 +80,24 @@ Generic local context such as "the best performing models" should not become a s
 
 The current reader uses extracted text slices. It is not a rendered PDF viewer yet. A future PDF viewer should preserve page geometry on the left while the right panel shows page-specific learning guidance.
 
+## Ingestion Policy
+
+Supported first-pass inputs:
+
+- pasted text;
+- `.txt`;
+- `.md` / `.markdown`;
+- `.docx`;
+- selectable-text `.pdf`;
+- video transcripts.
+
+Unsupported or degraded inputs:
+
+- legacy `.doc`: ask the user to export to `.docx`, `.pdf`, or `.txt`;
+- scanned/image-only PDF: require OCR before analysis;
+- image-only DOCX: ask the user to export or paste text;
+- equation-heavy and multi-column PDFs: extracted text may be damaged, so do not present it as a faithful PDF reader.
+
 ## Edge Runtime Strategy
 
 Small Gemma models should not receive a whole paper and be asked for one large JSON object. The stable pattern is:

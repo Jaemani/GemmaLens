@@ -180,6 +180,45 @@ def test_upload_document_uses_ingestion_service(client):
     assert empty.status_code == 400
 
 
+def test_upload_docx_document_uses_ingestion_service(client):
+    from io import BytesIO
+
+    from docx import Document
+
+    buffer = BytesIO()
+    doc = Document()
+    doc.add_paragraph("Batch Normalization stabilizes deep network training.")
+    doc.add_table(rows=1, cols=2).rows[0].cells[0].text = "term"
+    doc.tables[0].rows[0].cells[1].text = "meaning"
+    doc.save(buffer)
+
+    uploaded = client.post(
+        "/documents/upload",
+        files={
+            "file": (
+                "notes.docx",
+                buffer.getvalue(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
+    assert uploaded.status_code == 200
+    body = uploaded.json()
+    assert body["title"] == "notes.docx"
+    assert body["source_type"] == "docx"
+    assert "Batch Normalization" in body["content"]
+    assert "term | meaning" in body["content"]
+
+
+def test_upload_legacy_doc_returns_actionable_error(client):
+    uploaded = client.post(
+        "/documents/upload",
+        files={"file": ("legacy.doc", b"binary-doc-content", "application/msword")},
+    )
+    assert uploaded.status_code == 400
+    assert ".doc files are not directly supported" in uploaded.json()["detail"]
+
+
 def test_missing_resources_return_404(client):
     assert client.get("/documents/missing").status_code == 404
     assert client.get("/documents/missing/analysis").status_code == 404

@@ -82,7 +82,7 @@ export function DocumentInputPanel() {
   }
 
   return (
-    <section className="grid w-full gap-5 xl:grid-cols-[minmax(0,760px)_340px]">
+    <section className="grid w-full gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div className="rounded-lg border border-line bg-panel p-5 shadow-material sm:p-6">
         <div className="mx-auto grid w-full max-w-md grid-cols-2 gap-1 rounded-lg bg-surface p-1">
           {(["upload", "paste"] as const).map((item) => (
@@ -100,7 +100,7 @@ export function DocumentInputPanel() {
           ))}
         </div>
         {mode === "paste" ? (
-          <div className="mx-auto mt-6 max-w-3xl">
+          <div className="mt-6">
             <label className="mt-5 block text-sm font-semibold" htmlFor="title">Title</label>
             <input
               id="title"
@@ -120,14 +120,14 @@ export function DocumentInputPanel() {
             />
           </div>
         ) : (
-          <div className="mx-auto mt-6 max-w-3xl space-y-4">
+          <div className="mt-6 space-y-4">
             <DocumentUploadCard disabled={busy} onFile={uploadAndAnalyze} />
             <div className="rounded-lg border border-line bg-surface p-4 text-sm leading-6 text-neutral-700">
-              After extraction, the local model analyzes the first safe section. Full staged paper analysis is planned next.
+              PDF and DOCX files are converted to text before analysis. Scanned PDFs or image-only DOCX files need OCR or pasted text.
             </div>
           </div>
         )}
-        <div className="mx-auto mt-4 flex max-w-3xl justify-end">
+        <div className="mt-4 flex justify-end">
           <div className="flex flex-wrap justify-end gap-3">
             {mode === "paste" ? (
               <>

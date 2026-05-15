@@ -2,6 +2,14 @@
 
 ## 2026-05-15
 
+- Added DOCX upload support, including paragraph and simple table extraction.
+- Added explicit legacy `.doc` rejection with conversion guidance.
+- Improved text decoding for TXT/Markdown uploads, including Korean encodings.
+- Added clearer OCR guidance for scanned/image-only PDFs.
+- Widened the main workspace and document input layout so a real PDF viewer can fit later without wasting side margins.
+- Removed narrow page wrappers from dashboard, documents, translate, quiz, and settings so tool screens use the available workspace consistently.
+- Normalized oversized rounded guide/progress cards to the same 8px-radius card language used elsewhere.
+- Updated sidebar spacing and typography for a quieter workspace feel.
 - Cached analysis reads now re-run normalization against the source text, so bad saved objects can be filtered without forcing a model rerun.
 - Removed the fake left-side PDF reader layout. Extracted text slices are now collapsed source tools, not presented as a real reading pane.
 - Clarified that extracted text slices are model input, not rendered PDF pages.

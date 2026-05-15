@@ -53,7 +53,7 @@ export default function TranslatePage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-6xl">
+      <div className="w-full">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="mt-2 text-2xl font-semibold">Translate</h1>
@@ -61,7 +61,7 @@ export default function TranslatePage() {
           </div>
           <p className="text-xs font-medium text-neutral-500">{LIMIT} character limit</p>
         </div>
-        <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
           <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
           <div className="grid gap-3 sm:grid-cols-2">
             <LanguageSelect label="From" value={sourceLanguage} onChange={setSourceLanguage} />

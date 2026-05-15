@@ -22,7 +22,7 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-6xl space-y-5">
+      <div className="space-y-5">
         <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="rounded-lg border border-line bg-panel p-6 shadow-material">
             <p className="text-sm font-semibold text-accent">GemmaLens</p>

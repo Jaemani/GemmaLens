@@ -10,7 +10,9 @@ GemmaLens turns academic or technical documents into personalized language-learn
 - Backend: FastAPI, SQLite, SQLAlchemy, Pydantic.
 - Model runtime: Mock, Ollama scaffold, MLX Gemma 4 presets, and ThinkPad remote Gemma 4 presets over Tailscale.
 - Local models installed: Gemma 4 E2B bf16 and Gemma 4 E4B bf16 under `~/Models/mlx`.
-- Input: pasted text, text/markdown upload, basic PDF text extraction.
+- Input: pasted text, text/markdown/DOCX upload, and basic selectable-text PDF extraction.
+- Legacy `.doc` files are not directly supported; users should export to `.docx`, `.pdf`, or `.txt`.
+- Scanned/image-only PDFs require OCR before analysis.
 - Output: domain, difficulty, concepts, terms, phrases, sentence decomposition, layered summaries.
 - Dictionary: save/list/delete concepts, terms, phrases, and sentences.
 

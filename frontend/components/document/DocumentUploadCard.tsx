@@ -15,7 +15,7 @@ export function DocumentUploadCard({ disabled, onFile }: { disabled?: boolean; o
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{disabled ? "Processing document..." : "Upload document"}</p>
           <p className="mt-1 text-sm leading-6 text-neutral-600">
-            Select a PDF, text, or markdown file. GemmaLens extracts the text first, then runs structured learning analysis.
+            Select a PDF, DOCX, text, or markdown file. GemmaLens extracts text first, then runs structured learning analysis.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
@@ -27,7 +27,7 @@ export function DocumentUploadCard({ disabled, onFile }: { disabled?: boolean; o
               <Upload size={16} />
               Choose file
             </button>
-            <span className="text-xs font-medium text-neutral-500">PDF, TXT, MD</span>
+            <span className="text-xs font-medium text-neutral-500">PDF, DOCX, TXT, MD</span>
           </div>
         </div>
       </div>
@@ -35,7 +35,7 @@ export function DocumentUploadCard({ disabled, onFile }: { disabled?: boolean; o
         ref={inputRef}
         className="sr-only"
         type="file"
-        accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf"
+        accept=".txt,.md,.markdown,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         disabled={disabled}
         onChange={(event) => {
           const file = event.target.files?.[0];

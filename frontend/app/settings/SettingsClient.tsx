@@ -48,7 +48,7 @@ export function SettingsClient({
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-5xl">
+      <div className="w-full">
         <div className="mb-5">
           <p className="text-sm font-semibold text-accent">Local learner profile</p>
           <h1 className="mt-2 text-2xl font-semibold text-ink">Settings</h1>
@@ -70,7 +70,7 @@ export function SettingsClient({
             </button>
           </div>
         ) : profile ? (
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <section className="rounded-lg border border-line bg-panel p-5 shadow-material">
               <h2 className="text-xl font-semibold">Language pair</h2>
               <Field label="Learning language">

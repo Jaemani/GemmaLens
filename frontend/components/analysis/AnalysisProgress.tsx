@@ -31,7 +31,7 @@ export function AnalysisProgress({
       : "Preparing the document before model analysis starts.";
 
   return (
-    <div className="rounded-2xl border border-line bg-panel p-5 shadow-material">
+    <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
       <div className="flex items-center gap-3">
         <Loader2 size={20} className="animate-spin text-accent" />
         <div>
