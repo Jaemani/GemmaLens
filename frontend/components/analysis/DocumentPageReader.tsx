@@ -34,6 +34,7 @@ export function DocumentPageReader({
   const fallbackUnanalyzedIndex = sections.findIndex((section) => !section.analyzed);
   const targetUnanalyzedIndex = nextUnanalyzedIndex >= 0 ? nextUnanalyzedIndex : fallbackUnanalyzedIndex;
   const plannedBatchIndices = nextUnanalyzedSectionIndices(sections, pageIndex, 3);
+  const progressStorageKey = `gemmalens:auto-study:${documentId}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +69,13 @@ export function DocumentPageReader({
     const matchingIndex = sections.findIndex((section) => pdfPageFromLabel(section.source_label) === requestedSourcePage);
     if (matchingIndex >= 0) setPageIndex(matchingIndex);
   }, [currentSection?.source_label, requestedSourcePage, sections]);
+
+  useEffect(() => {
+    const saved = readAutoStudyProgress(progressStorageKey);
+    if (saved && !batchStatus) {
+      setBatchStatus(saved.status);
+    }
+  }, [batchStatus, progressStorageKey]);
 
   async function analyzeSectionAt(index: number, options: { keepBusy?: boolean } = {}) {
     const section = sections[index];
@@ -127,16 +135,43 @@ export function DocumentPageReader({
     setIsBatchAnalyzing(true);
     setIsAnalyzing(true);
     setBatchStatus("");
+    writeAutoStudyProgress(progressStorageKey, {
+      status: `Starting auto-study for ${plannedBatchIndices.length} sections...`,
+      completed: 0,
+      planned: plannedBatchIndices.length,
+      updatedAt: Date.now()
+    });
     try {
       for (let offset = 0; offset < plannedBatchIndices.length; offset += 1) {
         const index = plannedBatchIndices[offset];
         const section = sections[index];
-        setBatchStatus(`Analyzing ${offset + 1} / ${plannedBatchIndices.length}: section ${section?.section_number ?? index + 1}`);
+        const status = `Analyzing ${offset + 1} / ${plannedBatchIndices.length}: section ${section?.section_number ?? index + 1}`;
+        setBatchStatus(status);
+        writeAutoStudyProgress(progressStorageKey, {
+          status,
+          completed: offset,
+          planned: plannedBatchIndices.length,
+          updatedAt: Date.now()
+        });
         await analyzeSectionAt(index, { keepBusy: true });
       }
-      setBatchStatus(`Finished ${plannedBatchIndices.length} sections. Paper map updated.`);
+      const status = `Finished ${plannedBatchIndices.length} sections. Paper map updated.`;
+      setBatchStatus(status);
+      writeAutoStudyProgress(progressStorageKey, {
+        status,
+        completed: plannedBatchIndices.length,
+        planned: plannedBatchIndices.length,
+        updatedAt: Date.now()
+      });
     } catch {
-      setBatchStatus("Auto-study stopped. The last section needs attention.");
+      const status = "Auto-study stopped. The last section needs attention. Use Auto-study next 3 to continue.";
+      setBatchStatus(status);
+      writeAutoStudyProgress(progressStorageKey, {
+        status,
+        completed: sections.filter((section) => section.analyzed).length,
+        planned: plannedBatchIndices.length,
+        updatedAt: Date.now()
+      });
     } finally {
       setIsBatchAnalyzing(false);
       setIsAnalyzing(false);
@@ -391,4 +426,31 @@ function nextUnanalyzedSectionIndices(sections: DocumentSection[], currentIndex:
     .filter(({ section, index }) => index < currentIndex && !section.analyzed)
     .map(({ index }) => index);
   return [...afterCurrent, ...beforeCurrent].slice(0, limit);
+}
+
+type AutoStudyProgress = {
+  status: string;
+  completed: number;
+  planned: number;
+  updatedAt: number;
+};
+
+function readAutoStudyProgress(key: string): AutoStudyProgress | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as AutoStudyProgress;
+    if (!parsed.status || !parsed.updatedAt) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeAutoStudyProgress(key: string, progress: AutoStudyProgress) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(progress));
+  } catch {
+    // Ignore storage failures; auto-study still works for the current session.
+  }
 }
