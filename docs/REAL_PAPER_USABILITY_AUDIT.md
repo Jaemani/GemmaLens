@@ -37,6 +37,7 @@ Local demo records currently include:
 - New PDF uploads preserve internal page markers during extraction, allowing section responses to include labels such as `PDF page 2`. Older existing demo records may not have these markers.
 - The PDF viewer now follows section selection when source labels are available. In the BatchNorm smoke check, selecting section 4 moved the left preview to `PDF page 2 / 11`.
 - Reverse sync also works for labeled PDFs. In the BatchNorm smoke check, clicking the PDF preview `Next` button moved the reader to `Section 4 / 31`, labeled `PDF page 2`.
+- Added `Auto-study next 3` as a lightweight staged-analysis loop. It uses the same section-analysis endpoint repeatedly and updates section status/paper-map state after each section.
 - A completed section lesson now includes `Analyze next unstudied`, keeping the reading loop moving after the user finishes a section.
 - The cumulative paper map refreshes after section analysis.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
@@ -47,7 +48,7 @@ Local demo records currently include:
 ## Still Weak
 
 - PDF page navigation and extracted section navigation are partially aligned for new uploads. Section-to-PDF and PDF-to-section movement both work when source labels are available.
-- Full-paper staged analysis is not automated yet. The user still has to trigger section analysis manually, though the UI now helps move to the next unstudied section.
+- Full-paper staged analysis is not fully automated yet. The user can trigger `Auto-study next 3`, but there is no durable backend job queue, pause/resume state, or full-paper final merge.
 - The lower analysis page still contains large report-style blocks. It is usable, but it is not yet a polished reading companion.
 - Some source extraction remains lossy for multi-column papers and equations.
 - Concept quality is improved by guardrails, but still needs broader real model-output contract tests across more papers and sections.
@@ -55,7 +56,7 @@ Local demo records currently include:
 
 ## Next Product Fixes
 
-1. Add a background staged-analysis mode that processes sections sequentially and updates paper-map coverage.
+1. Add a durable backend staged-analysis job queue with pause/resume and status recovery after refresh.
 2. Add a final merge step that deduplicates concepts, terms, expressions, references, and summaries after enough sections are analyzed.
 3. Improve PDF page-to-text-section alignment. If exact alignment is not possible, make the mismatch explicit and avoid implying they are the same unit.
 4. Add real-paper quality fixtures for BERT, BatchNorm, and Transformer papers that reject generic fragments and verify expected concept/term separation.

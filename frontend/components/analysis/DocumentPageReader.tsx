@@ -21,6 +21,8 @@ export function DocumentPageReader({
   const [pageIndex, setPageIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
+  const [batchStatus, setBatchStatus] = useState("");
   const [isAttaching, setIsAttaching] = useState(false);
   const [sectionAnalysis, setSectionAnalysis] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState("");
@@ -31,6 +33,7 @@ export function DocumentPageReader({
   const nextUnanalyzedIndex = sections.findIndex((section, index) => index > pageIndex && !section.analyzed);
   const fallbackUnanalyzedIndex = sections.findIndex((section) => !section.analyzed);
   const targetUnanalyzedIndex = nextUnanalyzedIndex >= 0 ? nextUnanalyzedIndex : fallbackUnanalyzedIndex;
+  const plannedBatchIndices = nextUnanalyzedSectionIndices(sections, pageIndex, 3);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,7 +69,7 @@ export function DocumentPageReader({
     if (matchingIndex >= 0) setPageIndex(matchingIndex);
   }, [currentSection?.source_label, requestedSourcePage, sections]);
 
-  async function analyzeSectionAt(index: number) {
+  async function analyzeSectionAt(index: number, options: { keepBusy?: boolean } = {}) {
     const section = sections[index];
     if (!document || !section || !section.text.trim()) return;
     setPageIndex(index);
@@ -81,8 +84,9 @@ export function DocumentPageReader({
       onSectionAnalyzed?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not analyze this section.");
+      throw err;
     } finally {
-      setIsAnalyzing(false);
+      if (!options.keepBusy) setIsAnalyzing(false);
     }
   }
 
@@ -118,6 +122,27 @@ export function DocumentPageReader({
     if (targetUnanalyzedIndex >= 0) setPageIndex(targetUnanalyzedIndex);
   }
 
+  async function autoStudyNextSections() {
+    if (!plannedBatchIndices.length || isBatchAnalyzing) return;
+    setIsBatchAnalyzing(true);
+    setIsAnalyzing(true);
+    setBatchStatus("");
+    try {
+      for (let offset = 0; offset < plannedBatchIndices.length; offset += 1) {
+        const index = plannedBatchIndices[offset];
+        const section = sections[index];
+        setBatchStatus(`Analyzing ${offset + 1} / ${plannedBatchIndices.length}: section ${section?.section_number ?? index + 1}`);
+        await analyzeSectionAt(index, { keepBusy: true });
+      }
+      setBatchStatus(`Finished ${plannedBatchIndices.length} sections. Paper map updated.`);
+    } catch {
+      setBatchStatus("Auto-study stopped. The last section needs attention.");
+    } finally {
+      setIsBatchAnalyzing(false);
+      setIsAnalyzing(false);
+    }
+  }
+
   return (
     <section className="rounded-lg border border-line bg-panel shadow-material">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line p-5">
@@ -135,11 +160,20 @@ export function DocumentPageReader({
           <button
             type="button"
             onClick={goToNextUnanalyzed}
-            disabled={targetUnanalyzedIndex < 0}
+            disabled={targetUnanalyzedIndex < 0 || isBatchAnalyzing}
             className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
           >
             <SkipForward size={16} />
             Next unstudied
+          </button>
+          <button
+            type="button"
+            onClick={autoStudyNextSections}
+            disabled={!plannedBatchIndices.length || isBatchAnalyzing || isAnalyzing}
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-4 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
+          >
+            <ScanText size={16} />
+            {isBatchAnalyzing ? "Auto-studying..." : "Auto-study next 3"}
           </button>
           {document.source_type === "pdf" && !document.has_original_file ? (
             <>
@@ -168,7 +202,7 @@ export function DocumentPageReader({
           <button
             type="button"
             onClick={analyzePage}
-            disabled={isAnalyzing || !currentSection || !page.trim()}
+            disabled={isAnalyzing || isBatchAnalyzing || !currentSection || !page.trim()}
             className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
           >
             <ScanText size={16} />
@@ -176,6 +210,9 @@ export function DocumentPageReader({
           </button>
         </div>
       </div>
+      {batchStatus ? (
+        <div className="border-b border-line bg-blue-50 px-5 py-3 text-sm font-medium text-accent">{batchStatus}</div>
+      ) : null}
       {sections.length ? (
         <div className="flex gap-1 overflow-x-auto border-b border-line px-5 py-2">
           {sections.map((section, index) => (
@@ -342,4 +379,16 @@ function MiniList({ title, rows }: { title: string; rows: Array<[string, string]
 function pdfPageFromLabel(label: string | null) {
   const match = label?.match(/^PDF page (\d+)$/);
   return match ? Number(match[1]) : null;
+}
+
+function nextUnanalyzedSectionIndices(sections: DocumentSection[], currentIndex: number, limit: number) {
+  const afterCurrent = sections
+    .map((section, index) => ({ section, index }))
+    .filter(({ section, index }) => index >= currentIndex && !section.analyzed)
+    .map(({ index }) => index);
+  const beforeCurrent = sections
+    .map((section, index) => ({ section, index }))
+    .filter(({ section, index }) => index < currentIndex && !section.analyzed)
+    .map(({ index }) => index);
+  return [...afterCurrent, ...beforeCurrent].slice(0, limit);
 }
