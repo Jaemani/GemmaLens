@@ -8,6 +8,7 @@ import type {
   PaperMap,
   ModelPreset,
   ModelStatus,
+  StagedAnalysisResponse,
   TranslationResponse,
   TranscriptResponse,
   UserProfile
@@ -149,6 +150,12 @@ export const api = {
     request<AnalysisResult>(`/documents/${documentId}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
   analyzeDocumentSection: (documentId: string, sectionIndex: number) =>
     request<AnalysisResult>(`/documents/${documentId}/sections/${sectionIndex}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
+  stagedAnalyzeDocument: (documentId: string, payload: { max_sections: number }) =>
+    request<StagedAnalysisResponse>(`/documents/${documentId}/staged-analysis`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      timeoutMs: ANALYSIS_TIMEOUT_MS
+    }),
   getAnalysis: (documentId: string) => request<AnalysisResult>(`/documents/${documentId}/analysis`),
   getPaperMap: (documentId: string) => request<PaperMap>(`/documents/${documentId}/paper-map`),
   deleteDocument: async (documentId: string) => {

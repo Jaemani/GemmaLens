@@ -146,6 +146,8 @@ Current implementation note: `GET /documents/{id}/paper-map` returns both `total
 
 The frontend should not duplicate section-splitting logic. The reader requests backend-cleaned sections from `GET /documents/{id}/sections`, and `Analyze this section` sends the same zero-based section index to `POST /documents/{id}/sections/{section_index}/analyze`. This keeps displayed text, cache keys, paper-map coverage, and model input aligned.
 
+`POST /documents/{id}/staged-analysis` analyzes the next unstudied sections in backend order. The current endpoint is synchronous, which is acceptable for local functional testing, but the release version should become a durable job with pause/resume, cancellation, and status polling. This matters for edge devices because a slow model should not make the browser responsible for remembering which sections succeeded.
+
 For new PDF uploads, extraction stores internal page markers before text cleanup. Section responses can expose `source_label` values such as `PDF page 2`, which gives the learner a source location hint even before full PDF-page synchronization exists.
 
 UI priority for paper reading:

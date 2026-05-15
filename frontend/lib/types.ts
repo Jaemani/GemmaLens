@@ -99,6 +99,16 @@ export type PaperMap = {
   section_summaries: PaperMapItem[];
 };
 
+export type StagedAnalysisResponse = {
+  document_id: string;
+  total_sections: number;
+  requested_sections: number[];
+  analyzed_sections: number[];
+  skipped_sections: number[];
+  status: "completed" | "nothing_to_do" | "partial";
+  message: string;
+};
+
 export type DictionaryItem = {
   id: string;
   item_type: "term" | "phrase" | "sentence" | "concept";

@@ -38,18 +38,20 @@ Local demo records currently include:
 - The PDF viewer now follows section selection when source labels are available. In the BatchNorm smoke check, selecting section 4 moved the left preview to `PDF page 2 / 11`.
 - Reverse sync also works for labeled PDFs. In the BatchNorm smoke check, clicking the PDF preview `Next` button moved the reader to `Section 4 / 31`, labeled `PDF page 2`.
 - Added `Auto-study next 3` as a lightweight staged-analysis loop. It uses the same section-analysis endpoint repeatedly and updates section status/paper-map state after each section.
+- `Auto-study next 3` now delegates the sequence to `POST /documents/{id}/staged-analysis`, so backend state, cache keys, and section ordering stay aligned while the browser shows progress and refreshes afterward.
 - Auto-study progress is persisted per document in browser localStorage. A reload can restore the last status message and keep the continuation path visible.
 - A completed section lesson now includes `Analyze next unstudied`, keeping the reading loop moving after the user finishes a section.
 - The cumulative paper map refreshes after section analysis.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
 - Added real-paper normalization fixtures for BatchNorm and BERT snippets so generic fragments and PDF split artifacts are rejected in tests.
+- Added an Attention/Transformer fixture so `the best performing models` is handled as a discourse signal rather than a saveable term/concept, while Transformer, self-attention, sequence transduction, and parallelization remain learnable.
 - The per-result concept block is called `Concept anchors`, while the cumulative cross-section block is called `Paper map`.
 - The section reader shows a short preview of the current backend-cleaned text before opening the full source text.
 
 ## Still Weak
 
 - PDF page navigation and extracted section navigation are partially aligned for new uploads. Section-to-PDF and PDF-to-section movement both work when source labels are available.
-- Full-paper staged analysis is not fully automated yet. The user can trigger `Auto-study next 3`, and the browser remembers the last progress message, but there is no durable backend job queue or full-paper final merge.
+- Full-paper staged analysis is partly automated. The user can trigger `Auto-study next 3`, and the backend analyzes the next unstudied sections sequentially, but there is no durable background job queue or full-paper final merge.
 - The lower analysis page still contains large report-style blocks. It is usable, but it is not yet a polished reading companion.
 - Some source extraction remains lossy for multi-column papers and equations.
 - Concept quality is improved by guardrails, but still needs broader real model-output contract tests across more papers and sections.
@@ -57,11 +59,11 @@ Local demo records currently include:
 
 ## Next Product Fixes
 
-1. Add a durable backend staged-analysis job queue with pause/resume and status recovery after refresh.
+1. Promote staged analysis from a request/response endpoint to a durable backend job queue with pause/resume and status recovery after refresh.
 2. Add a final merge step that deduplicates concepts, terms, expressions, references, and summaries after enough sections are analyzed.
 3. Improve PDF page-to-text-section alignment. If exact alignment is not possible, make the mismatch explicit and avoid implying they are the same unit.
 4. Add real-paper quality fixtures for BERT, BatchNorm, and Transformer papers that reject generic fragments and verify expected concept/term separation.
 
 ## Current Verdict
 
-The app is closer to a real paper-reading workspace than before because source, extracted section, analysis action, and cumulative map are now visible in one flow. It is still not finished as a full-paper language-learning product because staged analysis, section status, and final merge are missing.
+The app is closer to a real paper-reading workspace than before because source, extracted section, analysis action, staged section analysis, and cumulative map are now visible in one flow. It is still not finished as a full-paper language-learning product because the final whole-paper merge and durable job control are missing.

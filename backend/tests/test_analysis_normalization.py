@@ -308,3 +308,38 @@ def test_bert_real_paper_snippet_drops_pdf_artifacts_and_unhelpful_model_terms()
     assert "new language representation model" not in concepts
     assert "BERT" in terms
     assert "BERT" in concepts
+
+
+def test_attention_paper_snippet_keeps_discourse_signals_out_of_terms():
+    document = (
+        "The best performing models also connect the encoder and decoder through an attention mechanism. "
+        "We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, "
+        "dispensing with recurrence and convolutions entirely. In these models, self-attention is used to compute "
+        "representations of sequence transduction inputs and outputs. This allows for significantly more parallelization "
+        "and helps draw global dependencies between input and output."
+    )
+    payload = {
+        "terms": [
+            {"term": "the best performing models", "meaning": "generic discourse signal"},
+            {"term": "Transformer", "meaning": "attention-only architecture"},
+        ],
+        "concepts": [
+            {"concept": "the best performing models", "explanation": "generic discourse signal"},
+            {"concept": "self-attention", "explanation": "connects sequence positions"},
+        ],
+        "sentences": [],
+        "summaries": {"one_line": document.split(".")[0] + ".", "simple": document.split(".")[0] + ".", "academic": document.split(".")[0] + "."},
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "attention", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "the best performing models" not in {item.lower() for item in terms}
+    assert "the best performing models" not in {item.lower() for item in concepts}
+    assert {"Transformer", "self-attention", "sequence transduction"}.issubset(terms)
+    assert {"Transformer", "self-attention", "sequence transduction"}.issubset(concepts)
+    assert "based solely on" in phrases
+    assert result.summaries.one_line.startswith("The paper introduces the Transformer")
+    assert result.sentences[0].core_structure == "X is based solely on Y, dispensing with Z."

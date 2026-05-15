@@ -364,6 +364,79 @@ class AnalysisNormalizationService:
                     "This task supports sentence-pair understanding in BERT.",
                 ),
             ]
+        elif self._is_attention_text(document_text):
+            known = [
+                (
+                    "Transformer",
+                    "An encoder-decoder architecture that relies on attention instead of recurrence or convolution.",
+                    "field_term",
+                    "hard",
+                    "This is the paper's main model and should anchor the lesson.",
+                ),
+                (
+                    "self-attention",
+                    "An attention mechanism that relates positions within the same sequence to build contextual representations.",
+                    "field_term",
+                    "hard",
+                    "The paper presents self-attention as the core replacement for recurrent sequence modeling.",
+                ),
+                (
+                    "attention mechanism",
+                    "A mechanism that lets a model focus on relevant positions when building a representation or generating output.",
+                    "field_term",
+                    "medium",
+                    "The title claim depends on understanding attention as the central computation.",
+                ),
+                (
+                    "sequence transduction",
+                    "Transforming one sequence into another, such as translating a sentence from one language to another.",
+                    "field_term",
+                    "hard",
+                    "This names the broad task family the Transformer targets.",
+                ),
+                (
+                    "encoder-decoder",
+                    "A model pattern where an encoder represents the input sequence and a decoder generates the output sequence.",
+                    "field_term",
+                    "medium",
+                    "The Transformer keeps the encoder-decoder structure while changing the internal computation.",
+                ),
+                (
+                    "recurrent neural networks",
+                    "Neural networks that process sequences step by step using hidden state.",
+                    "useful",
+                    "medium",
+                    "The paper contrasts recurrent models with attention-only computation.",
+                ),
+                (
+                    "convolutional neural networks",
+                    "Neural networks that use convolution operations to process local patterns.",
+                    "useful",
+                    "medium",
+                    "The paper contrasts convolutional sequence models with the Transformer.",
+                ),
+                (
+                    "parallelization",
+                    "Running computations at the same time instead of step by step.",
+                    "field_term",
+                    "medium",
+                    "This is one of the practical advantages claimed for self-attention.",
+                ),
+                (
+                    "long-range dependencies",
+                    "Relationships between tokens that are far apart in a sequence.",
+                    "field_term",
+                    "hard",
+                    "The paper uses this to explain why shorter attention paths matter.",
+                ),
+                (
+                    "BLEU",
+                    "A machine translation evaluation score based on overlap with reference translations.",
+                    "useful",
+                    "medium",
+                    "This helps the learner interpret the paper's translation results.",
+                ),
+            ]
         else:
             known = [
             (
@@ -495,6 +568,19 @@ class AnalysisNormalizationService:
                 ("we demonstrate", "result", "Signals the evidence used to support the paper's claim."),
                 ("obtains new state-of-the-art", "result", "States an empirical performance result."),
             ]
+        elif self._is_attention_text(document_text):
+            phrase_specs = [
+                ("dominant sequence transduction models", "claim", "Introduces the prior model family the paper is about to contrast."),
+                ("based solely on", "method", "States the main design choice by excluding other mechanisms."),
+                ("dispensing with", "contrast", "Means the method removes or avoids something used by earlier systems."),
+                ("entirely on an attention mechanism", "method", "States that attention is the central computation of the architecture."),
+                ("drawing global dependencies", "claim", "Explains what attention is useful for across input and output positions."),
+                ("allow for significantly more parallelization", "result", "States the runtime or training advantage of the architecture."),
+                ("The best performing models", "claim", "Introduces the baseline class before the authors narrow the contrast."),
+                ("we propose", "method", "Signals the authors' new contribution."),
+                ("we establish a new state of the art", "result", "Signals an empirical result claim."),
+                ("with considerably less training cost", "result", "Links model quality to efficiency, not only accuracy."),
+            ]
         rows: list[dict[str, Any]] = []
         lower_text = document_text.lower()
         for phrase, function, explanation in phrase_specs:
@@ -572,6 +658,39 @@ class AnalysisNormalizationService:
                     "next sentence prediction",
                     "A pre-training objective that teaches relationships between sentence pairs.",
                     "This supports tasks where understanding the relation between two sentences matters.",
+                ),
+            ]
+        elif self._is_attention_text(document_text):
+            specs = [
+                (
+                    "Transformer",
+                    "The paper's proposed attention-only encoder-decoder architecture.",
+                    "This is the central method that connects every later term and result.",
+                ),
+                (
+                    "self-attention",
+                    "A mechanism for connecting positions inside a sequence without recurrent steps.",
+                    "This explains the architecture's claimed advantage in modeling dependencies and parallelizing computation.",
+                ),
+                (
+                    "sequence transduction",
+                    "The task setting of converting one sequence into another, such as machine translation.",
+                    "It defines what problem the architecture is built to solve.",
+                ),
+                (
+                    "encoder-decoder",
+                    "The high-level input-to-output structure retained by the Transformer.",
+                    "It helps the learner separate the architecture frame from the attention mechanism inside it.",
+                ),
+                (
+                    "parallelization",
+                    "The ability to compute many positions at once during training.",
+                    "This is the edge-device and efficiency-relevant reason the paper matters beyond accuracy.",
+                ),
+                (
+                    "long-range dependencies",
+                    "Relationships between distant sequence positions.",
+                    "The paper argues attention reduces the path length needed to model these relationships.",
                 ),
             ]
         else:
@@ -687,6 +806,37 @@ class AnalysisNormalizationService:
                     "Passive voice plus ML workflow vocabulary makes the sentence dense.",
                 ),
             ]
+        elif self._is_attention_text(document_text):
+            specs = [
+                (
+                    "based solely on",
+                    "X is based solely on Y, dispensing with Z.",
+                    "The authors define the Transformer by what it uses and what it removes: attention yes, recurrence/convolution no.",
+                    "'is based solely on'은 핵심 구성 요소를 제한해서 말하는 표현이고, 'dispensing with'는 기존 요소를 제거한다는 뜻입니다.",
+                    "The sentence is dense because the main claim and contrast are packed into one clause.",
+                ),
+                (
+                    "The best performing models",
+                    "The best performing models do A and B through C.",
+                    "The authors first describe prior strong systems before presenting what the Transformer changes.",
+                    "'The best performing models'는 이전 최고 성능 방법들을 묶어서 소개하는 표현입니다. 저장할 단어라기보다 문헌 배경 신호입니다.",
+                    "This is a discourse move, not a vocabulary item; the reader should ask what contrast comes next.",
+                ),
+                (
+                    "drawing global dependencies",
+                    "Mechanism A becomes important for drawing global dependencies between B and C.",
+                    "Attention helps connect distant input and output positions.",
+                    "'drawing global dependencies'는 멀리 떨어진 요소 사이의 관계를 포착한다는 뜻입니다.",
+                    "The phrase combines an abstract verb with a technical noun phrase.",
+                ),
+                (
+                    "allow for significantly more parallelization",
+                    "A allows for more B and can reach C after D.",
+                    "The architecture can train more in parallel and reach strong quality with less training time.",
+                    "'allow for'는 어떤 방법이 특정 효과를 가능하게 한다는 논문식 표현입니다.",
+                    "The sentence links architecture, compute efficiency, and empirical result in one claim.",
+                ),
+            ]
         else:
             specs = [
             (
@@ -761,6 +911,23 @@ class AnalysisNormalizationService:
                     "Track the argument chain: training instability -> internal covariate shift -> mini-batch normalization -> faster optimization.",
                     "Separate concept words from academic moves: 'refer to this phenomenon as' names a concept; 'allows us to' states a benefit.",
                     "When reading equations, first identify what statistics are estimated from the mini-batch: mean and variance.",
+                ],
+            }
+        if self._is_attention_text(document_text):
+            return {
+                "one_line": "The paper introduces the Transformer, an attention-only architecture for sequence transduction.",
+                "simple": (
+                    "Earlier translation models relied on recurrence or convolution. "
+                    "The Transformer keeps the encoder-decoder idea but uses self-attention so sequence positions can interact more directly and training can be more parallel."
+                ),
+                "academic": (
+                    "The section frames dominant recurrent and convolutional sequence-transduction models as less parallel and less direct for long-range dependencies, "
+                    "then proposes an attention-only encoder-decoder architecture that improves translation quality with lower training cost."
+                ),
+                "study_notes": [
+                    "Do not save 'the best performing models' as vocabulary; treat it as a discourse signal introducing prior work.",
+                    "Track the contrast chain: recurrent/convolutional models -> attention-only Transformer -> more parallel training.",
+                    "Separate task terms such as sequence transduction from method terms such as self-attention and encoder-decoder.",
                 ],
             }
         if self._is_bert_text(document_text):
@@ -1016,6 +1183,14 @@ class AnalysisNormalizationService:
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
+
+    def _is_attention_text(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "attention is all you need" in lowered
+            or ("transformer" in lowered and "sequence transduction" in lowered)
+            or ("self-attention" in lowered and "recurrent" in lowered and "convolution" in lowered)
+        )
 
     def _score(self, value: Any, default: int) -> int:
         try:

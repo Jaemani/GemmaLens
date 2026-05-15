@@ -135,32 +135,37 @@ export function DocumentPageReader({
     setIsBatchAnalyzing(true);
     setIsAnalyzing(true);
     setBatchStatus("");
+    const plannedCount = plannedBatchIndices.length;
     writeAutoStudyProgress(progressStorageKey, {
-      status: `Starting auto-study for ${plannedBatchIndices.length} sections...`,
+      status: `Starting server-side auto-study for ${plannedCount} sections...`,
       completed: 0,
-      planned: plannedBatchIndices.length,
+      planned: plannedCount,
       updatedAt: Date.now()
     });
     try {
-      for (let offset = 0; offset < plannedBatchIndices.length; offset += 1) {
-        const index = plannedBatchIndices[offset];
-        const section = sections[index];
-        const status = `Analyzing ${offset + 1} / ${plannedBatchIndices.length}: section ${section?.section_number ?? index + 1}`;
-        setBatchStatus(status);
-        writeAutoStudyProgress(progressStorageKey, {
-          status,
-          completed: offset,
-          planned: plannedBatchIndices.length,
-          updatedAt: Date.now()
-        });
-        await analyzeSectionAt(index, { keepBusy: true });
-      }
-      const status = `Finished ${plannedBatchIndices.length} sections. Paper map updated.`;
+      const runningStatus = `Server is analyzing ${plannedCount} section(s). This can take time on local models.`;
+      setBatchStatus(runningStatus);
+      writeAutoStudyProgress(progressStorageKey, {
+        status: runningStatus,
+        completed: 0,
+        planned: plannedCount,
+        updatedAt: Date.now()
+      });
+      const result = await api.stagedAnalyzeDocument(documentId, { max_sections: plannedCount });
+      const updatedSections = await api.listDocumentSections(documentId);
+      setSections(updatedSections);
+      const lastAnalyzed = result.analyzed_sections.at(-1);
+      if (lastAnalyzed) setPageIndex(Math.max(0, lastAnalyzed - 1));
+      onSectionAnalyzed?.();
+      const status =
+        result.status === "nothing_to_do"
+          ? "All available sections are already analyzed."
+          : `Finished ${result.analyzed_sections.length} section(s). Paper map updated.`;
       setBatchStatus(status);
       writeAutoStudyProgress(progressStorageKey, {
         status,
-        completed: plannedBatchIndices.length,
-        planned: plannedBatchIndices.length,
+        completed: result.analyzed_sections.length,
+        planned: plannedCount,
         updatedAt: Date.now()
       });
     } catch {
@@ -169,7 +174,7 @@ export function DocumentPageReader({
       writeAutoStudyProgress(progressStorageKey, {
         status,
         completed: sections.filter((section) => section.analyzed).length,
-        planned: plannedBatchIndices.length,
+        planned: plannedCount,
         updatedAt: Date.now()
       });
     } finally {

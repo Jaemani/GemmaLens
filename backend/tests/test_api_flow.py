@@ -220,6 +220,32 @@ def test_document_section_analysis_stays_on_parent_document(client):
     assert missing.status_code == 404
 
 
+def test_staged_analysis_analyzes_next_unstudied_sections(client):
+    content = " ".join([SAMPLE_TEXT] * 14)
+    created = client.post(
+        "/documents",
+        json={"title": "Long staged paper", "content": content, "source_type": "text"},
+    )
+    assert created.status_code == 200
+
+    staged = client.post(f"/documents/{created.json()['id']}/staged-analysis", json={"max_sections": 2})
+    assert staged.status_code == 200
+    body = staged.json()
+    assert body["status"] == "completed"
+    assert body["requested_sections"] == [1, 2]
+    assert body["analyzed_sections"] == [1, 2]
+
+    sections = client.get(f"/documents/{created.json()['id']}/sections")
+    assert sections.status_code == 200
+    assert sections.json()[0]["analyzed"] is True
+    assert sections.json()[1]["analyzed"] is True
+
+    staged_again = client.post(f"/documents/{created.json()['id']}/staged-analysis", json={"max_sections": 1})
+    assert staged_again.status_code == 200
+    assert staged_again.json()["requested_sections"] == [3]
+    assert staged_again.json()["analyzed_sections"] == [3]
+
+
 def test_document_sections_include_pdf_page_labels_when_available(client):
     created = client.post(
         "/documents",

@@ -157,3 +157,17 @@ class PaperMapResponse(BaseModel):
     top_terms: list[PaperMapItem] = Field(default_factory=list)
     top_phrases: list[PaperMapItem] = Field(default_factory=list)
     section_summaries: list[PaperMapItem] = Field(default_factory=list)
+
+
+class StagedAnalysisRequest(BaseModel):
+    max_sections: int = Field(default=3, ge=1, le=10)
+
+
+class StagedAnalysisResponse(BaseModel):
+    document_id: str
+    total_sections: int
+    requested_sections: list[int] = Field(default_factory=list)
+    analyzed_sections: list[int] = Field(default_factory=list)
+    skipped_sections: list[int] = Field(default_factory=list)
+    status: Literal["completed", "nothing_to_do", "partial"]
+    message: str

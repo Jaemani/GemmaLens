@@ -8,7 +8,7 @@ from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.section_analysis_repository import SectionAnalysisRepository
 from app.repositories.user_profile_repository import UserProfileRepository
-from app.schemas.analysis_schema import AnalysisResult, PaperMapResponse
+from app.schemas.analysis_schema import AnalysisResult, PaperMapResponse, StagedAnalysisRequest, StagedAnalysisResponse
 from app.services.academic_text_service import AcademicTextService
 from app.services.analysis_normalization_service import AnalysisNormalizationService
 from app.services.analysis_pipeline_service import AnalysisPipelineService
@@ -42,6 +42,66 @@ async def analyze_document_section(document_id: str, section_index: int, db: Ses
     if not result:
         raise not_found("Document section not found")
     return result
+
+
+@router.post("/{document_id}/staged-analysis", response_model=StagedAnalysisResponse)
+async def analyze_next_document_sections(
+    document_id: str,
+    payload: StagedAnalysisRequest | None = None,
+    db: Session = Depends(get_db),
+):
+    document = DocumentRepository(db).get(document_id)
+    if not document:
+        raise not_found("Document not found")
+    payload = payload or StagedAnalysisRequest()
+    readable_text = AcademicTextService().readable_section(document.content)
+    sections = DocumentSectionService().split(readable_text)
+    analysis_repository = AnalysisRepository(db)
+    section_repository = SectionAnalysisRepository(db)
+    analyzed_indices = set(section_repository.list_indices(document_id))
+    if analysis_repository.get_result(document_id):
+        analyzed_indices.add(0)
+    candidate_indices = [index for index in range(len(sections)) if index not in analyzed_indices][: payload.max_sections]
+    if not candidate_indices:
+        return StagedAnalysisResponse(
+            document_id=document_id,
+            total_sections=len(sections),
+            skipped_sections=sorted(index + 1 for index in analyzed_indices),
+            status="nothing_to_do",
+            message="All available sections are already analyzed.",
+        )
+
+    service = AnalysisPipelineService(DocumentRepository(db), analysis_repository, section_repository)
+    profile = UserProfileRepository(db).get_or_create()
+    completed: list[int] = []
+    for index in candidate_indices:
+        try:
+            result = await service.analyze_section(document_id, index, target_level=profile.target_level)
+        except RuntimeError as exc:
+            if not completed:
+                raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+            return StagedAnalysisResponse(
+                document_id=document_id,
+                total_sections=len(sections),
+                requested_sections=[item + 1 for item in candidate_indices],
+                analyzed_sections=completed,
+                skipped_sections=sorted(item + 1 for item in analyzed_indices),
+                status="partial",
+                message=f"Stopped after {len(completed)} sections: {exc}",
+            )
+        if not result:
+            break
+        completed.append(index + 1)
+
+    return StagedAnalysisResponse(
+        document_id=document_id,
+        total_sections=len(sections),
+        requested_sections=[item + 1 for item in candidate_indices],
+        analyzed_sections=completed,
+        skipped_sections=sorted(item + 1 for item in analyzed_indices),
+        status="completed" if len(completed) == len(candidate_indices) else "partial",
+        message=f"Analyzed {len(completed)} section(s).",
+    )
 
 
 @router.get("/{document_id}/analysis", response_model=AnalysisResult)
