@@ -152,9 +152,12 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
         </button>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-5 py-3">
-        <p className="max-w-2xl text-xs leading-5 text-neutral-600">
-          The left PDF is the visual source. This section text is what the model can read; it may lose equations, columns, or line breaks.
-        </p>
+        <div className="max-w-2xl space-y-1">
+          {currentSection?.preview ? <p className="text-sm font-medium leading-6 text-ink">{currentSection.preview}</p> : null}
+          <p className="text-xs leading-5 text-neutral-600">
+            The left PDF is the visual source. This section text is what the model can read; it may lose equations, columns, or line breaks.
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
