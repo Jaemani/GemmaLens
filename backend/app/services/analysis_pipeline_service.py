@@ -2,6 +2,7 @@ from app.core.config import get_settings
 from app.llm import get_model_adapter
 from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.document_repository import DocumentRepository
+from app.repositories.section_analysis_repository import SectionAnalysisRepository
 from app.schemas.analysis_schema import AnalysisResult
 from app.services.academic_text_service import AcademicTextService
 from app.services.analysis_normalization_service import AnalysisNormalizationService
@@ -10,9 +11,10 @@ from app.services.document_section_service import DocumentSectionService
 
 
 class AnalysisPipelineService:
-    def __init__(self, documents: DocumentRepository, analyses: AnalysisRepository):
+    def __init__(self, documents: DocumentRepository, analyses: AnalysisRepository, section_analyses: SectionAnalysisRepository | None = None):
         self.documents = documents
         self.analyses = analyses
+        self.section_analyses = section_analyses
         self.settings = get_settings()
         self.chunker = ChunkingService()
         self.adapter = get_model_adapter()
@@ -56,6 +58,10 @@ class AnalysisPipelineService:
         section = self.sections.section(readable_text, section_index)
         if not section:
             return None
+        if self.section_analyses:
+            cached = self.section_analyses.get_result(document_id, section_index)
+            if cached:
+                return cached
         section_text, section_count = section
         chunks = self.chunker.chunk(section_text)
         result = await self.adapter.analyze_document(document.id, section_text, chunks[: self.settings.analysis_model_max_chunks])
@@ -72,6 +78,8 @@ class AnalysisPipelineService:
                     )
                 }
             )
+        if self.section_analyses:
+            self.section_analyses.upsert(section_index, result)
         return result
 
     def _analysis_text(self, text: str) -> str:

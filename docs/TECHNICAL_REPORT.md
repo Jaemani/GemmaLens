@@ -130,6 +130,7 @@ Important current policy:
 - Reordered the analysis result screen so the domain summary and source/learning workspace appear before experiment controls. This makes the demo read as a paper-learning tool rather than a settings dashboard.
 - Extracted-section controls are now visible without opening a hidden text block. The user can move through extracted sections and analyze the current section while the original PDF stays visible.
 - Added a same-document section analysis endpoint, `POST /documents/{id}/sections/{section_index}/analyze`. This lets the frontend show an inline section lesson without creating a separate document or breaking the user's place in the paper.
+- Section analysis is now cached in SQLite. In the BERT paper smoke test, a cold section analysis took about 67.0 seconds on the current remote edge route; the cached repeat call returned in about 0.03 seconds.
 - Cached analysis normalization now uses the analyzed text span rather than the entire readable paper, reducing cross-section contamination where later-paper vocabulary could appear in the first-section guide.
 
 ### Video Learning

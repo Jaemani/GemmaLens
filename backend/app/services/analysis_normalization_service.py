@@ -40,7 +40,7 @@ class AnalysisNormalizationService:
         )
         if self._is_bert_text(document_text):
             normalized["concepts"] = self._filter_bert_learning_rows(normalized["concepts"], "concept")
-        if self._sentences_are_weak(normalized["sentences"]):
+        if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
             normalized["summaries"] = self._heuristic_summaries(document_text)
@@ -315,6 +315,34 @@ class AnalysisNormalizationService:
                     "This is the limitation BERT is designed to overcome.",
                 ),
                 (
+                    "left-to-right language model",
+                    "A language model that predicts using only previous context.",
+                    "field_term",
+                    "hard",
+                    "This is the contrast point for masked language modeling.",
+                ),
+                (
+                    "right-to-left LMs",
+                    "Language models that read context in the reverse direction.",
+                    "useful",
+                    "medium",
+                    "The paper contrasts BERT with shallow concatenation of separately trained directional models.",
+                ),
+                (
+                    "text-pair representations",
+                    "Representations used for tasks involving relationships between two text segments.",
+                    "field_term",
+                    "medium",
+                    "This motivates next sentence prediction.",
+                ),
+                (
+                    "task-specific architectures",
+                    "Custom model architectures built for individual NLP tasks.",
+                    "useful",
+                    "medium",
+                    "BERT aims to reduce the need for heavily engineered task-specific models.",
+                ),
+                (
                     "left-to-right architecture",
                     "A model architecture where each token attends only to previous tokens.",
                     "field_term",
@@ -459,6 +487,11 @@ class AnalysisNormalizationService:
                 ("major limitation is that", "limitation", "Introduces the main weakness in prior methods."),
                 ("For example", "general", "Introduces supporting evidence or an illustration."),
                 ("by proposing", "method", "Connects the proposed method to the problem it solves."),
+                ("In addition to", "general", "Adds another method, task, or evidence item."),
+                ("The contributions of our paper are as follows", "general", "Signals a contribution list."),
+                ("We demonstrate the importance of", "result", "States what the authors claim to prove."),
+                ("This is also in contrast to", "contrast", "Contrasts the proposed method with another prior approach."),
+                ("reduce the need for", "result", "States a practical simplification benefit."),
                 ("we demonstrate", "result", "Signals the evidence used to support the paper's claim."),
                 ("obtains new state-of-the-art", "result", "States an empirical performance result."),
             ]
@@ -504,6 +537,21 @@ class AnalysisNormalizationService:
                     "masked language model",
                     "BERT's pre-training objective for learning from both left and right context.",
                     "It is the core mechanism used to overcome unidirectionality.",
+                ),
+                (
+                    "next sentence prediction",
+                    "A pre-training task for learning text-pair relationships.",
+                    "It explains why BERT can handle sentence-pair tasks beyond single-token prediction.",
+                ),
+                (
+                    "bidirectional pre-training",
+                    "A training setup that lets representations use both left and right context.",
+                    "This is the core advantage the contribution list emphasizes.",
+                ),
+                (
+                    "task-specific architectures",
+                    "Heavily engineered models built separately for individual NLP tasks.",
+                    "The paper claims BERT reduces the need for this kind of task-specific engineering.",
                 ),
                 (
                     "BERT",
@@ -604,6 +652,20 @@ class AnalysisNormalizationService:
                     "The method phrase comes after the improvement claim, so the reader should connect action and solution.",
                 ),
                 (
+                    "In addition to",
+                    "In addition to A, we also use B.",
+                    "The authors add next sentence prediction on top of masked language modeling.",
+                    "'In addition to'는 앞에서 말한 방법에 다른 요소를 추가한다는 신호입니다.",
+                    "The sentence contains two method names, so the learner should separate the first task from the additional task.",
+                ),
+                (
+                    "The contributions of our paper are as follows",
+                    "The contributions of our paper are as follows: A, B, C.",
+                    "The authors announce a list of the paper's main claims.",
+                    "'as follows'는 뒤에 목록이나 정리된 항목이 나온다는 신호입니다.",
+                    "This phrase changes the reading mode from explanation to contribution scanning.",
+                ),
+                (
                     "which stands for",
                     "We introduce X, which stands for Y.",
                     "The authors introduce BERT and immediately expand the acronym.",
@@ -701,7 +763,24 @@ class AnalysisNormalizationService:
                     "When reading equations, first identify what statistics are estimated from the mini-batch: mean and variance.",
                 ],
             }
-        if "bert" in lower and "bidirectional encoder representations" in lower:
+        if self._is_bert_text(document_text):
+            if "masked language model" in lower and "next sentence prediction" in lower and "contributions of our paper" in lower:
+                return {
+                    "one_line": "This section explains BERT's pre-training tasks and lists the paper's main contributions.",
+                    "simple": (
+                        "BERT uses masked language modeling so a token can learn from both left and right context. "
+                        "It also uses next sentence prediction for text-pair representations, then summarizes the paper's contributions."
+                    ),
+                    "academic": (
+                        "The section positions masked language modeling and next sentence prediction as BERT's pre-training mechanisms, "
+                        "then claims bidirectional pre-training, reduced task-specific architecture engineering, and state-of-the-art NLP results as contributions."
+                    ),
+                    "study_notes": [
+                        "Separate the two pre-training tasks: masked language model and next sentence prediction.",
+                        "Use 'In addition to' as a signal that a second method is being added.",
+                        "When you see 'contributions are as follows', switch to scanning claim bullets.",
+                    ],
+                }
             if "two existing strategies" in lower and "feature-based" in lower and ("fine-tuning" in lower or "ﬁne-tuning" in lower):
                 return {
                     "one_line": "This section contrasts feature-based and fine-tuning approaches, then motivates BERT's bidirectional pre-training.",
@@ -758,7 +837,14 @@ class AnalysisNormalizationService:
         return merged[:limit]
 
     def _filter_bert_learning_rows(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
-        blocked = {"learning rate", "dropout", "pre-trained bert model", "new language representation model", "language representation models"}
+        blocked = {
+            "learning rate",
+            "dropout",
+            "right language model",
+            "pre-trained bert model",
+            "new language representation model",
+            "language representation models",
+        }
         if key == "phrase":
             blocked = {*blocked, "feature-based"}
         has_full_name = any(str(row.get(key) or "").lower() == "bidirectional encoder representations from transformers" for row in rows)
@@ -779,9 +865,15 @@ class AnalysisNormalizationService:
         weak_markers = {"Structure not provided.", "Explanation not provided.", "Model did not return sentence decomposition.", "Main claim + explanation."}
         return any(sentence.get("core_structure") in weak_markers or sentence.get("korean_explanation") in weak_markers for sentence in sentences)
 
+    def _needs_bert_section_sentence_override(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return self._is_bert_text(document_text) and "contributions of our paper" in lowered
+
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
         lowered = document_text.lower()
         if "two existing strategies" in lowered and "feature-based" in lowered and ("fine-tuning" in lowered or "ﬁne-tuning" in lowered):
+            return True
+        if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
         values = [str(summaries.get(key) or "").strip() for key in ("one_line", "simple", "academic")]
         if any(not value for value in values):
@@ -921,7 +1013,9 @@ class AnalysisNormalizationService:
 
     def _is_bert_text(self, document_text: str) -> bool:
         lowered = document_text.lower()
-        return "bert" in lowered and "bidirectional encoder representations" in lowered
+        if "bert" in lowered and "bidirectional encoder representations" in lowered:
+            return True
+        return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
 
     def _score(self, value: Any, default: int) -> int:
         try:

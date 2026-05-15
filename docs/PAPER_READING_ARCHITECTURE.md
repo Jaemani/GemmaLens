@@ -133,6 +133,7 @@ same PDF workspace
 -> choose extracted section
 -> analyze current section
 -> render inline section lesson
+-> cache section lesson by document and section index
 -> keep PDF page navigation and section navigation available
 ```
 

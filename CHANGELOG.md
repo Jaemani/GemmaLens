@@ -6,6 +6,7 @@
 - Promoted extracted-section navigation so section Previous/Next and "Analyze this section" are visible without opening a hidden debug text block.
 - Added BERT-family learning guardrails after testing the BERT paper: BERT results now prioritize BERT, pre-training, fine-tuning, masked language model, and next sentence prediction instead of unrelated terms that merely appear elsewhere in the paper.
 - Added same-document section analysis: "Analyze this section" now returns an inline section lesson without creating a separate document or leaving the current paper workspace.
+- Added persistent section-analysis cache. Re-opening an analyzed section now returns the saved lesson immediately instead of calling the model again.
 - Fixed cached/section normalization to use the text span actually analyzed instead of re-normalizing against the whole paper, which reduced cross-section vocabulary contamination.
 - Added source-grounded learning guardrails that repair weak edge-model output: summaries that only repeat source text are replaced, missing academic phrases are recovered from reusable paper-reading patterns, and weak sentence decompositions are replaced with structure explanations.
 - Tightened concept/term separation so generic source fragments such as `Training Deep Neural Networks` and `inputs changes during training` are not shown as saveable learning objects.

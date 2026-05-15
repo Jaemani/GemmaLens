@@ -178,6 +178,10 @@ def test_document_section_analysis_stays_on_parent_document(client):
     assert body["terms"]
     assert body["summaries"]["one_line"]
 
+    cached = client.post(f"/documents/{created.json()['id']}/sections/1/analyze")
+    assert cached.status_code == 200
+    assert cached.json() == body
+
     missing = client.post(f"/documents/{created.json()['id']}/sections/999/analyze")
     assert missing.status_code == 404
 
