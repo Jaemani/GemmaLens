@@ -8,11 +8,13 @@ import type { AnalysisResult, DocumentRead, DocumentSection } from "@/lib/types"
 export function DocumentPageReader({
   documentId,
   onSectionAnalyzed,
-  onSourcePageChange
+  onSourcePageChange,
+  requestedSourcePage
 }: {
   documentId: string;
   onSectionAnalyzed?: () => void;
   onSourcePageChange?: (page: number | null) => void;
+  requestedSourcePage?: number | null;
 }) {
   const [document, setDocument] = useState<DocumentRead | null>(null);
   const [sections, setSections] = useState<DocumentSection[]>([]);
@@ -55,6 +57,14 @@ export function DocumentPageReader({
   useEffect(() => {
     onSourcePageChange?.(pdfPageFromLabel(currentSection?.source_label ?? null));
   }, [currentSection?.source_label, onSourcePageChange]);
+
+  useEffect(() => {
+    if (!requestedSourcePage || !sections.length) return;
+    const currentPage = pdfPageFromLabel(currentSection?.source_label ?? null);
+    if (currentPage === requestedSourcePage) return;
+    const matchingIndex = sections.findIndex((section) => pdfPageFromLabel(section.source_label) === requestedSourcePage);
+    if (matchingIndex >= 0) setPageIndex(matchingIndex);
+  }, [currentSection?.source_label, requestedSourcePage, sections]);
 
   async function analyzeSectionAt(index: number) {
     const section = sections[index];

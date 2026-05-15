@@ -201,6 +201,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           documentId={documentId}
           onSectionAnalyzed={() => setPaperMapRefreshKey((value) => value + 1)}
           onSourcePageChange={setRequestedPdfPage}
+          requestedSourcePage={requestedPdfPage}
         />
       ) : null}
       {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
@@ -235,7 +236,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       {hasPdfViewer && document ? (
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(520px,0.95fr)_minmax(0,1.05fr)]">
           <div className="xl:sticky xl:top-4">
-            <PdfSourcePane document={document} requestedPage={requestedPdfPage} />
+            <PdfSourcePane document={document} requestedPage={requestedPdfPage} onPageChange={setRequestedPdfPage} />
           </div>
           {guideContent}
         </div>
