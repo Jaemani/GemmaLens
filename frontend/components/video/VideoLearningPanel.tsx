@@ -31,6 +31,7 @@ export function VideoLearningPanel() {
   const [currentTime, setCurrentTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showSubtitleFallback, setShowSubtitleFallback] = useState(false);
   const playerRef = useRef<YouTubePlayer | null>(null);
   const playerElementId = "youtube-learning-player";
 
@@ -187,34 +188,43 @@ export function VideoLearningPanel() {
 
         {!transcript ? (
           <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <FileText size={17} className="text-accent" />
-            Subtitle fallback
-          </div>
-          <input
-            value={sourceName}
-            onChange={(event) => setSourceName(event.target.value)}
-            className="mt-3 w-full rounded-md border border-line px-3 py-2 text-sm"
-            placeholder="subtitle filename"
-          />
-          <textarea
-            value={subtitleText}
-            onChange={(event) => setSubtitleText(event.target.value)}
-            rows={9}
-            className="mt-3 w-full resize-y rounded-md border border-line px-3 py-2 text-sm leading-6"
-          />
-          <div className="mt-3 flex flex-wrap justify-end gap-3">
             <button
               type="button"
-              onClick={parseSubtitle}
-              disabled={busy || !subtitleText.trim()}
-              className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              onClick={() => setShowSubtitleFallback((value) => !value)}
+              className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface"
             >
-              Parse subtitle
+              <FileText size={16} className="text-accent" />
+              {showSubtitleFallback ? "Hide manual subtitles" : "Captions unavailable? Paste subtitles"}
             </button>
+            {showSubtitleFallback ? (
+              <>
+                <input
+                  value={sourceName}
+                  onChange={(event) => setSourceName(event.target.value)}
+                  className="mt-3 w-full rounded-md border border-line px-3 py-2 text-sm"
+                  placeholder="subtitle filename"
+                />
+                <textarea
+                  value={subtitleText}
+                  onChange={(event) => setSubtitleText(event.target.value)}
+                  rows={9}
+                  className="mt-3 w-full resize-y rounded-md border border-line px-3 py-2 text-sm leading-6"
+                  placeholder="Paste .srt or .vtt subtitle text."
+                />
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={parseSubtitle}
+                    disabled={busy || !subtitleText.trim()}
+                    className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    Parse subtitle
+                  </button>
+                </div>
+              </>
+            ) : null}
+            {error ? <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">{error}</p> : null}
           </div>
-          {error ? <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">{error}</p> : null}
-        </div>
         ) : (
           <div className="rounded-lg border border-line bg-panel p-4 shadow-material">
             <div className="flex flex-wrap items-center justify-between gap-3">

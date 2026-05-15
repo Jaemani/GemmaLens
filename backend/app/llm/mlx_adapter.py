@@ -51,8 +51,8 @@ class MLXAdapter(ModelAdapter):
             payload = extract_json_object(output)
             return self.normalizer.normalize_payload(payload, document_id, text)
         except (ImportError, FileNotFoundError, ValidationError, Exception) as exc:
-            logger.warning("MLX analysis failed, falling back to mock output: %s", exc)
-            return await self.fallback.analyze_document(document_id, text, chunks)
+            logger.exception("MLX analysis failed")
+            raise RuntimeError(f"MLX analysis failed: {exc}") from exc
 
     def _load(self):
         model_path = str(Path(self.runtime_config["mlx_model_path"]).expanduser())

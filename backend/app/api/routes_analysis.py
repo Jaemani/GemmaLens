@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.errors import not_found
@@ -14,7 +14,10 @@ router = APIRouter(prefix="/documents", tags=["analysis"])
 @router.post("/{document_id}/analyze", response_model=AnalysisResult)
 async def analyze_document(document_id: str, db: Session = Depends(get_db)):
     service = AnalysisPipelineService(DocumentRepository(db), AnalysisRepository(db))
-    result = await service.analyze(document_id)
+    try:
+        result = await service.analyze(document_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     if not result:
         raise not_found("Document not found")
     return result
