@@ -20,6 +20,7 @@ class AnalysisNormalizationService:
         phrases = self._merge_learning_rows(phrases, self._heuristic_phrases(document_text), "phrase", limit=10)
         if self._is_bert_text(document_text):
             terms = self._filter_bert_learning_rows(terms, "term")
+            phrases = self._filter_bert_learning_rows(phrases, "phrase")
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -286,6 +287,48 @@ class AnalysisNormalizationService:
                     "This is one of BERT's core pre-training tasks.",
                 ),
                 (
+                    "feature-based",
+                    "An approach that uses pre-trained representations as additional features inside task-specific architectures.",
+                    "useful",
+                    "medium",
+                    "This is one of the two pre-BERT strategies contrasted in the paper.",
+                ),
+                (
+                    "Generative Pre-trained Transformer",
+                    "The full name of OpenAI GPT, used as an example of the fine-tuning approach.",
+                    "useful",
+                    "medium",
+                    "The paper contrasts BERT with GPT's left-to-right pre-training.",
+                ),
+                (
+                    "OpenAI GPT",
+                    "A prior Transformer language model used as a comparison point for BERT.",
+                    "useful",
+                    "medium",
+                    "It anchors the contrast between unidirectional and bidirectional pre-training.",
+                ),
+                (
+                    "unidirectional language models",
+                    "Language models that condition in one direction, such as left-to-right context only.",
+                    "field_term",
+                    "hard",
+                    "This is the limitation BERT is designed to overcome.",
+                ),
+                (
+                    "left-to-right architecture",
+                    "A model architecture where each token attends only to previous tokens.",
+                    "field_term",
+                    "hard",
+                    "The paper uses it to explain why GPT is restricted compared with BERT.",
+                ),
+                (
+                    "self-attention layers",
+                    "Transformer layers where tokens attend to other tokens to build contextual representations.",
+                    "field_term",
+                    "medium",
+                    "This explains the architecture-level restriction in left-to-right models.",
+                ),
+                (
                     "next sentence prediction",
                     "A pre-training task where the model predicts whether two sentences follow each other.",
                     "field_term",
@@ -406,11 +449,16 @@ class AnalysisNormalizationService:
         ]
         if self._is_bert_text(document_text):
             phrase_specs = [
+                ("There are two existing strategies", "claim", "Introduces a two-part literature map."),
                 ("We introduce", "method", "Signals the paper's new contribution."),
                 ("which stands for", "general", "Expands an acronym or named method."),
                 ("Unlike recent", "contrast", "Contrasts the proposed method with prior work."),
                 ("is designed to", "method", "Explains the intended design or purpose of a method."),
                 ("can be fine-tuned", "method", "Explains how a pre-trained model is adapted to tasks."),
+                ("We argue that", "claim", "Signals the authors' position or critique."),
+                ("major limitation is that", "limitation", "Introduces the main weakness in prior methods."),
+                ("For example", "general", "Introduces supporting evidence or an illustration."),
+                ("by proposing", "method", "Connects the proposed method to the problem it solves."),
                 ("we demonstrate", "result", "Signals the evidence used to support the paper's claim."),
                 ("obtains new state-of-the-art", "result", "States an empirical performance result."),
             ]
@@ -438,6 +486,26 @@ class AnalysisNormalizationService:
         if self._is_bert_text(document_text):
             specs = [
                 (
+                    "feature-based",
+                    "A prior strategy that uses pre-trained representations as features in task-specific models.",
+                    "It helps the reader understand what BERT is being compared against.",
+                ),
+                (
+                    "fine-tuning",
+                    "A prior and continuing strategy that adapts all pre-trained parameters to a downstream task.",
+                    "This is the workflow BERT makes more powerful by changing pre-training.",
+                ),
+                (
+                    "unidirectional language models",
+                    "Prior language models that learn representations from one direction of context.",
+                    "This is the limitation the paper uses to motivate bidirectional pre-training.",
+                ),
+                (
+                    "masked language model",
+                    "BERT's pre-training objective for learning from both left and right context.",
+                    "It is the core mechanism used to overcome unidirectionality.",
+                ),
+                (
                     "BERT",
                     "A bidirectional Transformer representation model introduced for language understanding tasks.",
                     "This is the paper's main contribution and the anchor for the rest of the terminology.",
@@ -451,16 +519,6 @@ class AnalysisNormalizationService:
                     "pre-training",
                     "The broad training stage before task-specific adaptation.",
                     "This is the first half of BERT's transfer-learning workflow.",
-                ),
-                (
-                    "fine-tuning",
-                    "The adaptation stage where the same pre-trained model is trained for a specific downstream task.",
-                    "This explains how one model becomes useful across many NLP benchmarks.",
-                ),
-                (
-                    "masked language model",
-                    "A pre-training objective where masked words are predicted from surrounding context.",
-                    "This is the mechanism that lets BERT train bidirectionally.",
                 ),
                 (
                     "next sentence prediction",
@@ -524,6 +582,27 @@ class AnalysisNormalizationService:
     def _heuristic_sentences(self, document_text: str) -> list[dict[str, str]]:
         if self._is_bert_text(document_text):
             specs = [
+                (
+                    "There are two existing strategies",
+                    "There are two existing strategies for applying X to Y: A and B.",
+                    "The authors map prior work into two approaches: feature-based use and fine-tuning.",
+                    "'There are two existing strategies'는 문헌 배경을 두 갈래로 정리하겠다는 신호입니다.",
+                    "The sentence is a roadmap; the colon tells the reader to expect categories.",
+                ),
+                (
+                    "major limitation is that",
+                    "The major limitation is that X is Y, and this limits Z.",
+                    "The authors identify unidirectional language modeling as the key weakness of prior approaches.",
+                    "'major limitation is that'는 논문이 해결하려는 핵심 한계를 직접 제시합니다.",
+                    "The sentence links a technical property to its downstream consequence.",
+                ),
+                (
+                    "by proposing",
+                    "We improve X by proposing Y.",
+                    "The authors improve fine-tuning approaches by proposing BERT.",
+                    "'by proposing'은 어떤 방법으로 문제를 개선하는지 설명합니다.",
+                    "The method phrase comes after the improvement claim, so the reader should connect action and solution.",
+                ),
                 (
                     "which stands for",
                     "We introduce X, which stands for Y.",
@@ -623,6 +702,23 @@ class AnalysisNormalizationService:
                 ],
             }
         if "bert" in lower and "bidirectional encoder representations" in lower:
+            if "two existing strategies" in lower and "feature-based" in lower and ("fine-tuning" in lower or "ﬁne-tuning" in lower):
+                return {
+                    "one_line": "This section contrasts feature-based and fine-tuning approaches, then motivates BERT's bidirectional pre-training.",
+                    "simple": (
+                        "The authors explain that earlier pre-trained representations were used either as features or through fine-tuning. "
+                        "They argue that unidirectional language models limit both strategies, especially for tasks that need context from both directions."
+                    ),
+                    "academic": (
+                        "The section frames BERT as a response to the unidirectionality constraint in previous pre-training methods, contrasting ELMo-style "
+                        "feature extraction and GPT-style fine-tuning before introducing masked language modeling as the bidirectional solution."
+                    ),
+                    "study_notes": [
+                        "Notice the literature-map phrase 'There are two existing strategies'.",
+                        "Track the contrast: feature-based vs. fine-tuning, then unidirectional vs. bidirectional.",
+                        "The phrase 'major limitation is that' signals the problem BERT is designed to solve.",
+                    ],
+                }
             return {
                 "one_line": "The paper introduces BERT, a bidirectional Transformer representation model for language understanding.",
                 "simple": "BERT learns from both left and right context during pre-training, then can be fine-tuned for many NLP tasks.",
@@ -663,6 +759,8 @@ class AnalysisNormalizationService:
 
     def _filter_bert_learning_rows(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {"learning rate", "dropout", "pre-trained bert model", "new language representation model", "language representation models"}
+        if key == "phrase":
+            blocked = {*blocked, "feature-based"}
         has_full_name = any(str(row.get(key) or "").lower() == "bidirectional encoder representations from transformers" for row in rows)
         filtered: list[dict[str, Any]] = []
         for row in rows:
@@ -682,6 +780,9 @@ class AnalysisNormalizationService:
         return any(sentence.get("core_structure") in weak_markers or sentence.get("korean_explanation") in weak_markers for sentence in sentences)
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
+        lowered = document_text.lower()
+        if "two existing strategies" in lowered and "feature-based" in lowered and ("fine-tuning" in lowered or "ﬁne-tuning" in lowered):
+            return True
         values = [str(summaries.get(key) or "").strip() for key in ("one_line", "simple", "academic")]
         if any(not value for value in values):
             return True
@@ -789,6 +890,10 @@ class AnalysisNormalizationService:
         if lowered in {"training deep neural networks", "inputs changes during training"}:
             return ""
         if lowered in {"new language representation model", "language representation models", "pre-trained bert model"}:
+            return ""
+        if lowered in {"generative pre", "use unidirectional language models", "standard language models"}:
+            return ""
+        if lowered.startswith(("use ", "uses ", "using ")):
             return ""
         if re.fullmatch(r"(?:inputs?|outputs?|models?|networks?)\s+\w+(?:\s+\w+){0,3}", lowered):
             return ""

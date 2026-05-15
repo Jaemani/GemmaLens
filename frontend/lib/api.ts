@@ -144,6 +144,8 @@ export const api = {
   },
   analyzeDocument: (documentId: string) =>
     request<AnalysisResult>(`/documents/${documentId}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
+  analyzeDocumentSection: (documentId: string, sectionIndex: number) =>
+    request<AnalysisResult>(`/documents/${documentId}/sections/${sectionIndex}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
   getAnalysis: (documentId: string) => request<AnalysisResult>(`/documents/${documentId}/analysis`),
   deleteDocument: async (documentId: string) => {
     const response = await fetch(`${apiBase()}/documents/${documentId}`, { method: "DELETE" });

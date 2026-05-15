@@ -6,6 +6,7 @@ from app.schemas.analysis_schema import AnalysisResult
 from app.services.academic_text_service import AcademicTextService
 from app.services.analysis_normalization_service import AnalysisNormalizationService
 from app.services.chunking_service import ChunkingService
+from app.services.document_section_service import DocumentSectionService
 
 
 class AnalysisPipelineService:
@@ -17,6 +18,7 @@ class AnalysisPipelineService:
         self.adapter = get_model_adapter()
         self.normalizer = AnalysisNormalizationService()
         self.academic_text = AcademicTextService()
+        self.sections = DocumentSectionService()
 
     async def analyze(self, document_id: str, target_level: str | None = None) -> AnalysisResult | None:
         document = self.documents.get(document_id)
@@ -27,7 +29,7 @@ class AnalysisPipelineService:
         analysis_text = self._analysis_text(readable_text)
         analysis_chunks = chunks[: self.settings.analysis_model_max_chunks]
         result = await self.adapter.analyze_document(document.id, analysis_text, analysis_chunks)
-        result = self.normalizer.normalize_result(result, readable_text)
+        result = self.normalizer.normalize_result(result, analysis_text)
         if target_level and target_level != "unknown":
             result = result.model_copy(
                 update={
@@ -44,6 +46,32 @@ class AnalysisPipelineService:
                 "This is a section-level analysis from the first readable section. Full-document staged analysis is not implemented yet."
             )
         self.analyses.upsert(result)
+        return result
+
+    async def analyze_section(self, document_id: str, section_index: int, target_level: str | None = None) -> AnalysisResult | None:
+        document = self.documents.get(document_id)
+        if not document:
+            return None
+        readable_text = self.academic_text.readable_section(document.content)
+        section = self.sections.section(readable_text, section_index)
+        if not section:
+            return None
+        section_text, section_count = section
+        chunks = self.chunker.chunk(section_text)
+        result = await self.adapter.analyze_document(document.id, section_text, chunks[: self.settings.analysis_model_max_chunks])
+        result = self.normalizer.normalize_result(result, section_text)
+        result.quality_warnings.append(f"section:{section_index + 1}/{section_count}")
+        if target_level and target_level != "unknown":
+            result = result.model_copy(
+                update={
+                    "difficulty": result.difficulty.model_copy(
+                        update={
+                            "overall_level": target_level,
+                            "reason": f"Calibrated against your {target_level} reading setting. {result.difficulty.reason}",
+                        }
+                    )
+                }
+            )
         return result
 
     def _analysis_text(self, text: str) -> str:

@@ -162,6 +162,26 @@ def test_document_analysis_and_dictionary_flow(client):
     assert len(client.get("/dictionary/items").json()) == 1
 
 
+def test_document_section_analysis_stays_on_parent_document(client):
+    content = " ".join([SAMPLE_TEXT] * 14)
+    created = client.post(
+        "/documents",
+        json={"title": "Long paper", "content": content, "source_type": "text"},
+    )
+    assert created.status_code == 200
+
+    section = client.post(f"/documents/{created.json()['id']}/sections/1/analyze")
+    assert section.status_code == 200
+    body = section.json()
+    assert body["document_id"] == created.json()["id"]
+    assert any(warning.startswith("section:") for warning in body["quality_warnings"])
+    assert body["terms"]
+    assert body["summaries"]["one_line"]
+
+    missing = client.post(f"/documents/{created.json()['id']}/sections/999/analyze")
+    assert missing.status_code == 404
+
+
 def test_upload_document_uses_ingestion_service(client):
     uploaded = client.post(
         "/documents/upload",

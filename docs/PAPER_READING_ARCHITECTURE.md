@@ -126,6 +126,18 @@ The backend must not pass model output directly to the learner. A separate norma
 - replace missing sentence decomposition with explicit structure patterns and support-language explanation;
 - keep concepts and vocabulary separate even when the surface string overlaps.
 
+Section analysis should preserve the parent document context. Analyzing a section should not create a new top-level document or navigate away from the current paper workspace. The preferred interaction is:
+
+```text
+same PDF workspace
+-> choose extracted section
+-> analyze current section
+-> render inline section lesson
+-> keep PDF page navigation and section navigation available
+```
+
+Normalization must use the text span that was actually analyzed. Re-normalizing a first-section result against the whole paper can pull in later terms that are source-grounded somewhere in the document but irrelevant to the current reading moment.
+
 ## MVP Decision
 
 For the next usable paper-reading MVP, implement:

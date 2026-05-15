@@ -129,6 +129,8 @@ Important current policy:
 - Added a re-analysis button so cached low-quality results can be replaced after model/runtime improvements.
 - Reordered the analysis result screen so the domain summary and source/learning workspace appear before experiment controls. This makes the demo read as a paper-learning tool rather than a settings dashboard.
 - Extracted-section controls are now visible without opening a hidden text block. The user can move through extracted sections and analyze the current section while the original PDF stays visible.
+- Added a same-document section analysis endpoint, `POST /documents/{id}/sections/{section_index}/analyze`. This lets the frontend show an inline section lesson without creating a separate document or breaking the user's place in the paper.
+- Cached analysis normalization now uses the analyzed text span rather than the entire readable paper, reducing cross-section contamination where later-paper vocabulary could appear in the first-section guide.
 
 ### Video Learning
 
