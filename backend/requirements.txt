@@ -8,3 +8,4 @@ httpx>=0.28.0,<1.0.0
 pypdf>=6.4.0,<7.0.0
 json-repair>=0.54.0,<1.0.0
 youtube-transcript-api>=0.6.2,<1.0.0
+yt-dlp>=2025.1.0

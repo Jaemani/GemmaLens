@@ -1,6 +1,8 @@
 import re
+from collections.abc import Iterable
 from urllib.parse import parse_qs, urlparse
 
+import httpx
 from fastapi import HTTPException, status
 
 from app.schemas.video_schema import TranscriptResponse, TranscriptSegment
@@ -38,22 +40,19 @@ class VideoTranscriptService:
         try:
             rows = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
         except Exception as exc:
+            fallback = self._fetch_youtube_with_ytdlp(url, languages, str(exc))
+            if fallback:
+                return fallback
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Could not fetch YouTube transcript: {exc}",
+                detail=(
+                    "Could not fetch YouTube transcript from available caption APIs. "
+                    "If captions are visible in the player, paste the subtitle text manually for now. "
+                    f"Transcript API error: {exc}"
+                ),
             ) from exc
 
-        segments = [
-            TranscriptSegment(
-                index=index + 1,
-                start=round(float(row["start"]), 3),
-                duration=round(float(row.get("duration", 0)), 3),
-                end=round(float(row["start"]) + float(row.get("duration", 0)), 3),
-                text=self._clean_text(str(row["text"])),
-            )
-            for index, row in enumerate(rows)
-            if str(row.get("text", "")).strip()
-        ]
+        segments = self._rows_to_segments(rows)
         if not segments:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transcript is empty")
         return TranscriptResponse(
@@ -64,6 +63,98 @@ class VideoTranscriptService:
             plain_text=self._plain_text(segments),
             warning="Experimental: YouTube transcript availability depends on the video and network conditions.",
         )
+
+    def _fetch_youtube_with_ytdlp(self, url: str, languages: list[str], first_error: str) -> TranscriptResponse | None:
+        try:
+            from yt_dlp import YoutubeDL
+        except ImportError:
+            return None
+
+        try:
+            with YoutubeDL({"quiet": True, "skip_download": True, "noplaylist": True}) as ydl:
+                info = ydl.extract_info(url, download=False)
+        except Exception:
+            return None
+
+        captions = {**(info.get("automatic_captions") or {}), **(info.get("subtitles") or {})}
+        track = self._select_caption_track(captions, languages)
+        if not track:
+            return None
+
+        for candidate in self._prefer_caption_formats(track):
+            transcript_url = candidate.get("url")
+            if not transcript_url:
+                continue
+            try:
+                response = httpx.get(transcript_url, timeout=20, follow_redirects=True)
+                response.raise_for_status()
+                content = response.text
+                segments = self._parse_ytdlp_caption(content, candidate.get("ext"))
+            except Exception:
+                continue
+            if segments:
+                video_id = self.extract_youtube_id(url)
+                title = info.get("title") if isinstance(info.get("title"), str) else None
+                return TranscriptResponse(
+                    source_type="youtube",
+                    source_id=video_id,
+                    title=title,
+                    segments=segments,
+                    plain_text=self._plain_text(segments),
+                    warning=f"Fetched captions through yt-dlp fallback. Primary transcript API failed: {first_error}",
+                )
+        return None
+
+    def _rows_to_segments(self, rows: Iterable[dict]) -> list[TranscriptSegment]:
+        return [
+            TranscriptSegment(
+                index=index + 1,
+                start=round(float(row["start"]), 3),
+                duration=round(float(row.get("duration", 0)), 3),
+                end=round(float(row["start"]) + float(row.get("duration", 0)), 3),
+                text=self._clean_text(str(row["text"])),
+            )
+            for index, row in enumerate(rows)
+            if str(row.get("text", "")).strip()
+        ]
+
+    def _select_caption_track(self, captions: dict, languages: list[str]) -> list[dict] | None:
+        normalized_languages = [language.lower() for language in languages]
+        for language in normalized_languages:
+            if language in captions:
+                return captions[language]
+        for language in normalized_languages:
+            base = language.split("-", 1)[0]
+            for key, value in captions.items():
+                if key.lower().split("-", 1)[0] == base:
+                    return value
+        return next(iter(captions.values()), None)
+
+    def _prefer_caption_formats(self, track: list[dict]) -> list[dict]:
+        priority = {"json3": 0, "vtt": 1, "srv3": 2, "ttml": 3}
+        return sorted(track, key=lambda item: priority.get(str(item.get("ext")), 10))
+
+    def _parse_ytdlp_caption(self, content: str, ext: str | None) -> list[TranscriptSegment]:
+        if ext == "json3":
+            return self._parse_json3(content)
+        return self._parse_vtt(content)
+
+    def _parse_json3(self, content: str) -> list[TranscriptSegment]:
+        try:
+            data = httpx.Response(200, text=content).json()
+        except Exception:
+            return []
+        segments: list[TranscriptSegment] = []
+        for event in data.get("events", []):
+            parts = event.get("segs") or []
+            text = self._clean_text("".join(str(part.get("utf8", "")) for part in parts))
+            if not text:
+                continue
+            start = round(float(event.get("tStartMs", 0)) / 1000, 3)
+            duration = round(float(event.get("dDurationMs", 0)) / 1000, 3)
+            end = round(start + duration, 3)
+            segments.append(TranscriptSegment(index=len(segments) + 1, start=start, duration=duration, end=end, text=text))
+        return segments
 
     def extract_youtube_id(self, url: str) -> str | None:
         parsed = urlparse(url.strip())
