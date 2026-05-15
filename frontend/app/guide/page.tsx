@@ -19,9 +19,9 @@ export default function GuidePage() {
     <AppShell>
       <div className="mb-6">
         <p className="text-sm font-semibold uppercase text-accent">User guide</p>
-        <h1 className="mt-2 text-3xl font-semibold text-ink">How PaperLens works</h1>
+        <h1 className="mt-2 text-3xl font-semibold text-ink">How GemmaLens works</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-700">
-          PaperLens turns academic or technical documents into language-learning material. It is a prototype, so details may change, but this page explains the current behavior and intended product direction.
+          GemmaLens turns academic or technical documents into language-learning material. It is a prototype, so details may change, but this page explains the current behavior and intended product direction.
         </p>
       </div>
 

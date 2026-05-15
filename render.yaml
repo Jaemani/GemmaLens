@@ -19,6 +19,6 @@ services:
       - key: MODEL_RUNTIME_CONFIG_PATH
         value: /tmp/model_runtime.json
       - key: DATABASE_URL
-        value: sqlite:////data/paperlens.db
+        value: sqlite:////data/gemmalens.db
       - key: CORS_ALLOW_ORIGIN_REGEX
         value: https://.*\.vercel\.app

@@ -4,8 +4,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    app_name: str = "PaperLens Core"
-    database_url: str = "sqlite:///./paperlens.db"
+    app_name: str = "GemmaLens Core"
+    database_url: str = "sqlite:///./gemmalens.db"
     app_demo_mode: bool = False
     model_provider: str = "mlx"
     model_switching_enabled: bool = True

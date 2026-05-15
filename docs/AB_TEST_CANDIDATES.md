@@ -6,7 +6,7 @@ Reduce the user's cleanup time after document analysis while still keeping the t
 
 This is not a translation-quality test. The core question is:
 
-> Does PaperLens help a learner keep only useful learning objects with less manual work?
+> Does GemmaLens help a learner keep only useful learning objects with less manual work?
 
 ## Primary Metric
 

@@ -16,7 +16,7 @@ export function DocumentPreview({ documents }: { documents: DocumentListItem[] }
     setError(null);
     try {
       await api.deleteDocument(document.id);
-      window.localStorage.removeItem(`paperlens.quiz.${document.id}`);
+      window.localStorage.removeItem(`gemmalens.quiz.${document.id}`);
       setItems((current) => current.filter((item) => item.id !== document.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete document.");

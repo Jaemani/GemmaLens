@@ -5,7 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     MODEL_PROVIDER=mock \
     MODEL_SWITCHING_ENABLED=false \
     MODEL_RUNTIME_CONFIG_PATH=/tmp/model_runtime.json \
-    DATABASE_URL=sqlite:////data/paperlens.db
+    DATABASE_URL=sqlite:////data/gemmalens.db
 
 WORKDIR /app
 

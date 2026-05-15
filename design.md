@@ -2,7 +2,7 @@
 
 ## Thesis
 
-Every academic or technical document can become a personalized language lesson. PaperLens builds reading ability by extracting vocabulary, phrase patterns, sentence structures, and summaries from difficult source text.
+Every academic or technical document can become a personalized language lesson. GemmaLens builds reading ability by extracting vocabulary, phrase patterns, sentence structures, and summaries from difficult source text.
 
 ## User
 
@@ -20,7 +20,7 @@ Initial user is a non-native English-speaking undergraduate or graduate student 
 
 ## Product Boundaries
 
-PaperLens is not a PDF chatbot, generic translator, or summarizer. The UI centers on document-to-learning-object analysis, not chat.
+GemmaLens is not a PDF chatbot, generic translator, or summarizer. The UI centers on document-to-learning-object analysis, not chat.
 
 ## UI Principles
 

@@ -6,6 +6,7 @@ node_modules
 backend/.venv
 backend/.venv-mlx
 paperlens.db
+gemmalens.db
 model_runtime.json
 ~/Models
 dist

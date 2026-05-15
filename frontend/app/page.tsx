@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookMarked, FileQuestion, FileText, Languages, Video } from "lucide-react";
+import { BookMarked, Cpu, FileQuestion, FileText, Languages, Video, WifiOff } from "lucide-react";
 import { ModelStatusCard } from "@/components/common/ModelStatusCard";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
@@ -17,10 +17,19 @@ export default async function DashboardPage() {
     <AppShell>
       <div className="space-y-5">
         <section className="rounded-lg border border-line bg-panel p-5 shadow-material">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold uppercase text-accent">Reading workspace</p>
-              <h1 className="mt-2 text-2xl font-semibold">PaperLens</h1>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold uppercase text-accent">GemmaLens</p>
+              <h1 className="mt-2 text-2xl font-semibold">Multimodal Language Learning from Any Content</h1>
+              <p className="mt-3 text-sm leading-6 text-neutral-600">
+                Turn papers, PDFs, video transcripts, and short passages into personalized language-learning material with local Gemma models.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Signal icon={<WifiOff size={15} />} label="Offline-ready" />
+                <Signal icon={<Cpu size={15} />} label="Fast edge inference" />
+                <Signal icon={<BookMarked size={15} />} label="Personalized dictionary" />
+                <Signal icon={<Languages size={15} />} label="Translate + learn" />
+              </div>
             </div>
           </div>
         </section>
@@ -36,12 +45,21 @@ export default async function DashboardPage() {
         </section>
 
         <section className="grid gap-4 md:grid-cols-3">
-          <Stat icon={<FileText size={18} />} label="Pipeline" value="Extract -> analyze -> save" />
-          <Stat icon={<BookMarked size={18} />} label="Dictionary" value="Terms, phrases, structures" />
-          <Stat icon={<FileQuestion size={18} />} label="Review" value="Quiz drafts from analysis" />
+          <Stat icon={<FileText size={18} />} label="Any content" value="Document, video, text" />
+          <Stat icon={<BookMarked size={18} />} label="Personal fit" value="Terms, phrases, structures" />
+          <Stat icon={<FileQuestion size={18} />} label="Edge workflow" value="Extract -> analyze -> review" />
         </section>
       </div>
     </AppShell>
+  );
+}
+
+function Signal({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-accent">
+      {icon}
+      {label}
+    </span>
   );
 }
 

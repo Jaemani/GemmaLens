@@ -9,7 +9,7 @@ import type { AnalysisResult, DocumentListItem } from "@/lib/types";
 type Source = { document: DocumentListItem; analysis: AnalysisResult };
 type QuizItem = { prompt: string; answer: string; source: string; type: "term" | "phrase" | "sentence" };
 
-const CACHE_PREFIX = "paperlens.quiz.";
+const CACHE_PREFIX = "gemmalens.quiz.";
 
 export default function QuizPage() {
   const [sources, setSources] = useState<Source[]>([]);

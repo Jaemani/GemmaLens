@@ -86,7 +86,7 @@ export default function SettingsPage() {
               <Segmented items={levels} value={profile.target_level} onChange={(target_level) => save({ target_level })} disabled={busy} />
             </Field>
             <div className="mt-5 rounded-2xl bg-surface p-4 text-sm leading-6 text-neutral-700">
-              Fresh users start with a simple profile. PaperLens can later infer learning focus from saved terms, viewed items, and repeated document domains.
+              Fresh users start with a simple profile. GemmaLens can later infer learning focus from saved terms, viewed items, and repeated document domains.
             </div>
           </section>
         </div>

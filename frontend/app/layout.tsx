@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PaperLens",
-  description: "Academic document language learning harness"
+  title: "GemmaLens",
+  description: "GemmaLens: Multimodal Language Learning from Any Content"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

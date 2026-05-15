@@ -1,8 +1,8 @@
-# PaperLens Team Brief
+# GemmaLens Team Brief
 
 ## One-Sentence Summary
 
-PaperLens turns academic or technical documents into personalized language-learning objects: terms, phrases, sentence structures, summaries, and saved review items.
+GemmaLens turns academic or technical documents into personalized language-learning objects: terms, phrases, sentence structures, summaries, and saved review items.
 
 ## Current Prototype
 
@@ -53,7 +53,7 @@ The prototype now includes local profile settings for support language, learning
 
 ## Edge Device Direction
 
-Gemma 4 is an edge-device model family, so PaperLens should not become a desktop-only product. The current PC/Mac prototype is a practical first runtime, but future packaging should consider:
+Gemma 4 is an edge-device model family, so GemmaLens should not become a desktop-only product. The current PC/Mac prototype is a practical first runtime, but future packaging should consider:
 
 - desktop local inference for students with laptops;
 - Android on-device inference when a stable mobile runtime is available;

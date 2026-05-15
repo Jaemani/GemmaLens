@@ -1,8 +1,8 @@
-# SoloLingo / PaperLens Technical Report
+# GemmaLens Technical Report
 
 ## 1. Project Summary
 
-SoloLingo, currently implemented as PaperLens, is a local-first language-learning assistant for academic and technical reading. The target user is a non-native reader who wants to read papers, reports, tutorials, and videos without repeatedly copy-pasting individual sentences into a translator.
+GemmaLens is a local-first language-learning assistant for academic, technical, and video-based reading. The target user is a non-native reader who wants to learn from papers, reports, tutorials, videos, and short passages without repeatedly copy-pasting individual sentences into a translator.
 
 The core thesis is:
 

@@ -17,8 +17,8 @@ export function Sidebar() {
   return (
     <aside className="hidden w-64 shrink-0 border-r border-line bg-panel px-4 py-5 md:block">
       <div className="mb-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">PaperLens</p>
-        <h1 className="mt-2 text-xl font-semibold">Learning harness</h1>
+        <p className="text-sm font-semibold uppercase tracking-wide text-accent">GemmaLens</p>
+        <h1 className="mt-2 text-xl font-semibold">Edge learning</h1>
       </div>
       <nav className="space-y-1">
         {items.map((item) => {

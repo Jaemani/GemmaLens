@@ -2,7 +2,7 @@
 
 ## Principle
 
-PaperLens should stay local-first and edge-friendly. Gemma 4 is intended for edge devices, so the product should not assume a permanent cloud backend or desktop-only runtime.
+GemmaLens should stay local-first and edge-friendly. Gemma 4 is intended for edge devices, so the product should not assume a permanent cloud backend or desktop-only runtime.
 
 ## Current Runtime
 

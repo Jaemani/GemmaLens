@@ -1,6 +1,8 @@
-# PaperLens Core Prototype
+# GemmaLens
 
-Local-first academic language learning harness for turning documents into structured learning objects.
+GemmaLens: Multimodal Language Learning from Any Content.
+
+Local-first learning harness for turning documents, transcripts, and short passages into personalized language-learning objects with Gemma.
 
 ## Stack
 

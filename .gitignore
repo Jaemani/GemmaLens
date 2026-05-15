@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 .venv-mlx/
 paperlens.db
+gemmalens.db
 model_runtime.json
 node_modules/
 .next/

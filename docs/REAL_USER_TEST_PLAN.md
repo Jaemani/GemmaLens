@@ -2,7 +2,7 @@
 
 ## Goal
 
-Find whether PaperLens helps real learners avoid manual copy/paste note-taking when reading hard academic PDFs or papers.
+Find whether GemmaLens helps real learners avoid manual copy/paste note-taking when reading hard academic PDFs or papers.
 
 ## Research Notes
 

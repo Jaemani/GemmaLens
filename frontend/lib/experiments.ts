@@ -23,7 +23,7 @@ export const DEFAULT_ANALYSIS_EXPERIMENT: AnalysisExperimentConfig = {
   userFit: "onboarding"
 };
 
-export const ANALYSIS_EXPERIMENT_STORAGE_KEY = "paperlens.analysisExperiment";
+export const ANALYSIS_EXPERIMENT_STORAGE_KEY = "gemmalens.analysisExperiment";
 
 export function parseAnalysisExperiment(value: string | null): AnalysisExperimentConfig {
   if (!value) return DEFAULT_ANALYSIS_EXPERIMENT;
