@@ -1,84 +1,106 @@
 "use client";
 
+import { Clipboard, Languages, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 
 const LIMIT = 1200;
+const languages = ["English", "Korean", "Spanish", "French", "Japanese"];
 
 export default function ToolsPage() {
-  const [tab, setTab] = useState<"translate" | "quiz">("translate");
+  const [sourceLanguage, setSourceLanguage] = useState("English");
+  const [targetLanguage, setTargetLanguage] = useState("Korean");
   const [text, setText] = useState("");
+  const [result, setResult] = useState("");
   const clipped = text.slice(0, LIMIT);
-  const quizItems = useMemo(() => buildQuiz(clipped), [clipped]);
+  const sentenceCount = useMemo(() => clipped.split(/[.!?\n]/).filter((line) => line.trim()).length, [clipped]);
+
+  function translate() {
+    if (!clipped.trim()) return;
+    setResult(
+      `[${sourceLanguage} -> ${targetLanguage}]\n\n${clipped}\n\nModel-backed offline translation will replace this draft. Current interaction keeps the character limit, language pair, copy, and reset flow stable.`
+    );
+  }
+
+  async function copyResult() {
+    if (result) await navigator.clipboard.writeText(result);
+  }
+
+  function reset() {
+    setText("");
+    setResult("");
+  }
 
   return (
     <AppShell>
       <div className="mb-6">
-        <p className="text-sm font-semibold uppercase text-accent">Experimental</p>
-        <h1 className="mt-2 text-2xl font-semibold">Learning tools</h1>
+        <p className="text-sm font-semibold uppercase text-accent">Focused tool</p>
+        <h1 className="mt-2 text-2xl font-semibold">Translate</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
-          Small, fast helpers for offline workflows. These are UI-first prototypes; model-backed translation and quiz generation can plug into the same panels.
+          Short-passage translation for reading flow. Keep it bounded so edge-device model calls stay fast and predictable.
         </p>
       </div>
-      <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
-        <div className="flex gap-2 rounded-lg bg-surface p-1">
-          {(["translate", "quiz"] as const).map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setTab(item)}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold capitalize ${
-                tab === item ? "bg-panel text-accent shadow-sm" : "text-neutral-600 hover:bg-white"
-              }`}
-            >
-              {item === "translate" ? "Translate" : "Quiz maker"}
-            </button>
-          ))}
+      <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Select label="From" value={sourceLanguage} onChange={setSourceLanguage} />
+            <Select label="To" value={targetLanguage} onChange={setTargetLanguage} />
+          </div>
+          <textarea
+            value={text}
+            onChange={(event) => setText(event.target.value.slice(0, LIMIT))}
+            rows={12}
+            placeholder="Paste a sentence or short paragraph."
+            className="mt-5 w-full resize-y rounded-md border border-line px-3 py-2 text-sm leading-6"
+          />
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs font-medium text-neutral-500">{clipped.length}/{LIMIT} chars · {sentenceCount} segments</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={reset} className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface">
+                <RotateCcw size={16} />
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={translate}
+                disabled={!clipped.trim()}
+                className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
+              >
+                <Languages size={16} />
+                Translate
+              </button>
+            </div>
+          </div>
         </div>
-        <textarea
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          rows={10}
-          maxLength={LIMIT}
-          placeholder={tab === "translate" ? "Paste a short passage for focused translation." : "Paste text to draft quick review questions."}
-          className="mt-5 w-full resize-y rounded-md border border-line px-3 py-2 text-sm leading-6"
-        />
-        <div className="mt-2 text-right text-xs font-medium text-neutral-500">{clipped.length}/{LIMIT}</div>
-
-        {tab === "translate" ? (
-          <section className="mt-5 rounded-lg bg-surface p-4 text-sm leading-6 text-neutral-800">
-            <p className="font-semibold">Translation draft</p>
-            <p className="mt-2 text-neutral-600">
-              Model-backed offline translation will run here with a strict character limit. For now, this panel defines the UX: short passage in, focused translation out, then save useful expressions to dictionary.
-            </p>
-          </section>
-        ) : (
-          <section className="mt-5 space-y-3">
-            {quizItems.length ? (
-              quizItems.map((item, index) => (
-                <div key={item} className="rounded-lg border border-line bg-surface p-4 text-sm">
-                  <p className="font-semibold">Q{index + 1}. What does this expression mean in context?</p>
-                  <p className="mt-2 text-neutral-700">{item}</p>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-lg bg-surface p-4 text-sm text-neutral-600">Paste text to draft quiz prompts.</div>
-            )}
-          </section>
-        )}
-      </div>
+        <aside className="rounded-lg border border-line bg-panel p-5 shadow-material">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold">Result</h2>
+            <button
+              type="button"
+              onClick={copyResult}
+              disabled={!result}
+              className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-50"
+            >
+              <Clipboard size={14} />
+              Copy
+            </button>
+          </div>
+          <pre className="mt-4 min-h-64 whitespace-pre-wrap rounded-md bg-surface p-4 text-sm leading-6 text-neutral-800">
+            {result || "Translation output appears here after you run Translate."}
+          </pre>
+        </aside>
+      </section>
     </AppShell>
   );
 }
 
-function buildQuiz(text: string) {
-  return Array.from(
-    new Set(
-      text
-        .split(/[.!?\n]/)
-        .map((line) => line.trim())
-        .filter((line) => line.split(/\s+/).length >= 6)
-        .slice(0, 5)
-    )
+function Select({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="text-sm font-semibold">
+      {label}
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-md border border-line bg-white px-3 py-2 text-sm">
+        {languages.map((language) => <option key={language}>{language}</option>)}
+      </select>
+    </label>
   );
 }

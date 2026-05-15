@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 class DocumentCreate(BaseModel):
     title: str = Field(default="Untitled document", max_length=255)
     content: str = Field(min_length=1)
-    source_type: Literal["text", "markdown", "pdf", "unknown"] = "text"
+    source_type: Literal["text", "markdown", "pdf", "transcript", "video_segment", "unknown"] = "text"
 
 
 class DocumentRead(BaseModel):

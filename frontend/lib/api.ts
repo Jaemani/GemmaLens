@@ -116,6 +116,10 @@ export const api = {
   analyzeDocument: (documentId: string) =>
     request<AnalysisResult>(`/documents/${documentId}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
   getAnalysis: (documentId: string) => request<AnalysisResult>(`/documents/${documentId}/analysis`),
+  deleteDocument: async (documentId: string) => {
+    const response = await fetch(`${apiBase()}/documents/${documentId}`, { method: "DELETE" });
+    if (!response.ok) throw new Error(await responseErrorMessage(response));
+  },
   listDictionary: () => request<DictionaryItem[]>("/dictionary/items"),
   markDictionaryViewed: (itemId: string) =>
     request<DictionaryItem>(`/dictionary/items/${itemId}/view`, { method: "POST" }),

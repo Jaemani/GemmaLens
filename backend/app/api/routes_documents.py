@@ -48,3 +48,10 @@ def get_document(document_id: str, db: Session = Depends(get_db)):
     if not document:
         raise not_found("Document not found")
     return document
+
+
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_document(document_id: str, db: Session = Depends(get_db)):
+    deleted = DocumentRepository(db).delete(document_id)
+    if not deleted:
+        raise not_found("Document not found")
