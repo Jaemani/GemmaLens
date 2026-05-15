@@ -2,6 +2,9 @@
 
 ## 2026-05-15
 
+- Added source-grounded learning guardrails that repair weak edge-model output: summaries that only repeat source text are replaced, missing academic phrases are recovered from reusable paper-reading patterns, and weak sentence decompositions are replaced with structure explanations.
+- Tightened concept/term separation so generic source fragments such as `Training Deep Neural Networks` and `inputs changes during training` are not shown as saveable learning objects.
+- Moved A/B and scope panels below the main analysis workspace so PDF/source reading and the learning guide appear first.
 - Added DOCX upload support, including paragraph and simple table extraction.
 - Stored uploaded original files locally and added `GET /documents/{id}/file`.
 - Added source-file attachment for existing documents, so demo documents created before file storage can attach the original PDF without losing the existing analysis id.

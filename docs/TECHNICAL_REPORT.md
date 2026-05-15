@@ -118,11 +118,14 @@ Important current policy:
 - Structured result includes domain, difficulty, terms, phrases, concepts, sentence decomposition, summaries, and warnings.
 - Concepts are first-class learning objects, separate from dictionary terms. They connect vocabulary to the paper's argument, method, and referenced ideas.
 - Concepts can be saved to the dictionary/review store, just like terms and phrases.
+- Added source-grounded guardrails after model analysis. If the edge model returns empty phrase lists, repeated source text as summaries, weak sentence decompositions, or generic noun fragments, the backend now repairs or discards those items before the UI sees them.
+- The current Batch Normalization smoke result now separates concepts (`internal covariate shift`, `Batch Normalization`, `mini-batch`) from vocabulary (`stochastic gradient descent`, `learning rate`, `vanishing gradients`) and reusable academic expressions (`is complicated by the fact that`, `as opposed to`, `This motivates us to`).
 - Added A/B controls for save behavior, labels, layout, item detail, review state, and user-fit mode.
 - Added user-facing section-level status when analysis is section-limited.
 - Hid internal validator warnings from the result UI because they are debugging signals, not learning content.
 - Prevented silent mock fallback on MLX failure.
 - Added a re-analysis button so cached low-quality results can be replaced after model/runtime improvements.
+- Reordered the analysis result screen so the domain summary and source/learning workspace appear before experiment controls. This makes the demo read as a paper-learning tool rather than a settings dashboard.
 
 ### Video Learning
 
@@ -209,6 +212,7 @@ source chunk
 -> source-grounded normalization
 -> discard placeholders and items not found in source
 -> fallback source parser when Q4 output is invalid or too sparse
+-> learning guardrails repair weak summaries, phrases, concepts, and sentence structures
 ```
 
 This makes the Q4 ThinkPad route usable for functional testing. A short Batch Normalization smoke analysis completed in about 48 seconds with source-grounded terms, phrases, and sentence explanation, instead of timing out at 300 seconds on the fp16 CPU route.

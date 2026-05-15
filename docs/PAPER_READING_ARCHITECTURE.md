@@ -117,6 +117,15 @@ Atomic tasks:
 
 If a task returns invalid JSON, only that task should be retried or replaced with a source-grounded fallback. The whole document should not fail.
 
+The backend must not pass model output directly to the learner. A separate normalization/guardrail layer should:
+
+- prefer source-grounded known terms over low-confidence model guesses;
+- discard generic fragments such as section titles, partial noun phrases, and vague local context;
+- recover reusable academic phrases from source text when the model returns none;
+- replace summaries that merely repeat the first sentence;
+- replace missing sentence decomposition with explicit structure patterns and support-language explanation;
+- keep concepts and vocabulary separate even when the surface string overlaps.
+
 ## MVP Decision
 
 For the next usable paper-reading MVP, implement:

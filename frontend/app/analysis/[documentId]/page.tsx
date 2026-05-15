@@ -8,7 +8,7 @@ export default async function AnalysisPage({ params }: { params: Promise<{ docum
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Analysis result</h1>
         <p className="mt-2 max-w-3xl text-sm text-neutral-600">
-          Learning guide generated from extracted source text. For PDFs, the current view is not a rendered page viewer yet.
+          Read the original source beside a language-learning guide built from extracted text, concepts, expressions, and sentence structures.
         </p>
       </div>
       <AnalysisResultView documentId={documentId} />

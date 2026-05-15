@@ -165,6 +165,32 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const isVideoSource = document?.source_type === "transcript" || document?.source_type === "video_segment";
   const isDocumentSource = documentId !== DEMO_DOCUMENT_ID && !isVideoSource;
   const hasPdfViewer = Boolean(document?.source_type === "pdf" && document.has_original_file);
+  const experimentControls = (
+    <>
+      <ExperimentSwitchPanel config={config} onChange={setConfig} />
+      <section className="rounded-lg border border-line bg-panel p-4 shadow-material">
+        <p className="text-sm font-semibold">User-fit mode</p>
+        <p className="mt-1 text-sm text-neutral-600">
+          {config.userFit === "onboarding"
+            ? "A Ask mode: analysis assumes level, support language, learning language, and field are selected before reading."
+            : "B Learn mode: analysis should adapt from saved, ignored, viewed, and familiar items over time."}
+        </p>
+      </section>
+      {autoSaveStatus ? (
+        <div className="rounded-lg border border-line bg-blue-50 px-4 py-3 text-sm font-medium text-accent">{autoSaveStatus}</div>
+      ) : null}
+    </>
+  );
+  const scopeNotice = isSectionLevel ? (
+    <section className="rounded-lg border border-line bg-panel p-4 text-sm leading-6 text-neutral-700 shadow-material">
+      <p className="font-semibold text-ink">{isVideoSource ? "Transcript scope" : "Scope"}</p>
+      <p className="mt-1">
+        {isVideoSource
+          ? "This result covers the transcript text sent from the video page. Longer videos should be analyzed scene by scene, then merged into a full-video learning guide."
+          : "This is not the whole paper yet. It covers the first readable section after front matter cleanup. Use source slices for page-level study while full-paper staged analysis is being built."}
+      </p>
+    </section>
+  ) : null;
   const guideContent = (
     <div className="space-y-6">
       <ConceptMapPanel analysis={analysis} sourceKind={isVideoSource ? "video" : "document"} />
@@ -195,28 +221,6 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           </button>
         </div>
       ) : null}
-      <ExperimentSwitchPanel config={config} onChange={setConfig} />
-      <section className="rounded-lg border border-line bg-panel p-4 shadow-material">
-        <p className="text-sm font-semibold">User-fit mode</p>
-        <p className="mt-1 text-sm text-neutral-600">
-          {config.userFit === "onboarding"
-            ? "A Ask mode: analysis assumes level, support language, learning language, and field are selected before reading."
-            : "B Learn mode: analysis should adapt from saved, ignored, viewed, and familiar items over time."}
-        </p>
-      </section>
-      {autoSaveStatus ? (
-        <div className="rounded-lg border border-line bg-blue-50 px-4 py-3 text-sm font-medium text-accent">{autoSaveStatus}</div>
-      ) : null}
-      {isSectionLevel ? (
-        <section className="rounded-lg border border-line bg-panel p-4 text-sm leading-6 text-neutral-700 shadow-material">
-          <p className="font-semibold text-ink">{isVideoSource ? "Transcript scope" : "Scope"}</p>
-          <p className="mt-1">
-            {isVideoSource
-              ? "This result covers the transcript text sent from the video page. Longer videos should be analyzed scene by scene, then merged into a full-video learning guide."
-              : "This is not the whole paper yet. It covers the first readable section after front matter cleanup. Full-paper staged analysis should analyze each section and merge them into a whole-paper view."}
-          </p>
-        </section>
-      ) : null}
       <DomainOverviewCard analysis={analysis} />
       {hasPdfViewer && document ? (
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(520px,0.95fr)_minmax(0,1.05fr)]">
@@ -228,6 +232,10 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       ) : (
         guideContent
       )}
+      <div className="space-y-4">
+        {scopeNotice}
+        {experimentControls}
+      </div>
     </div>
   );
 }

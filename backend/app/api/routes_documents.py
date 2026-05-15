@@ -66,14 +66,6 @@ def list_documents(db: Session = Depends(get_db)):
     ]
 
 
-@router.get("/{document_id}", response_model=DocumentRead)
-def get_document(document_id: str, db: Session = Depends(get_db)):
-    document = DocumentRepository(db).get(document_id)
-    if not document:
-        raise not_found("Document not found")
-    return _read_document(document)
-
-
 @router.get("/{document_id}/file")
 def get_document_file(document_id: str, db: Session = Depends(get_db)):
     document = DocumentRepository(db).get(document_id)
@@ -85,6 +77,14 @@ def get_document_file(document_id: str, db: Session = Depends(get_db)):
     if not path.exists() or not path.is_file():
         raise not_found("Original file not found")
     return FileResponse(path, media_type=document.original_mime_type or "application/octet-stream", filename=document.title)
+
+
+@router.get("/{document_id}", response_model=DocumentRead)
+def get_document(document_id: str, db: Session = Depends(get_db)):
+    document = DocumentRepository(db).get(document_id)
+    if not document:
+        raise not_found("Document not found")
+    return _read_document(document)
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
