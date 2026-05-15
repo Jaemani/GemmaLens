@@ -132,21 +132,22 @@ def _read_document(document) -> DocumentRead:
     )
 
 
-def _document_sections(content: str) -> list[str]:
+def _document_sections(content: str):
     readable_text = AcademicTextService().readable_section(content)
-    return DocumentSectionService().split(readable_text)
+    return DocumentSectionService().split_with_labels(readable_text)
 
 
-def _read_section(index: int, text: str, total: int, analyzed: bool = False) -> DocumentSectionRead:
-    preview = " ".join(text.split())[:220]
+def _read_section(index: int, section, total: int, analyzed: bool = False) -> DocumentSectionRead:
+    preview = " ".join(section.text.split())[:220]
     return DocumentSectionRead(
         index=index,
         section_number=index + 1,
         total_sections=total,
-        text=text,
+        text=section.text,
         preview=preview,
-        char_count=len(text),
+        char_count=len(section.text),
         analyzed=analyzed,
+        source_label=section.source_label,
     )
 
 

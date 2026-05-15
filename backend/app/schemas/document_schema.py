@@ -40,3 +40,4 @@ class DocumentSectionRead(BaseModel):
     preview: str
     char_count: int
     analyzed: bool = False
+    source_label: str | None = None

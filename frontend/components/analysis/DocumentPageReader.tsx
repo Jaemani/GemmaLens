@@ -189,6 +189,7 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
           <p className="text-sm font-semibold text-ink">
             Section {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
           </p>
+          {currentSection?.source_label ? <p className="text-xs font-semibold text-neutral-600">{currentSection.source_label}</p> : null}
           <p className="text-xs text-neutral-500">{(currentSection?.char_count ?? page.length).toLocaleString()} chars from backend-cleaned text</p>
           {currentSection?.analyzed ? <p className="text-xs font-semibold text-green-700">Analyzed</p> : null}
         </div>

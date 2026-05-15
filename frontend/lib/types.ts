@@ -24,6 +24,7 @@ export type DocumentSection = {
   preview: string;
   char_count: number;
   analyzed: boolean;
+  source_label: string | null;
 };
 
 export type AnalysisResult = {

@@ -2,6 +2,8 @@ import re
 
 
 class AcademicTextService:
+    page_marker_pattern = re.compile(r"\[\[GEMMALENS_PDF_PAGE:\d+]]")
+
     def readable_section(self, text: str) -> str:
         normalized_lines = self._clean_lines(text)
         abstract = self._after_abstract(normalized_lines)
@@ -31,6 +33,9 @@ class AcademicTextService:
             return ""
         after = text[match.end() :]
         after = re.sub(r"^\s*[:.-]?\s*", "", after)
+        page_markers = list(self.page_marker_pattern.finditer(text[: match.start()]))
+        if page_markers:
+            after = f"{page_markers[-1].group(0)}\n{after}"
         return self._normalize_for_model(after)
 
     def _drop_obvious_front_matter(self, text: str) -> str:

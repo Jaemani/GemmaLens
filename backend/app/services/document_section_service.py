@@ -1,13 +1,36 @@
 import re
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class DocumentSection:
+    text: str
+    source_label: str | None = None
 
 
 class DocumentSectionService:
     section_chars = 1800
+    page_marker_pattern = re.compile(r"\[\[GEMMALENS_PDF_PAGE:(\d+)]]")
 
     def split(self, text: str) -> list[str]:
-        cleaned = self._clean(text)
-        if not cleaned:
-            return []
+        return [section.text for section in self.split_with_labels(text)]
+
+    def split_with_labels(self, text: str) -> list[DocumentSection]:
+        if not self.page_marker_pattern.search(text):
+            return [DocumentSection(section) for section in self._split_plain(self._clean(text))]
+
+        sections: list[DocumentSection] = []
+        parts = self.page_marker_pattern.split(text)
+        leading = parts[0]
+        sections.extend(DocumentSection(section) for section in self._split_plain(self._clean(leading)))
+        for index in range(1, len(parts), 2):
+            page_number = parts[index]
+            page_text = parts[index + 1] if index + 1 < len(parts) else ""
+            label = f"PDF page {page_number}"
+            sections.extend(DocumentSection(section, label) for section in self._split_plain(self._clean(page_text)))
+        return sections
+
+    def _split_plain(self, cleaned: str) -> list[str]:
         sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", cleaned) if part.strip()]
         sections: list[str] = []
         current = ""

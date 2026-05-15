@@ -220,6 +220,25 @@ def test_document_section_analysis_stays_on_parent_document(client):
     assert missing.status_code == 404
 
 
+def test_document_sections_include_pdf_page_labels_when_available(client):
+    created = client.post(
+        "/documents",
+        json={
+            "title": "Marked PDF",
+            "content": (
+                "[[GEMMALENS_PDF_PAGE:1]]\nAbstract\nBatch Normalization reduces internal covariate shift. "
+                "[[GEMMALENS_PDF_PAGE:2]]\nThe method estimates mini-batch statistics."
+            ),
+            "source_type": "pdf",
+        },
+    )
+    assert created.status_code == 200
+
+    sections = client.get(f"/documents/{created.json()['id']}/sections")
+    assert sections.status_code == 200
+    assert [section["source_label"] for section in sections.json()] == ["PDF page 1", "PDF page 2"]
+
+
 def test_upload_document_uses_ingestion_service(client):
     uploaded = client.post(
         "/documents/upload",

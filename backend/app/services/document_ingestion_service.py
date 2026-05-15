@@ -89,7 +89,10 @@ class DocumentIngestionService:
                     reader.decrypt("")
                 except Exception:
                     return ""
-            return "\n".join(page.extract_text() or "" for page in reader.pages)
+            pages = []
+            for index, page in enumerate(reader.pages, start=1):
+                pages.append(f"[[GEMMALENS_PDF_PAGE:{index}]]\n{page.extract_text() or ''}")
+            return "\n".join(pages)
         except Exception as exc:
             raise DocumentIngestionError(f"Could not read PDF: {exc}") from exc
 
