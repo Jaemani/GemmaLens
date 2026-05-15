@@ -134,10 +134,13 @@ same PDF workspace
 -> analyze current section
 -> render inline section lesson
 -> cache section lesson by document and section index
+-> update paper map from cached section lessons
 -> keep PDF page navigation and section navigation available
 ```
 
 Normalization must use the text span that was actually analyzed. Re-normalizing a first-section result against the whole paper can pull in later terms that are source-grounded somewhere in the document but irrelevant to the current reading moment.
+
+The paper map should be honest about coverage. If only sections 2 and 3 are analyzed, it should say so and aggregate only those sections. It should not produce a whole-paper conclusion until all major sections have been analyzed or a separate whole-paper merge step has run.
 
 ## MVP Decision
 

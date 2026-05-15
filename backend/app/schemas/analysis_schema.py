@@ -140,3 +140,19 @@ class AnalysisResult(BaseModel):
     sentences: list[SentenceDecomposition]
     summaries: LayeredSummaries
     quality_warnings: list[str] = Field(default_factory=list)
+
+
+class PaperMapItem(BaseModel):
+    text: str
+    meaning: str
+    sections: list[int] = Field(default_factory=list)
+    count: int = 0
+
+
+class PaperMapResponse(BaseModel):
+    document_id: str
+    analyzed_sections: list[int] = Field(default_factory=list)
+    top_concepts: list[PaperMapItem] = Field(default_factory=list)
+    top_terms: list[PaperMapItem] = Field(default_factory=list)
+    top_phrases: list[PaperMapItem] = Field(default_factory=list)
+    section_summaries: list[PaperMapItem] = Field(default_factory=list)

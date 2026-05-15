@@ -21,6 +21,7 @@ import { AnalysisProgress } from "./AnalysisProgress";
 import { ConceptMapPanel } from "./ConceptMapPanel";
 import { DocumentPageReader } from "./DocumentPageReader";
 import { ExperimentSwitchPanel } from "./ExperimentSwitchPanel";
+import { PaperMapProgressPanel } from "./PaperMapProgressPanel";
 import { PdfSourcePane } from "./PdfSourcePane";
 import { ErrorState } from "../common/ErrorState";
 
@@ -194,6 +195,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const guideContent = (
     <div className="space-y-6">
       <ConceptMapPanel analysis={analysis} sourceKind={isVideoSource ? "video" : "document"} />
+      {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} /> : null}
       {config.resultLayout === "readingContextFirst" ? reader : null}
       {learningObjects}
       {summaries}

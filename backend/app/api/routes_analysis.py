@@ -8,10 +8,12 @@ from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.section_analysis_repository import SectionAnalysisRepository
 from app.repositories.user_profile_repository import UserProfileRepository
-from app.schemas.analysis_schema import AnalysisResult
+from app.schemas.analysis_schema import AnalysisResult, PaperMapResponse
 from app.services.academic_text_service import AcademicTextService
 from app.services.analysis_normalization_service import AnalysisNormalizationService
 from app.services.analysis_pipeline_service import AnalysisPipelineService
+from app.services.document_section_service import DocumentSectionService
+from app.services.paper_map_service import PaperMapService
 
 router = APIRouter(prefix="/documents", tags=["analysis"])
 
@@ -57,3 +59,13 @@ def get_analysis(document_id: str, db: Session = Depends(get_db)):
         analysis_text = analysis_text[: settings.analysis_model_input_chars].rsplit(" ", 1)[0]
     normalized = AnalysisNormalizationService().normalize_result(result, analysis_text)
     return normalized
+
+
+@router.get("/{document_id}/paper-map", response_model=PaperMapResponse)
+def get_paper_map(document_id: str, db: Session = Depends(get_db)):
+    document = DocumentRepository(db).get(document_id)
+    if not document:
+        raise not_found("Document not found")
+    readable_text = AcademicTextService().readable_section(document.content)
+    sections = DocumentSectionService().split(readable_text)
+    return PaperMapService(AnalysisRepository(db), SectionAnalysisRepository(db)).build(document_id, sections)

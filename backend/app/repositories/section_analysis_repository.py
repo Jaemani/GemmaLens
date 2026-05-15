@@ -38,3 +38,9 @@ class SectionAnalysisRepository:
         if not model:
             return None
         return AnalysisResult.model_validate(json.loads(model.payload))
+
+    def list_results(self, document_id: str) -> list[tuple[int, AnalysisResult]]:
+        rows = self.db.scalars(
+            select(SectionAnalysis).where(SectionAnalysis.document_id == document_id).order_by(SectionAnalysis.section_index)
+        ).all()
+        return [(row.section_index, AnalysisResult.model_validate(json.loads(row.payload))) for row in rows]

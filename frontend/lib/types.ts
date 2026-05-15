@@ -71,6 +71,22 @@ export type AnalysisResult = {
   quality_warnings?: string[];
 };
 
+export type PaperMapItem = {
+  text: string;
+  meaning: string;
+  sections: number[];
+  count: number;
+};
+
+export type PaperMap = {
+  document_id: string;
+  analyzed_sections: number[];
+  top_concepts: PaperMapItem[];
+  top_terms: PaperMapItem[];
+  top_phrases: PaperMapItem[];
+  section_summaries: PaperMapItem[];
+};
+
 export type DictionaryItem = {
   id: string;
   item_type: "term" | "phrase" | "sentence" | "concept";

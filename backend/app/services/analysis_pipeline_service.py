@@ -58,11 +58,26 @@ class AnalysisPipelineService:
         section = self.sections.section(readable_text, section_index)
         if not section:
             return None
+        section_text, section_count = section
         if self.section_analyses:
             cached = self.section_analyses.get_result(document_id, section_index)
             if cached:
-                return cached
-        section_text, section_count = section
+                normalized_cached = self.normalizer.normalize_result(cached, section_text)
+                if target_level and target_level != "unknown" and not normalized_cached.difficulty.reason.startswith("Calibrated against your"):
+                    normalized_cached = normalized_cached.model_copy(
+                        update={
+                            "difficulty": normalized_cached.difficulty.model_copy(
+                                update={
+                                    "overall_level": target_level,
+                                    "reason": f"Calibrated against your {target_level} reading setting. {normalized_cached.difficulty.reason}",
+                                }
+                            )
+                        }
+                    )
+                if f"section:{section_index + 1}/{section_count}" not in normalized_cached.quality_warnings:
+                    normalized_cached.quality_warnings.append(f"section:{section_index + 1}/{section_count}")
+                self.section_analyses.upsert(section_index, normalized_cached)
+                return normalized_cached
         chunks = self.chunker.chunk(section_text)
         result = await self.adapter.analyze_document(document.id, section_text, chunks[: self.settings.analysis_model_max_chunks])
         result = self.normalizer.normalize_result(result, section_text)

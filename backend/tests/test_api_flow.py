@@ -182,6 +182,12 @@ def test_document_section_analysis_stays_on_parent_document(client):
     assert cached.status_code == 200
     assert cached.json() == body
 
+    paper_map = client.get(f"/documents/{created.json()['id']}/paper-map")
+    assert paper_map.status_code == 200
+    assert paper_map.json()["analyzed_sections"] == [2]
+    assert paper_map.json()["section_summaries"][0]["text"] == "Section 2"
+    assert paper_map.json()["top_terms"]
+
     missing = client.post(f"/documents/{created.json()['id']}/sections/999/analyze")
     assert missing.status_code == 404
 

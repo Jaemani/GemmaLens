@@ -4,6 +4,7 @@ import type {
   DocumentListItem,
   DocumentRead,
   ModelConfigUpdate,
+  PaperMap,
   ModelPreset,
   ModelStatus,
   TranslationResponse,
@@ -147,6 +148,7 @@ export const api = {
   analyzeDocumentSection: (documentId: string, sectionIndex: number) =>
     request<AnalysisResult>(`/documents/${documentId}/sections/${sectionIndex}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
   getAnalysis: (documentId: string) => request<AnalysisResult>(`/documents/${documentId}/analysis`),
+  getPaperMap: (documentId: string) => request<PaperMap>(`/documents/${documentId}/paper-map`),
   deleteDocument: async (documentId: string) => {
     const response = await fetch(`${apiBase()}/documents/${documentId}`, { method: "DELETE" });
     if (!response.ok) throw new Error(await responseErrorMessage(response));

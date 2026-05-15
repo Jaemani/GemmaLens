@@ -132,6 +132,8 @@ Important current policy:
 - Added a same-document section analysis endpoint, `POST /documents/{id}/sections/{section_index}/analyze`. This lets the frontend show an inline section lesson without creating a separate document or breaking the user's place in the paper.
 - Section analysis is now cached in SQLite. In the BERT paper smoke test, a cold section analysis took about 67.0 seconds on the current remote edge route; the cached repeat call returned in about 0.03 seconds.
 - Cached analysis normalization now uses the analyzed text span rather than the entire readable paper, reducing cross-section contamination where later-paper vocabulary could appear in the first-section guide.
+- Added a paper map endpoint, `GET /documents/{id}/paper-map`, built from analyzed section cache. It aggregates cumulative concepts, terms, reusable expressions, and section summaries while explicitly reflecting only analyzed sections.
+- Cached section lessons are re-normalized on read with the current guardrails. This lets older cached output improve when the validation layer improves, without forcing a slow model rerun.
 
 ### Video Learning
 
