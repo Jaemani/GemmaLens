@@ -21,7 +21,7 @@ The repo includes `render.yaml` and `backend/Dockerfile`.
 Render settings:
 
 - Blueprint file: `render.yaml`
-- Service: `sololingo-api`
+- Service: `gemmalens-api`
 - Runtime: Docker
 - Health check: `/health`
 - Disk: `/data`

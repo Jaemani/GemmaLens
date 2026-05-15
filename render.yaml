@@ -1,12 +1,12 @@
 services:
   - type: web
-    name: sololingo-api
+    name: gemmalens-api
     env: docker
     dockerContext: backend
     dockerfilePath: backend/Dockerfile
     healthCheckPath: /health
     disk:
-      name: sololingo-data
+      name: gemmalens-data
       mountPath: /data
       sizeGB: 1
     envVars:
