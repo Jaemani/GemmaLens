@@ -7,6 +7,7 @@
 - Reordered the analysis workspace so section navigation and "Analyze this section" appear above the cumulative paper map and concept cards, making the page work more like a reading tool than a static report.
 - Renamed the per-result concept panel from "Paper map" to "Concept anchors" to reduce confusion between current-section concepts and the cumulative paper map.
 - Fixed paper-map fallback normalization so older base analyses no longer leak generic fragments such as `Training Deep Neural Networks` or `inputs changes during training` into cumulative concepts/terms.
+- Added backend document-section endpoints and switched the frontend section reader to use them, so displayed section numbers/text now match the exact backend section sent to Gemma for analysis.
 - Replaced the native embedded PDF iframe with a PDF.js canvas preview, so the demo reliably shows the original PDF and supports PDF page Previous/Next controls.
 - Promoted extracted-section navigation so section Previous/Next and "Analyze this section" are visible without opening a hidden debug text block.
 - Added BERT-family learning guardrails after testing the BERT paper: BERT results now prioritize BERT, pre-training, fine-tuning, masked language model, and next sentence prediction instead of unrelated terms that merely appear elsewhere in the paper.

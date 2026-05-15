@@ -1,14 +1,13 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Paperclip, ScanText } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import type { AnalysisResult, DocumentRead } from "@/lib/types";
-
-const PAGE_CHARS = 1800;
+import type { AnalysisResult, DocumentRead, DocumentSection } from "@/lib/types";
 
 export function DocumentPageReader({ documentId, onSectionAnalyzed }: { documentId: string; onSectionAnalyzed?: () => void }) {
   const [document, setDocument] = useState<DocumentRead | null>(null);
+  const [sections, setSections] = useState<DocumentSection[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -16,15 +15,17 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
   const [sectionAnalysis, setSectionAnalysis] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState("");
   const attachInputRef = useRef<HTMLInputElement>(null);
-  const pages = useMemo(() => splitPages(document?.content ?? ""), [document?.content]);
-  const page = pages[pageIndex] ?? "";
+  const currentSection = sections[pageIndex];
+  const page = currentSection?.text ?? "";
 
   useEffect(() => {
     let cancelled = false;
-    api
-      .getDocument(documentId)
-      .then((loaded) => {
-        if (!cancelled) setDocument(loaded);
+    Promise.all([api.getDocument(documentId), api.listDocumentSections(documentId)])
+      .then(([loaded, loadedSections]) => {
+        if (!cancelled) {
+          setDocument(loaded);
+          setSections(loadedSections);
+        }
       })
       .catch(() => {
         if (!cancelled) setError("Could not load the source document reader.");
@@ -40,11 +41,11 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
   }, [pageIndex]);
 
   async function analyzePage() {
-    if (!document || !page.trim()) return;
+    if (!document || !currentSection || !page.trim()) return;
     setIsAnalyzing(true);
     setError("");
     try {
-      const created = await api.analyzeDocumentSection(document.id, pageIndex);
+      const created = await api.analyzeDocumentSection(document.id, currentSection.index);
       setSectionAnalysis(created);
       onSectionAnalyzed?.();
     } catch (err) {
@@ -116,7 +117,7 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
           <button
             type="button"
             onClick={analyzePage}
-            disabled={isAnalyzing || !page.trim()}
+            disabled={isAnalyzing || !currentSection || !page.trim()}
             className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
           >
             <ScanText size={16} />
@@ -136,14 +137,14 @@ export function DocumentPageReader({ documentId, onSectionAnalyzed }: { document
         </button>
         <div className="text-center">
           <p className="text-sm font-semibold text-ink">
-            Section {pageIndex + 1} / {Math.max(pages.length, 1)}
+            Section {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
           </p>
-          <p className="text-xs text-neutral-500">{page.length.toLocaleString()} chars from extracted text</p>
+          <p className="text-xs text-neutral-500">{(currentSection?.char_count ?? page.length).toLocaleString()} chars from backend-cleaned text</p>
         </div>
         <button
           type="button"
-          onClick={() => setPageIndex((value) => Math.min(pages.length - 1, value + 1))}
-          disabled={pageIndex >= pages.length - 1}
+          onClick={() => setPageIndex((value) => Math.min(sections.length - 1, value + 1))}
+          disabled={!sections.length || pageIndex >= sections.length - 1}
           className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-40"
         >
           Next
@@ -229,28 +230,4 @@ function MiniList({ title, rows }: { title: string; rows: Array<[string, string]
       )}
     </div>
   );
-}
-
-function splitPages(text: string) {
-  const cleaned = text
-    .replace(/\r\n/g, "\n")
-    .replace(/([A-Za-z]{3,})-\s+([a-z]{2,})/g, "$1$2")
-    .replace(/([A-Za-z]{3,})-\s*\n\s*([a-z]{2,})/g, "$1$2")
-    .replace(/\b(?:tion|sion|ment|sentation|resentation|pre)\s+(?:model|models|network|networks|training|representations)\b/gi, "")
-    .replace(/[ \t]+/g, " ")
-    .trim();
-  if (!cleaned) return [];
-  const sentences = cleaned.split(/(?<=[.!?])\s+/);
-  const pages: string[] = [];
-  let current = "";
-  for (const sentence of sentences) {
-    if (current.length + sentence.length > PAGE_CHARS && current) {
-      pages.push(current.trim());
-      current = sentence;
-    } else {
-      current = `${current} ${sentence}`.trim();
-    }
-  }
-  if (current) pages.push(current.trim());
-  return pages;
 }

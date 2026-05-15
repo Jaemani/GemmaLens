@@ -16,6 +16,15 @@ export type DocumentListItem = {
   created_at: string;
 };
 
+export type DocumentSection = {
+  index: number;
+  section_number: number;
+  total_sections: number;
+  text: string;
+  preview: string;
+  char_count: number;
+};
+
 export type AnalysisResult = {
   document_id: string;
   domain: {

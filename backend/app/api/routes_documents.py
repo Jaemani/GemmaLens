@@ -7,8 +7,10 @@ from sqlalchemy.orm import Session
 from app.core.errors import not_found
 from app.db.session import get_db
 from app.repositories.document_repository import DocumentRepository
-from app.schemas.document_schema import DocumentCreate, DocumentListItem, DocumentRead
+from app.schemas.document_schema import DocumentCreate, DocumentListItem, DocumentRead, DocumentSectionRead
+from app.services.academic_text_service import AcademicTextService
 from app.services.document_ingestion_service import DocumentIngestionError, DocumentIngestionService
+from app.services.document_section_service import DocumentSectionService
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -79,6 +81,26 @@ def get_document_file(document_id: str, db: Session = Depends(get_db)):
     return FileResponse(path, media_type=document.original_mime_type or "application/octet-stream", filename=document.title)
 
 
+@router.get("/{document_id}/sections", response_model=list[DocumentSectionRead])
+def list_document_sections(document_id: str, db: Session = Depends(get_db)):
+    document = DocumentRepository(db).get(document_id)
+    if not document:
+        raise not_found("Document not found")
+    sections = _document_sections(document.content)
+    return [_read_section(index, section, len(sections)) for index, section in enumerate(sections)]
+
+
+@router.get("/{document_id}/sections/{section_index}", response_model=DocumentSectionRead)
+def get_document_section(document_id: str, section_index: int, db: Session = Depends(get_db)):
+    document = DocumentRepository(db).get(document_id)
+    if not document:
+        raise not_found("Document not found")
+    sections = _document_sections(document.content)
+    if section_index < 0 or section_index >= len(sections):
+        raise not_found("Document section not found")
+    return _read_section(section_index, sections[section_index], len(sections))
+
+
 @router.get("/{document_id}", response_model=DocumentRead)
 def get_document(document_id: str, db: Session = Depends(get_db)):
     document = DocumentRepository(db).get(document_id)
@@ -103,4 +125,21 @@ def _read_document(document) -> DocumentRead:
         has_original_file=bool(document.original_file_path),
         original_mime_type=document.original_mime_type,
         created_at=document.created_at,
+    )
+
+
+def _document_sections(content: str) -> list[str]:
+    readable_text = AcademicTextService().readable_section(content)
+    return DocumentSectionService().split(readable_text)
+
+
+def _read_section(index: int, text: str, total: int) -> DocumentSectionRead:
+    preview = " ".join(text.split())[:220]
+    return DocumentSectionRead(
+        index=index,
+        section_number=index + 1,
+        total_sections=total,
+        text=text,
+        preview=preview,
+        char_count=len(text),
     )

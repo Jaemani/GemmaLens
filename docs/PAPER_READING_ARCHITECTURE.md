@@ -144,6 +144,8 @@ The paper map should be honest about coverage. If only sections 2 and 3 are anal
 
 Current implementation note: `GET /documents/{id}/paper-map` returns both `total_sections` and `analyzed_sections`. The frontend shows this as a coverage indicator and refreshes it after each section analysis, so the learner can tell whether the current map is only a first-section guide or a broader paper guide.
 
+The frontend should not duplicate section-splitting logic. The reader requests backend-cleaned sections from `GET /documents/{id}/sections`, and `Analyze this section` sends the same zero-based section index to `POST /documents/{id}/sections/{section_index}/analyze`. This keeps displayed text, cache keys, paper-map coverage, and model input aligned.
+
 UI priority for paper reading:
 
 ```text

@@ -3,6 +3,7 @@ import type {
   DictionaryItem,
   DocumentListItem,
   DocumentRead,
+  DocumentSection,
   ModelConfigUpdate,
   PaperMap,
   ModelPreset,
@@ -102,6 +103,7 @@ export const api = {
     request<ModelStatus>("/models/config", { method: "POST", body: JSON.stringify(payload) }),
   listDocuments: () => request<DocumentListItem[]>("/documents"),
   getDocument: (documentId: string) => request<DocumentRead>(`/documents/${documentId}`),
+  listDocumentSections: (documentId: string) => request<DocumentSection[]>(`/documents/${documentId}/sections`),
   documentFileUrl: (documentId: string) => `${apiBase()}/documents/${documentId}/file`,
   createDocument: (payload: { title: string; content: string; source_type: string }) =>
     request<DocumentRead>("/documents", { method: "POST", body: JSON.stringify(payload) }),

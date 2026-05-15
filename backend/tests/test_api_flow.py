@@ -180,6 +180,18 @@ def test_document_section_analysis_stays_on_parent_document(client):
     )
     assert created.status_code == 200
 
+    sections = client.get(f"/documents/{created.json()['id']}/sections")
+    assert sections.status_code == 200
+    assert len(sections.json()) >= 2
+    assert sections.json()[1]["index"] == 1
+    assert sections.json()[1]["section_number"] == 2
+    assert sections.json()[1]["total_sections"] == len(sections.json())
+    assert sections.json()[1]["char_count"] == len(sections.json()[1]["text"])
+
+    one_section = client.get(f"/documents/{created.json()['id']}/sections/1")
+    assert one_section.status_code == 200
+    assert one_section.json() == sections.json()[1]
+
     section = client.post(f"/documents/{created.json()['id']}/sections/1/analyze")
     assert section.status_code == 200
     body = section.json()

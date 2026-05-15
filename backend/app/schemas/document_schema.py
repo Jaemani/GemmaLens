@@ -30,3 +30,12 @@ class DocumentListItem(BaseModel):
     source_type: str
     preview: str
     created_at: datetime
+
+
+class DocumentSectionRead(BaseModel):
+    index: int
+    section_number: int
+    total_sections: int
+    text: str
+    preview: str
+    char_count: int

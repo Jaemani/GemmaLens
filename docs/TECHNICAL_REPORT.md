@@ -73,6 +73,8 @@ This is not legal advice; it is an engineering compliance checklist based on the
   - `POST /documents/upload`
   - `GET /documents`
   - `GET /documents/{id}`
+  - `GET /documents/{id}/sections`
+  - `GET /documents/{id}/sections/{section_index}`
   - `DELETE /documents/{id}`
   - `POST /documents/{id}/analyze`
   - `GET /documents/{id}/analysis`
@@ -136,6 +138,7 @@ Important current policy:
 - The paper map now returns total section count and analyzed section numbers. The UI displays coverage such as `1 / 27 sections analyzed`, and refreshes automatically after a section lesson is generated.
 - Reordered the paper workspace so the section reader and "Analyze this section" action appear directly beside the PDF before the cumulative map and lower learning-object tables. This supports page-by-page study instead of forcing the user to scroll through a static analysis report before continuing.
 - Renamed the single-result concept panel to "Concept anchors" so it is not confused with the cumulative paper map.
+- Added backend section endpoints, `GET /documents/{id}/sections` and `GET /documents/{id}/sections/{section_index}`. The frontend section reader now uses these endpoints instead of duplicating split logic in the browser, so the text shown to the user is the same text submitted to section analysis.
 - Cached section lessons are re-normalized on read with the current guardrails. This lets older cached output improve when the validation layer improves, without forcing a slow model rerun.
 
 ### Video Learning
