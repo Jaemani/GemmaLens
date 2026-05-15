@@ -2,6 +2,10 @@
 
 ## 2026-05-15
 
+- Cached analysis reads now re-run normalization against the source text, so bad saved objects can be filtered without forcing a model rerun.
+- Removed the fake left-side PDF reader layout. Extracted text slices are now collapsed source tools, not presented as a real reading pane.
+- Clarified that extracted text slices are model input, not rendered PDF pages.
+- Tightened term/concept cleanup so generic phrases such as `the best performing models` are not treated as saveable vocabulary.
 - Added visible progress UI for video transcript and current-scene analysis.
 - Made analysis result source-aware: video transcript results no longer show paper page-reader UI or paper-only copy.
 - Limited long transcript source excerpts so concept cards do not show entire transcript chunks.

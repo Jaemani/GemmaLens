@@ -63,7 +63,7 @@ class AnalysisNormalizationService:
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            term = str(row.get("term") or row.get("text") or "").strip()
+            term = self._clean_learning_term(str(row.get("term") or row.get("text") or ""))
             if not term:
                 continue
             if term.lower() in {"string", "term", "actual term"}:
@@ -164,7 +164,7 @@ class AnalysisNormalizationService:
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            concept = str(row.get("concept") or row.get("name") or row.get("text") or "").strip()
+            concept = self._clean_learning_term(str(row.get("concept") or row.get("name") or row.get("text") or ""))
             if not concept or concept.lower() in {"string", "concept", "actual concept"}:
                 continue
             if not self._appears_in_text(concept, document_text):
@@ -303,6 +303,25 @@ class AnalysisNormalizationService:
         if value == "low":
             return "low_priority"
         return "useful"
+
+    def _clean_learning_term(self, value: str) -> str:
+        value = " ".join(value.strip().split())
+        if not value:
+            return ""
+        value = re.sub(r"^(?:the|a|an|or|and|but|these|those|this|that)\s+", "", value, flags=re.IGNORECASE)
+        value = re.sub(r"^(?:dominant|best-performing|best performing|recent|previous|current)\s+", "", value, flags=re.IGNORECASE)
+        lowered = value.lower()
+        if lowered in {"term", "string", "concept", "introduction recurrent"}:
+            return ""
+        if lowered.startswith(("introduction ", "conclusion ", "abstract ", "references ")):
+            return ""
+        if re.fullmatch(r"(?:best|better|good|poor|strong|weak|performing|performance)\s+models?", lowered):
+            return ""
+        if lowered in {"best performing models", "performing models", "models", "the best performing models"}:
+            return ""
+        if len(value.split()) > 5:
+            return ""
+        return value
 
     def _string_list(self, value: Any) -> list[str]:
         if isinstance(value, list):

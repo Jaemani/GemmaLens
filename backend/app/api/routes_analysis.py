@@ -7,6 +7,8 @@ from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.user_profile_repository import UserProfileRepository
 from app.schemas.analysis_schema import AnalysisResult
+from app.services.academic_text_service import AcademicTextService
+from app.services.analysis_normalization_service import AnalysisNormalizationService
 from app.services.analysis_pipeline_service import AnalysisPipelineService
 
 router = APIRouter(prefix="/documents", tags=["analysis"])
@@ -30,4 +32,9 @@ def get_analysis(document_id: str, db: Session = Depends(get_db)):
     result = AnalysisRepository(db).get_result(document_id)
     if not result:
         raise not_found("Analysis not found")
-    return result
+    document = DocumentRepository(db).get(document_id)
+    if not document:
+        raise not_found("Document not found")
+    readable_text = AcademicTextService().readable_section(document.content)
+    normalized = AnalysisNormalizationService().normalize_result(result, readable_text)
+    return normalized

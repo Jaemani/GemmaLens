@@ -189,6 +189,29 @@ def test_normalizer_trims_long_transcript_source_context():
     assert len(result.concepts[0].source_sentence) <= 430
 
 
+def test_normalizer_drops_generic_model_phrases_from_terms_and_concepts():
+    document = (
+        "The best performing models also connect the encoder and decoder through an attention mechanism. "
+        "Dominant sequence transduction models are based on complex recurrent or convolutional neural networks."
+    )
+    payload = {
+        "terms": [
+            {"term": "the best performing models", "meaning": "generic phrase"},
+            {"term": "or convolutional neural networks", "meaning": "technical architecture"},
+            {"term": "Introduction Recurrent", "meaning": "section artifact"},
+        ],
+        "concepts": [
+            {"concept": "the best performing models", "explanation": "generic phrase"},
+            {"concept": "dominant sequence transduction models", "explanation": "model family for sequence tasks"},
+        ],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "doc-6", document)
+
+    assert [term.term for term in result.terms] == ["convolutional neural networks"]
+    assert [concept.concept for concept in result.concepts] == ["sequence transduction models"]
+
+
 def test_academic_text_service_starts_after_front_matter_abstract():
     raw_text = """
 arXiv:1502.03167v3 [cs.LG] 2 Mar 2015

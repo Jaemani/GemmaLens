@@ -130,8 +130,9 @@ export function TermTable({ analysis, config }: { analysis: AnalysisResult; conf
 }
 
 export function buildRows(analysis: AnalysisResult): Row[] {
+  const conceptTexts = new Set((analysis.concepts ?? []).map((concept) => concept.concept.toLowerCase()));
   return [
-    ...analysis.terms.map((term): Row => {
+    ...analysis.terms.filter((term) => !conceptTexts.has(term.term.toLowerCase())).map((term): Row => {
       const highPriority = term.should_save || term.domain_relevance === "high" || term.difficulty === "hard";
       return {
         key: `term:${term.term}`,

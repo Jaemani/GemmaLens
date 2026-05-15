@@ -154,8 +154,15 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const learningObjects = <TermTable analysis={analysis} config={config} />;
   const summaries = <LayeredSummaryPanel analysis={analysis} />;
   const reader = <ReadingContextPanel analysis={analysis} />;
+  const sentenceStructures = (
+    <section className="space-y-4">
+      <h2 className="text-lg font-semibold">Sentence structures</h2>
+      {analysis.sentences.map((sentence) => <SentenceDecompositionCard key={sentence.core_structure} sentence={sentence} />)}
+    </section>
+  );
   const isSectionLevel = analysis.quality_warnings?.some((warning) => warning.includes("section-level analysis"));
   const isVideoSource = document?.source_type === "transcript" || document?.source_type === "video_segment";
+  const isDocumentSource = documentId !== DEMO_DOCUMENT_ID && !isVideoSource;
 
   return (
     <div className="space-y-6">
@@ -199,24 +206,33 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
         </section>
       ) : null}
       <DomainOverviewCard analysis={analysis} />
-      {documentId !== DEMO_DOCUMENT_ID && !isVideoSource ? <DocumentPageReader documentId={documentId} /> : null}
-      <ConceptMapPanel analysis={analysis} sourceKind={isVideoSource ? "video" : "document"} />
-      {config.resultLayout === "tableFirst" ? (
+      {isDocumentSource ? (
         <>
+          <ConceptMapPanel analysis={analysis} sourceKind="document" />
+          {config.resultLayout === "readingContextFirst" ? reader : null}
           {learningObjects}
           {summaries}
+          {sentenceStructures}
+          <DocumentPageReader documentId={documentId} />
         </>
       ) : (
         <>
-          {reader}
-          {learningObjects}
-          {summaries}
+          <ConceptMapPanel analysis={analysis} sourceKind={isVideoSource ? "video" : "document"} />
+          {config.resultLayout === "tableFirst" ? (
+            <>
+              {learningObjects}
+              {summaries}
+            </>
+          ) : (
+            <>
+              {reader}
+              {learningObjects}
+              {summaries}
+            </>
+          )}
+          {sentenceStructures}
         </>
       )}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Sentence structures</h2>
-        {analysis.sentences.map((sentence) => <SentenceDecompositionCard key={sentence.core_structure} sentence={sentence} />)}
-      </section>
     </div>
   );
 }

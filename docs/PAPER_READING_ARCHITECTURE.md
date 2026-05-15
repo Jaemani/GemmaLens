@@ -71,6 +71,15 @@ Batch Normalization as a method for stabilizing deep network training by normali
 
 Concepts should be saveable because advanced reading depends on repeated idea recognition, not only vocabulary memorization.
 
+Generic local context such as "the best performing models" should not become a saveable term or concept. If it is useful, it belongs in sentence/context explanation, not the learner dictionary. Saveable objects should pass a higher bar:
+
+- term: reusable technical vocabulary or academic expression;
+- concept: idea, method, phenomenon, task, claim, or model family;
+- phrase: reusable academic wording or discourse function;
+- sentence: structure worth practicing.
+
+The current reader uses extracted text slices. It is not a rendered PDF viewer yet. A future PDF viewer should preserve page geometry on the left while the right panel shows page-specific learning guidance.
+
 ## Edge Runtime Strategy
 
 Small Gemma models should not receive a whole paper and be asked for one large JSON object. The stable pattern is:
