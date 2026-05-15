@@ -13,6 +13,7 @@ export default async function DocumentsPage() {
   } catch {
     documents = demoModeEnabled ? demoDocuments : [];
   }
+  const documentOnlyItems = documents.filter((document) => document.source_type !== "transcript" && document.source_type !== "video_segment");
 
   return (
     <AppShell>
@@ -25,7 +26,7 @@ export default async function DocumentsPage() {
         </div>
         <div className="space-y-6">
           <DocumentInputPanel />
-          {documents.length > 0 ? <DocumentPreview documents={documents} /> : null}
+          {documentOnlyItems.length > 0 ? <DocumentPreview documents={documentOnlyItems} /> : null}
         </div>
       </div>
     </AppShell>

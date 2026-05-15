@@ -89,6 +89,8 @@ Near-term product stance: keep the document pipeline and schemas device-agnostic
 - Cached old analyses can be replaced with the re-analysis button after changing model/runtime logic.
 - The result page includes a page-slice reader with previous/next controls and "Analyze this page" so long papers are not trapped at the first analyzed section.
 - PDF hyphenation cleanup now repairs common extraction artifacts before term/concept selection.
+- Analysis UI is now source-aware: document results can show page reading controls, while video transcript results use video-learning copy and hide paper-only controls.
+- Video analysis now shows the same progress pattern as document analysis, so long local/remote model runs do not look frozen.
 
 ## Paper Reading Direction
 

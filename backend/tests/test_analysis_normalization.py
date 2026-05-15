@@ -158,6 +158,37 @@ def test_normalizer_keeps_source_grounded_concepts():
     assert result.concepts[0].source_sentence.startswith("Although previous studies")
 
 
+def test_normalizer_trims_long_transcript_source_context():
+    transcript = (
+        "hello and welcome to this long tutorial about sequence models " * 10
+        + "now we explain Transformer attention and why it replaced many recurrent neural networks "
+        + "then we continue with many extra words " * 20
+    )
+    payload = {
+        "terms": [
+            {
+                "term": "Transformer attention",
+                "meaning": "attention mechanism used in transformer models",
+                "domain_relevance": "high",
+                "source_sentence": transcript,
+            }
+        ],
+        "concepts": [
+            {
+                "concept": "Transformer attention",
+                "explanation": "A core idea in transformer models.",
+                "source_sentence": transcript,
+            }
+        ],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "video-1", transcript)
+
+    assert len(result.terms[0].source_sentence) <= 430
+    assert "Transformer attention" in result.terms[0].source_sentence
+    assert len(result.concepts[0].source_sentence) <= 430
+
+
 def test_academic_text_service_starts_after_front_matter_abstract():
     raw_text = """
 arXiv:1502.03167v3 [cs.LG] 2 Mar 2015

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { TranscriptResponse, TranscriptSegment } from "@/lib/types";
+import { AnalysisProgress } from "@/components/analysis/AnalysisProgress";
 
 declare global {
   interface Window {
@@ -31,9 +32,13 @@ export function VideoLearningPanel() {
   const [currentTime, setCurrentTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [analysisElapsed, setAnalysisElapsed] = useState(0);
+  const [analysisStep, setAnalysisStep] = useState(0);
+  const [analysisLabel, setAnalysisLabel] = useState<string | null>(null);
   const [showSubtitleFallback, setShowSubtitleFallback] = useState(false);
   const playerRef = useRef<YouTubePlayer | null>(null);
   const playerElementId = "youtube-learning-player";
+  const isAnalyzing = analysisLabel !== null;
 
   const activeSegment = useMemo(
     () => transcript?.segments.find((segment) => currentTime >= segment.start && currentTime < segment.end),
@@ -85,6 +90,15 @@ export function VideoLearningPanel() {
       playerRef.current = null;
     };
   }, [videoId]);
+
+  useEffect(() => {
+    if (!isAnalyzing) return;
+    const timer = window.setInterval(() => {
+      setAnalysisElapsed((value) => value + 1);
+      setAnalysisStep((value) => Math.min(value + 1, 4));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [isAnalyzing]);
 
   async function parseSubtitle() {
     setBusy(true);
@@ -140,13 +154,21 @@ export function VideoLearningPanel() {
 
   async function analyzeText(title: string, content: string, sourceType: string) {
     setBusy(true);
+    setAnalysisElapsed(0);
+    setAnalysisStep(0);
+    setAnalysisLabel(sourceType === "video_segment" ? "Creating current-scene learning source" : "Creating transcript learning source");
     setError(null);
     try {
       const document = await api.createDocument({ title, content, source_type: sourceType });
+      setAnalysisStep(1);
+      setAnalysisLabel(sourceType === "video_segment" ? "Preparing nearby transcript lines" : "Preparing transcript chunks");
       await api.analyzeDocument(document.id);
+      setAnalysisStep(4);
+      setAnalysisLabel("Opening video learning result");
       router.push(`/analysis/${document.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not analyze transcript text.");
+      setAnalysisLabel(null);
     } finally {
       setBusy(false);
     }
@@ -250,6 +272,24 @@ export function VideoLearningPanel() {
                 </button>
               </div>
             </div>
+            {isAnalyzing ? (
+              <div className="mt-4">
+                <AnalysisProgress
+                  title="Analyzing video transcript"
+                  elapsed={analysisElapsed}
+                  step={analysisStep}
+                  currentLabel={analysisLabel}
+                  labels={[
+                    "Creating transcript source",
+                    "Preparing transcript chunks",
+                    "Running model analysis",
+                    "Validating learning objects",
+                    "Opening result"
+                  ]}
+                  hint="Video analysis uses the same learning-object pipeline as documents, but labels and reader UI should stay transcript-aware."
+                />
+              </div>
+            ) : null}
             {error ? <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">{error}</p> : null}
           </div>
         )}

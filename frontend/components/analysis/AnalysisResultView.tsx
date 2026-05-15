@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { AnalysisResult } from "@/lib/types";
+import type { AnalysisResult, DocumentRead } from "@/lib/types";
 import { demoModeEnabled } from "@/lib/demoMode";
 import { demoAnalysis, DEMO_DOCUMENT_ID } from "@/lib/demoData";
 import {
@@ -25,6 +25,7 @@ import { ErrorState } from "../common/ErrorState";
 
 export function AnalysisResultView({ documentId }: { documentId: string }) {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [document, setDocument] = useState<DocumentRead | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [step, setStep] = useState(1);
@@ -51,6 +52,12 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
             setStep(4);
           }
           return;
+        }
+        try {
+          const loadedDocument = await api.getDocument(documentId);
+          if (!cancelled) setDocument(loadedDocument);
+        } catch {
+          if (!cancelled) setDocument(null);
         }
         try {
           const existing = await api.getAnalysis(documentId);
@@ -148,6 +155,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const summaries = <LayeredSummaryPanel analysis={analysis} />;
   const reader = <ReadingContextPanel analysis={analysis} />;
   const isSectionLevel = analysis.quality_warnings?.some((warning) => warning.includes("section-level analysis"));
+  const isVideoSource = document?.source_type === "transcript" || document?.source_type === "video_segment";
 
   return (
     <div className="space-y-6">
@@ -182,15 +190,17 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       ) : null}
       {isSectionLevel ? (
         <section className="rounded-lg border border-line bg-panel p-4 text-sm leading-6 text-neutral-700 shadow-material">
-          <p className="font-semibold text-ink">Scope</p>
+          <p className="font-semibold text-ink">{isVideoSource ? "Transcript scope" : "Scope"}</p>
           <p className="mt-1">
-            This is not the whole paper yet. It covers the first readable section after front matter cleanup. Full-paper staged analysis should analyze each section and merge them into a whole-paper view.
+            {isVideoSource
+              ? "This result covers the transcript text sent from the video page. Longer videos should be analyzed scene by scene, then merged into a full-video learning guide."
+              : "This is not the whole paper yet. It covers the first readable section after front matter cleanup. Full-paper staged analysis should analyze each section and merge them into a whole-paper view."}
           </p>
         </section>
       ) : null}
       <DomainOverviewCard analysis={analysis} />
-      {documentId !== DEMO_DOCUMENT_ID ? <DocumentPageReader documentId={documentId} /> : null}
-      <ConceptMapPanel analysis={analysis} />
+      {documentId !== DEMO_DOCUMENT_ID && !isVideoSource ? <DocumentPageReader documentId={documentId} /> : null}
+      <ConceptMapPanel analysis={analysis} sourceKind={isVideoSource ? "video" : "document"} />
       {config.resultLayout === "tableFirst" ? (
         <>
           {learningObjects}

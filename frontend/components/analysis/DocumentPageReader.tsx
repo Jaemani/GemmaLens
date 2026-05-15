@@ -55,6 +55,7 @@ export function DocumentPageReader({ documentId }: { documentId: string }) {
       </section>
     );
   }
+  if (document.source_type === "transcript" || document.source_type === "video_segment") return null;
 
   return (
     <section className="rounded-lg border border-line bg-panel shadow-material">

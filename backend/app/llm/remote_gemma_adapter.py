@@ -360,11 +360,28 @@ class RemoteGemmaAdapter(ModelAdapter):
         return "actual translation" not in normalized
 
     def _sentence_containing(self, text: str, needle: str) -> str:
-        for sentence in text.split(". "):
+        for sentence in re.split(r"(?<=[.!?])\s+", text):
             sentence = sentence.strip()
             if needle.lower() in sentence.lower():
-                return sentence if sentence.endswith(".") else f"{sentence}."
+                sentence = self._trim_source(sentence, needle)
+                return sentence if sentence.endswith((".", "!", "?", "...")) else f"{sentence}."
         return ""
+
+    def _trim_source(self, source: str, needle: str, max_chars: int = 420) -> str:
+        source = " ".join(source.split())
+        if len(source) <= max_chars:
+            return source
+        index = source.lower().find(needle.lower())
+        if index < 0:
+            return f"{source[: max_chars - 1].rsplit(' ', 1)[0]}..."
+        start = max(0, index - 150)
+        end = min(len(source), index + len(needle) + 220)
+        excerpt = source[start:end].strip()
+        if start > 0:
+            excerpt = f"...{excerpt}"
+        if end < len(source):
+            excerpt = f"{excerpt.rsplit(' ', 1)[0]}..."
+        return excerpt
 
     def _meta_prompt(self, text: str) -> str:
         return (

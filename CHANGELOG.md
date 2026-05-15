@@ -2,6 +2,10 @@
 
 ## 2026-05-15
 
+- Added visible progress UI for video transcript and current-scene analysis.
+- Made analysis result source-aware: video transcript results no longer show paper page-reader UI or paper-only copy.
+- Limited long transcript source excerpts so concept cards do not show entire transcript chunks.
+- Filtered video transcript records out of the dashboard/documents "Recent documents" lists.
 - Added page-slice reader on analysis results so users can move through long papers and analyze the selected slice.
 - Fixed PDF hyphenation artifacts such as `representa- tion`, `repre- sentation`, and resulting junk candidates like `tion model`.
 - Analysis now uses the learner profile target level when the edge fast-meta path cannot estimate CEFR level.

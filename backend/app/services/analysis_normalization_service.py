@@ -261,17 +261,37 @@ class AnalysisNormalizationService:
     def _source_sentence(self, value: Any, target: str, document_text: str) -> str:
         candidate = str(value or "").strip()
         if candidate and self._appears_in_text(candidate, document_text):
-            return candidate
+            return self._trim_source(candidate, target)
         sentences = self._sentences_from_text(document_text)
         for sentence in sentences:
             if target.lower() in sentence.lower():
-                return sentence
+                return self._trim_source(sentence, target)
         if candidate and sentences:
-            return max(sentences, key=lambda sentence: SequenceMatcher(None, candidate.lower(), sentence.lower()).ratio())
-        return sentences[0] if sentences else candidate
+            return self._trim_source(max(sentences, key=lambda sentence: SequenceMatcher(None, candidate.lower(), sentence.lower()).ratio()), target)
+        return self._trim_source(sentences[0], target) if sentences else candidate
 
     def _sentences_from_text(self, text: str) -> list[str]:
-        return [part.strip() for part in re.split(r"(?<=[.!?])\s+", text.strip()) if part.strip()]
+        parts = [part.strip() for part in re.split(r"(?<=[.!?])\s+", text.strip()) if part.strip()]
+        if len(parts) == 1 and len(parts[0]) > 700:
+            chunks = re.split(r"\s+\b(?:so|and|but|because|then|now|first|second)\b\s+", parts[0])
+            return [part.strip() for part in chunks if part.strip()]
+        return parts
+
+    def _trim_source(self, source: str, target: str, max_chars: int = 420) -> str:
+        source = " ".join(source.split())
+        if len(source) <= max_chars:
+            return source
+        index = source.lower().find(target.lower()) if target else -1
+        if index < 0:
+            return f"{source[: max_chars - 1].rsplit(' ', 1)[0]}..."
+        start = max(0, index - 150)
+        end = min(len(source), index + len(target) + 220)
+        excerpt = source[start:end].strip()
+        if start > 0:
+            excerpt = f"...{excerpt}"
+        if end < len(source):
+            excerpt = f"{excerpt.rsplit(' ', 1)[0]}..."
+        return excerpt
 
     def _appears_in_text(self, value: str, text: str) -> bool:
         return " ".join(value.lower().split()) in " ".join(text.lower().split())

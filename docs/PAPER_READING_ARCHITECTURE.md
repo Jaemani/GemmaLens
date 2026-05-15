@@ -13,6 +13,8 @@ Generic AI tools already translate and summarize. GemmaLens should extract what 
 - references: citations or named works that connect ideas;
 - review memory: saved, viewed, familiar, ignored, and mastered states.
 
+The UI must stay source-aware. A PDF paper, pasted text, video transcript, and current video scene can share the same backend learning-object schema, but they should not share identical user-facing copy or navigation. Paper results need page/section reading controls. Video results need transcript/scene context and synchronized playback language.
+
 ## Recommended Flow
 
 ```text

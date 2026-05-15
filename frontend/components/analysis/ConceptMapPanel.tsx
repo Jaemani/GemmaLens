@@ -5,7 +5,9 @@ import { api } from "@/lib/api";
 import { DEMO_DOCUMENT_ID } from "@/lib/demoData";
 import type { AnalysisResult } from "@/lib/types";
 
-export function ConceptMapPanel({ analysis }: { analysis: AnalysisResult }) {
+type SourceKind = "document" | "video";
+
+export function ConceptMapPanel({ analysis, sourceKind = "document" }: { analysis: AnalysisResult; sourceKind?: SourceKind }) {
   const concepts = useMemo(() => analysis.concepts ?? [], [analysis.concepts]);
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState<string | null>(null);
@@ -30,14 +32,25 @@ export function ConceptMapPanel({ analysis }: { analysis: AnalysisResult }) {
 
   if (!concepts.length) return null;
 
+  const copy =
+    sourceKind === "video"
+      ? {
+          eyebrow: "Video learning map",
+          title: "Concepts and expressions in this transcript",
+          description: "Concepts explain what this segment is teaching. Terms and phrases below help you follow the spoken explanation."
+        }
+      : {
+          eyebrow: "Paper map",
+          title: "Concepts to understand before memorizing words",
+          description: "Concepts explain the argument of the paper. Terms and phrases below explain the language used to express those ideas."
+        };
+
   return (
     <section className="rounded-lg border border-line bg-panel shadow-material">
       <div className="border-b border-line p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Paper map</p>
-        <h2 className="mt-1 text-lg font-semibold">Concepts to understand before memorizing words</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">
-          Concepts explain the argument of the paper. Terms and phrases below explain the language used to express those ideas.
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{copy.eyebrow}</p>
+        <h2 className="mt-1 text-lg font-semibold">{copy.title}</h2>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">{copy.description}</p>
       </div>
       <div className="grid gap-4 p-5 md:grid-cols-2">
         {concepts.map((concept) => {
@@ -69,7 +82,7 @@ export function ConceptMapPanel({ analysis }: { analysis: AnalysisResult }) {
                   ))}
                 </div>
               ) : null}
-              <p className="mt-3 rounded-md bg-white p-3 text-xs leading-5 text-neutral-600">{concept.source_sentence}</p>
+              <p className="mt-3 max-h-28 overflow-y-auto rounded-md bg-white p-3 text-xs leading-5 text-neutral-600">{concept.source_sentence}</p>
               {concept.references.length ? (
                 <p className="mt-2 text-xs text-neutral-500">References: {concept.references.join(", ")}</p>
               ) : null}

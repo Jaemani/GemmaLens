@@ -18,6 +18,7 @@ export default async function DashboardPage() {
   } catch {
     documents = [];
   }
+  const recentDocuments = documents.filter((document) => !isVideoSource(document.source_type));
 
   return (
     <AppShell>
@@ -54,13 +55,13 @@ export default async function DashboardPage() {
               </Link>
             </div>
             <div className="mt-3 divide-y divide-line">
-              {documents.slice(0, 5).map((document) => (
+              {recentDocuments.slice(0, 5).map((document) => (
                 <Link key={document.id} href={`/analysis/${document.id}`} className="block rounded-md py-3 text-sm hover:bg-surface">
                   <span className="block font-semibold text-ink">{document.title}</span>
                   <span className="mt-1 line-clamp-1 block text-neutral-600">{document.preview}</span>
                 </Link>
               ))}
-              {!documents.length ? (
+              {!recentDocuments.length ? (
                 <div className="grid min-h-32 place-items-center rounded-md bg-surface px-4 py-6 text-center text-sm leading-6 text-neutral-600">
                   <p>No documents yet. Add a PDF, paper excerpt, or transcript to see learning objects here.</p>
                 </div>
@@ -86,6 +87,10 @@ export default async function DashboardPage() {
       </div>
     </AppShell>
   );
+}
+
+function isVideoSource(sourceType: string) {
+  return sourceType === "transcript" || sourceType === "video_segment";
 }
 
 function Signal({ icon, label }: { icon: React.ReactNode; label: string }) {
