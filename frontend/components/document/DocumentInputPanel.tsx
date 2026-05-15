@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { AnalysisProgress } from "@/components/analysis/AnalysisProgress";
 import { DocumentUploadCard } from "./DocumentUploadCard";
@@ -19,8 +19,11 @@ export function DocumentInputPanel() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [progressTitle, setProgressTitle] = useState("Preparing document");
+  const processingRef = useRef(false);
 
   async function runWithProgress(action: () => Promise<void>) {
+    if (processingRef.current) return;
+    processingRef.current = true;
     setBusy(true);
     setError(null);
     setStatus(null);
@@ -37,6 +40,7 @@ export function DocumentInputPanel() {
       setError(err instanceof Error ? err.message : "Analysis or upload failed.");
     } finally {
       window.clearInterval(timer);
+      processingRef.current = false;
       setBusy(false);
     }
   }
@@ -84,11 +88,21 @@ export function DocumentInputPanel() {
         <textarea id="content" value={content} onChange={(event) => setContent(event.target.value)} rows={14} className="mt-2 w-full resize-y rounded-md border border-line px-3 py-2 leading-6" />
         <div className="mt-4 flex justify-end">
           <div className="flex flex-wrap justify-end gap-3">
-            <Link href="/analysis/demo" className="rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface">
+            <Link
+              href={busy ? "#" : "/analysis/demo"}
+              aria-disabled={busy}
+              className={`rounded-md border border-line px-4 py-2 text-sm font-semibold ${
+                busy ? "pointer-events-none cursor-not-allowed text-neutral-400 opacity-50" : "text-ink hover:bg-surface"
+              }`}
+            >
               Open demo result
             </Link>
-            <button disabled={busy || !content.trim()} onClick={submit} className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-              {busy ? "Analyzing..." : "Analyze document"}
+            <button
+              disabled={busy || !content.trim()}
+              onClick={submit}
+              className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-600"
+            >
+              {busy ? "Processing..." : "Analyze document"}
             </button>
           </div>
         </div>
