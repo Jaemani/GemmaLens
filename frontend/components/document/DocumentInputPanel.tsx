@@ -82,9 +82,9 @@ export function DocumentInputPanel() {
   }
 
   return (
-    <section className="grid gap-5 lg:grid-cols-[1fr_320px]">
+    <section className="grid max-w-7xl gap-5 xl:grid-cols-[minmax(0,820px)_360px]">
       <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
-        <div className="flex gap-2 rounded-lg bg-surface p-1">
+        <div className="grid w-full max-w-sm grid-cols-2 gap-1 rounded-lg bg-surface p-1">
           {(["upload", "paste"] as const).map((item) => (
             <button
               key={item}
@@ -120,8 +120,11 @@ export function DocumentInputPanel() {
             />
           </>
         ) : (
-          <div className="mt-5 rounded-lg border border-line bg-surface p-5 text-sm leading-6 text-neutral-700">
-            Upload a PDF, text, or markdown file. After extraction, the local model analyzes a safe section of the document first. Full staged paper analysis is planned next.
+          <div className="mt-5 space-y-4">
+            <DocumentUploadCard disabled={busy} onFile={uploadAndAnalyze} />
+            <div className="rounded-lg border border-line bg-surface p-4 text-sm leading-6 text-neutral-700">
+              After extraction, the local model analyzes the first safe section. Full staged paper analysis is planned next.
+            </div>
           </div>
         )}
         <div className="mt-4 flex justify-end">
@@ -158,9 +161,13 @@ export function DocumentInputPanel() {
         ) : null}
       </div>
       <div className="space-y-5">
-        <DocumentUploadCard disabled={busy} onFile={uploadAndAnalyze} />
         {!busy && status ? <p className="rounded-lg border border-line bg-panel px-4 py-3 text-sm font-medium text-neutral-700 shadow-material">{status}</p> : null}
         {busy ? <AnalysisProgress step={step} elapsed={elapsed} title={progressTitle} currentLabel={status} /> : null}
+        {!busy && !status ? (
+          <div className="rounded-lg border border-line bg-panel p-4 text-sm leading-6 text-neutral-600 shadow-material">
+            Choose an input type, then GemmaLens will create learning objects for vocabulary, expressions, summaries, and sentence structures.
+          </div>
+        ) : null}
       </div>
     </section>
   );
