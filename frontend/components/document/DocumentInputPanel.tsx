@@ -17,10 +17,12 @@ export function DocumentInputPanel() {
   const [elapsed, setElapsed] = useState(0);
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   async function runWithProgress(action: () => Promise<void>) {
     setBusy(true);
     setError(null);
+    setStatus(null);
     setElapsed(0);
     setStep(0);
     const timer = window.setInterval(() => {
@@ -30,8 +32,8 @@ export function DocumentInputPanel() {
     try {
       await action();
       setStep(4);
-    } catch {
-      setError("Analysis stopped because the backend/model server is not reachable from this browser. Use demo result for team UI feedback, or run the local backend and set NEXT_PUBLIC_API_BASE_URL.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Analysis or upload failed.");
     } finally {
       window.clearInterval(timer);
       setBusy(false);
@@ -40,18 +42,24 @@ export function DocumentInputPanel() {
 
   async function submit() {
     await runWithProgress(async () => {
+      setStatus("Creating document record...");
       const document = await api.createDocument({ title, content, source_type: "text" });
       setStep(2);
+      setStatus("Running model analysis...");
       await api.analyzeDocument(document.id);
+      setStatus("Opening result...");
       router.push(`/analysis/${document.id}`);
     });
   }
 
   async function uploadAndAnalyze(file: File) {
     await runWithProgress(async () => {
+      setStatus(`Uploading ${file.name} and extracting text...`);
       const document = await api.uploadDocument(file);
       setStep(2);
+      setStatus(`Text extracted from ${file.name}. Running model analysis...`);
       await api.analyzeDocument(document.id);
+      setStatus("Opening result...");
       router.push(`/analysis/${document.id}`);
     });
   }
@@ -75,13 +83,14 @@ export function DocumentInputPanel() {
         </div>
         {error ? (
           <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <p className="font-semibold">Backend not connected</p>
+            <p className="font-semibold">Request failed</p>
             <p className="mt-1">{error}</p>
           </div>
         ) : null}
       </div>
       <div className="space-y-5">
         <DocumentUploadCard disabled={busy} onFile={uploadAndAnalyze} />
+        {status ? <p className="rounded-lg border border-line bg-panel px-4 py-3 text-sm font-medium text-neutral-700 shadow-material">{status}</p> : null}
         {busy ? <AnalysisProgress step={step} elapsed={elapsed} /> : null}
       </div>
     </section>

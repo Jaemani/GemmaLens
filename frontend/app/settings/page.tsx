@@ -11,17 +11,29 @@ const levels: UserProfile["target_level"][] = ["B1", "B2", "C1", "C2", "domain-h
 export default function SettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.getProfile().then(setProfile).catch(() => setProfile(null));
+    api
+      .getProfile()
+      .then((loadedProfile) => {
+        setProfile(loadedProfile);
+        setError(null);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Could not load profile.");
+      });
   }, []);
 
   async function save(updates: Partial<UserProfile>) {
     if (!profile) return;
     setBusy(true);
+    setError(null);
     try {
       const updated = await api.updateProfile({ ...updates, onboarding_completed: true });
       setProfile(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save profile.");
     } finally {
       setBusy(false);
     }
@@ -37,7 +49,11 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {!profile ? (
+      {error ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm leading-6 text-amber-900 shadow-material">
+          {error}
+        </div>
+      ) : !profile ? (
         <div className="rounded-2xl border border-line bg-panel p-6 shadow-material">Loading profile...</div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">

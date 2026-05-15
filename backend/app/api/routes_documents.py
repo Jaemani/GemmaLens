@@ -5,7 +5,7 @@ from app.core.errors import not_found
 from app.db.session import get_db
 from app.repositories.document_repository import DocumentRepository
 from app.schemas.document_schema import DocumentCreate, DocumentListItem, DocumentRead
-from app.services.document_ingestion_service import DocumentIngestionService
+from app.services.document_ingestion_service import DocumentIngestionError, DocumentIngestionService
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -19,10 +19,10 @@ def create_document(payload: DocumentCreate, db: Session = Depends(get_db)):
 async def upload_document(file: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
         payload = await DocumentIngestionService().from_upload(file)
-    except ValueError:
+    except DocumentIngestionError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No extractable text found in uploaded document",
+            detail=str(exc),
         ) from None
     return DocumentRepository(db).create(payload)
 

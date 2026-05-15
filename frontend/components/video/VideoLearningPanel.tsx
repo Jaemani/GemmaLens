@@ -87,6 +87,7 @@ export function VideoLearningPanel() {
     () => transcript?.segments.find((segment) => currentTime >= segment.start && currentTime < segment.end),
     [currentTime, transcript]
   );
+  const pastedVideoId = useMemo(() => extractYouTubeId(youtubeUrl), [youtubeUrl]);
   const sceneText = useMemo(() => {
     if (!transcript || !activeSegment) return "";
     const startIndex = Math.max(0, activeSegment.index - 2);
@@ -143,10 +144,14 @@ export function VideoLearningPanel() {
   }
 
   async function fetchYouTube() {
+    const id = extractYouTubeId(youtubeUrl);
+    if (!id) {
+      setError("Paste a valid YouTube watch, short, embed, or youtu.be URL.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      const id = extractYouTubeId(youtubeUrl);
       setVideoId(id);
       const result = await api.fetchYouTubeTranscript({ url: youtubeUrl, languages: ["en", "ko"] });
       setTranscript(result);
@@ -221,6 +226,9 @@ export function VideoLearningPanel() {
               Fetch transcript
             </button>
           </div>
+          {youtubeUrl.trim() && !pastedVideoId ? (
+            <p className="mt-2 text-xs text-amber-700">This does not look like a supported YouTube URL yet.</p>
+          ) : null}
           <div className="mt-4 flex flex-wrap gap-2">
             {SAMPLE_SUBTITLES.map((sample, index) => (
               <button
