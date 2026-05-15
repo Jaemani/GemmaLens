@@ -78,7 +78,7 @@ Generic local context such as "the best performing models" should not become a s
 - phrase: reusable academic wording or discourse function;
 - sentence: structure worth practicing.
 
-New PDF uploads preserve the original file locally. When available, the analysis workspace can render the original PDF on the left while the right panel shows page-specific learning guidance. Extracted text slices remain a source/debug tool because OCR, equations, and multi-column layout can damage model-input text.
+New PDF uploads preserve the original file locally. When available, the analysis workspace renders the original PDF with a PDF.js canvas preview and PDF page navigation on the left while the right panel shows learning guidance. Extracted text sections remain model-input units because OCR, equations, and multi-column layout can damage text extraction. They are useful for page/section analysis, but they should be labeled as extracted sections rather than faithful PDF pages.
 
 ## Ingestion Policy
 

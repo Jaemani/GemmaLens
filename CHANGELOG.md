@@ -2,6 +2,8 @@
 
 ## 2026-05-15
 
+- Replaced the native embedded PDF iframe with a PDF.js canvas preview, so the demo reliably shows the original PDF and supports PDF page Previous/Next controls.
+- Promoted extracted-section navigation so section Previous/Next and "Analyze this section" are visible without opening a hidden debug text block.
 - Added source-grounded learning guardrails that repair weak edge-model output: summaries that only repeat source text are replaced, missing academic phrases are recovered from reusable paper-reading patterns, and weak sentence decompositions are replaced with structure explanations.
 - Tightened concept/term separation so generic source fragments such as `Training Deep Neural Networks` and `inputs changes during training` are not shown as saveable learning objects.
 - Moved A/B and scope panels below the main analysis workspace so PDF/source reading and the learning guide appear first.

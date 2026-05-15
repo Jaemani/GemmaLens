@@ -109,6 +109,7 @@ Important current policy:
 - Added PDF/DOCX/text/markdown upload. Legacy `.doc` files return an actionable conversion message.
 - Text extraction has an explicit failure path: scanned or image-only PDFs require OCR, and image-only DOCX files should be exported or pasted as text.
 - Uploaded originals are now stored locally. PDF originals can be served back to the frontend and rendered in the analysis workspace beside the learning guide.
+- The PDF workspace now uses PDF.js canvas rendering instead of a native iframe, giving reliable in-app page preview and PDF page Previous/Next controls during demos.
 - Added upload progress and phase-specific status.
 - Added delete buttons for document/video history.
 - Added backend `DELETE /documents/{id}` with analysis cleanup.
@@ -126,6 +127,7 @@ Important current policy:
 - Prevented silent mock fallback on MLX failure.
 - Added a re-analysis button so cached low-quality results can be replaced after model/runtime improvements.
 - Reordered the analysis result screen so the domain summary and source/learning workspace appear before experiment controls. This makes the demo read as a paper-learning tool rather than a settings dashboard.
+- Extracted-section controls are now visible without opening a hidden text block. The user can move through extracted sections and analyze the current section while the original PDF stays visible.
 
 ### Video Learning
 

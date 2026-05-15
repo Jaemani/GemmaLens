@@ -50,7 +50,7 @@ export function TermTable({ analysis, config }: { analysis: AnalysisResult; conf
             {analysis.document_id === DEMO_DOCUMENT_ID
               ? "Demo save state is local to this browser tab."
               : config.saveMode === "manual"
-                ? "Manual save baseline. User chooses what enters the dictionary."
+                ? "Save the words and expressions worth reviewing later."
                 : "High-priority items can be auto-saved for comparison."}
           </p>
         </div>
