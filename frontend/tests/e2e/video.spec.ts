@@ -9,6 +9,14 @@ test("video page parses subtitles and shows timestamped transcript", async ({ pa
   await page.goto("/video");
 
   await expect(page.getByRole("heading", { name: "Video learning" })).toBeVisible();
+  await page.locator("textarea").fill(`1
+00:00:01,000 --> 00:00:03,500
+You're not gonna get away with this.
+
+2
+00:00:04,000 --> 00:00:06,200
+I should have told you earlier.
+`);
   await page.getByRole("button", { name: "Parse subtitle" }).click();
 
   const firstLine = page.getByRole("button", { name: /You're not gonna get away with this/ });
@@ -20,6 +28,10 @@ test("video page parses subtitles and shows timestamped transcript", async ({ pa
 test("video transcript can be sent into analysis flow", async ({ page }) => {
   await page.goto("/video");
 
+  await page.locator("textarea").fill(`1
+00:00:01,000 --> 00:00:03,500
+You're not gonna get away with this.
+`);
   await page.getByRole("button", { name: "Parse subtitle" }).click();
   await page.getByRole("button", { name: "Analyze transcript" }).click();
 
@@ -28,12 +40,13 @@ test("video transcript can be sent into analysis flow", async ({ page }) => {
   await expect(page.getByText("get away with this", { exact: true })).toBeVisible();
 });
 
-test("persona sample buttons switch subtitle content", async ({ page }) => {
+test("youtube transcript fetch replaces empty transcript state", async ({ page }) => {
   await page.goto("/video");
 
-  await page.getByRole("button", { name: "Technical tutorial" }).click();
-  await expect(page.locator("textarea")).toHaveValue(/idempotent preflight check/);
+  await expect(page.locator("textarea")).toHaveValue("");
+  await page.getByPlaceholder("YouTube URL").fill("https://youtu.be/dQw4w9WgXcQ");
+  await page.getByRole("button", { name: "Fetch transcript" }).click();
 
-  await page.getByRole("button", { name: "Academic lecture" }).click();
-  await expect(page.locator("textarea")).toHaveValue(/laboratory findings generalize/);
+  await expect(page.getByRole("button", { name: /You're not gonna get away with this/ })).toBeVisible();
+  await expect(page.locator("textarea")).toHaveValue("");
 });

@@ -16,66 +16,17 @@ declare global {
 }
 
 type YouTubePlayer = {
-  getCurrentTime: () => number;
-  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  getCurrentTime?: () => number;
+  seekTo?: (seconds: number, allowSeekAhead: boolean) => void;
+  destroy?: () => void;
 };
-
-const SAMPLE_SUBTITLES = [
-  {
-    label: "Movie dialogue",
-    sourceName: "movie-dialogue.srt",
-    content: `1
-00:00:01,000 --> 00:00:03,500
-You're not gonna get away with this.
-
-2
-00:00:04,000 --> 00:00:06,200
-I should have told you earlier.
-
-3
-00:00:07,000 --> 00:00:10,000
-This changes everything.
-`
-  },
-  {
-    label: "Technical tutorial",
-    sourceName: "technical-tutorial.srt",
-    content: `1
-00:00:01,000 --> 00:00:04,000
-Before we deploy the migration, we need to run an idempotent preflight check.
-
-2
-00:00:04,500 --> 00:00:08,000
-Otherwise, stale metadata can propagate across worker nodes.
-
-3
-00:00:08,500 --> 00:00:12,000
-This is why cache invalidation is treated as part of the release process.
-`
-  },
-  {
-    label: "Academic lecture",
-    sourceName: "academic-lecture.vtt",
-    content: `WEBVTT
-
-00:00:01.000 --> 00:00:05.000
-Today we are going to examine whether laboratory findings generalize to real-world learning environments.
-
-00:00:05.500 --> 00:00:09.000
-The key limitation is that controlled experiments often remove the very context we care about.
-
-00:00:09.500 --> 00:00:13.000
-To address this gap, researchers collect longitudinal data from students over several weeks.
-`
-  }
-];
 
 export function VideoLearningPanel() {
   const router = useRouter();
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [videoId, setVideoId] = useState<string | null>(null);
-  const [subtitleText, setSubtitleText] = useState(SAMPLE_SUBTITLES[0].content);
-  const [sourceName, setSourceName] = useState(SAMPLE_SUBTITLES[0].sourceName);
+  const [subtitleText, setSubtitleText] = useState("");
+  const [sourceName, setSourceName] = useState("subtitle.srt");
   const [transcript, setTranscript] = useState<TranscriptResponse | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +55,7 @@ export function VideoLearningPanel() {
 
     function createPlayer() {
       if (cancelled || !window.YT) return;
+      playerRef.current?.destroy?.();
       playerRef.current = new window.YT.Player(playerElementId, {
         videoId,
         playerVars: { modestbranding: 1, rel: 0 }
@@ -120,12 +72,16 @@ export function VideoLearningPanel() {
     }
 
     const timer = window.setInterval(() => {
-      if (playerRef.current) setCurrentTime(playerRef.current.getCurrentTime());
+      const player = playerRef.current;
+      if (typeof player?.getCurrentTime !== "function") return;
+      setCurrentTime(player.getCurrentTime());
     }, 400);
 
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      playerRef.current?.destroy?.();
+      playerRef.current = null;
     };
   }, [videoId]);
 
@@ -153,8 +109,11 @@ export function VideoLearningPanel() {
     setError(null);
     try {
       setVideoId(id);
+      setTranscript(null);
       const result = await api.fetchYouTubeTranscript({ url: youtubeUrl, languages: ["en", "ko"] });
       setTranscript(result);
+      setSubtitleText("");
+      setSourceName("subtitle.srt");
       if (result.source_id) setVideoId(result.source_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not fetch YouTube transcript.");
@@ -164,7 +123,7 @@ export function VideoLearningPanel() {
   }
 
   function seek(segment: TranscriptSegment) {
-    playerRef.current?.seekTo(segment.start, true);
+    playerRef.current?.seekTo?.(segment.start, true);
     setCurrentTime(segment.start);
   }
 
@@ -192,22 +151,13 @@ export function VideoLearningPanel() {
     }
   }
 
-  function useSample(index: number) {
-    const sample = SAMPLE_SUBTITLES[index];
-    setSubtitleText(sample.content);
-    setSourceName(sample.sourceName);
-    setTranscript(null);
-    setCurrentTime(0);
-    setError(null);
-  }
-
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
       <section className="space-y-5">
         <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
           <h1 className="text-2xl font-semibold">Video learning</h1>
           <p className="mt-2 text-sm leading-6 text-neutral-600">
-            Start with subtitles or an experimental YouTube transcript. The player and transcript stay synced by timestamp.
+            Fetch a YouTube transcript, or paste subtitle text manually when YouTube captions are unavailable.
           </p>
           <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto]">
             <input
@@ -229,24 +179,10 @@ export function VideoLearningPanel() {
           {youtubeUrl.trim() && !pastedVideoId ? (
             <p className="mt-2 text-xs text-amber-700">This does not look like a supported YouTube URL yet.</p>
           ) : null}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {SAMPLE_SUBTITLES.map((sample, index) => (
-              <button
-                key={sample.sourceName}
-                type="button"
-                onClick={() => useSample(index)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                  sourceName === sample.sourceName ? "border-accent bg-blue-50 text-accent" : "border-line text-neutral-600 hover:bg-surface"
-                }`}
-              >
-                {sample.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="aspect-video overflow-hidden rounded-lg border border-line bg-black shadow-material">
-          {videoId ? <div id={playerElementId} className="h-full w-full" /> : <EmptyPlayer />}
+          {videoId ? <div key={videoId} id={playerElementId} className="h-full w-full" /> : <EmptyPlayer />}
         </div>
 
         <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
