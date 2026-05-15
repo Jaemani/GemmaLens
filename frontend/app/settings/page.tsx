@@ -14,6 +14,31 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (!cancelled) setError("Profile loading timed out. Check the backend connection and try again.");
+    }, 10000);
+
+    setError(null);
+    api
+      .getProfile()
+      .then((loadedProfile) => {
+        if (cancelled) return;
+        setProfile(loadedProfile);
+        setError(null);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Could not load profile.");
+      });
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  function retryLoad() {
+    setProfile(null);
+    setError(null);
     api
       .getProfile()
       .then((loadedProfile) => {
@@ -23,7 +48,7 @@ export default function SettingsPage() {
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Could not load profile.");
       });
-  }, []);
+  }
 
   async function save(updates: Partial<UserProfile>) {
     if (!profile) return;
@@ -52,7 +77,14 @@ export default function SettingsPage() {
 
         {error ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900 shadow-material">
-            {error}
+            <p>{error}</p>
+            <button
+              type="button"
+              onClick={retryLoad}
+              className="mt-3 rounded-md border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-900"
+            >
+              Retry
+            </button>
           </div>
         ) : !profile ? (
           <div className="rounded-lg border border-line bg-panel p-5 shadow-material">Loading profile...</div>

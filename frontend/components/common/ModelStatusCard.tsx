@@ -11,7 +11,7 @@ const runtimeIcon = {
   ollama: Cloud
 };
 
-export function ModelStatusCard({ status }: { status: ModelStatus | null }) {
+export function ModelStatusCard({ status, compact = false }: { status: ModelStatus | null; compact?: boolean }) {
   const [current, setCurrent] = useState(status);
   const [presets, setPresets] = useState<ModelPreset[]>([]);
   const [busyPreset, setBusyPreset] = useState<string | null>(null);
@@ -51,7 +51,29 @@ export function ModelStatusCard({ status }: { status: ModelStatus | null }) {
         {current ? <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase text-accent">{current.provider}</span> : null}
       </div>
 
-      {current ? (
+      {compact ? (
+        current ? (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={warmup}
+              disabled={current.provider !== "mlx" || warmupStatus === "Loading model..."}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Zap size={16} />
+              {warmupStatus === "Loading model..." ? "Loading model..." : "Warm up model"}
+            </button>
+            {warmupStatus ? <p className="mt-3 text-xs leading-5 text-neutral-600">{warmupStatus}</p> : null}
+            <p className="mt-3 text-xs leading-5 text-neutral-500">
+              Model switching is available in the runtime preset list.
+            </p>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-neutral-600">Start the backend to use local model features.</p>
+        )
+      ) : null}
+
+      {!compact && current ? (
         <div className="mt-4 space-y-2">
           <button
             type="button"
@@ -95,9 +117,9 @@ export function ModelStatusCard({ status }: { status: ModelStatus | null }) {
             );
           })}
         </div>
-      ) : (
+      ) : !compact ? (
         <p className="mt-3 text-sm text-neutral-600">Start the backend to select a model.</p>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -42,14 +42,14 @@ export default async function DashboardPage() {
           </div>
         </header>
 
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <section className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="grid gap-4 sm:grid-cols-2">
             <ActionCard href="/documents" icon={<FileText size={19} />} title="Documents" detail="Upload PDF/text or paste a focused excerpt." />
             <ActionCard href="/video" icon={<Video size={19} />} title="Video" detail="Fetch captions and analyze scenes or transcripts." />
             <ActionCard href="/tools" icon={<Languages size={19} />} title="Translate" detail="Short passage translation workspace." />
             <ActionCard href="/quiz" icon={<FileQuestion size={19} />} title="Quiz maker" detail="Build cached review prompts from analyzed sources." />
           </div>
-          <ModelStatusCard status={modelStatus} />
+          <ModelStatusCard status={modelStatus} compact />
         </section>
 
         <section className="grid gap-4 md:grid-cols-3">
@@ -84,7 +84,7 @@ function LoopStep({ label, text }: { label: string; text: string }) {
 
 function ActionCard({ href, icon, title, detail }: { href: string; icon: React.ReactNode; title: string; detail: string }) {
   return (
-    <Link href={href} className="group rounded-lg border border-line bg-panel p-4 shadow-material transition hover:border-blue-200 hover:bg-white">
+    <Link href={href} className="group min-h-28 rounded-lg border border-line bg-panel p-4 shadow-material transition hover:border-blue-200 hover:bg-white">
       <div className="flex items-start gap-3">
         <div className="rounded-md bg-blue-50 p-2 text-accent transition group-hover:bg-blue-100">{icon}</div>
         <div>
@@ -98,7 +98,7 @@ function ActionCard({ href, icon, title, detail }: { href: string; icon: React.R
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-line bg-panel p-4 shadow-material">
+    <div className="min-h-24 rounded-lg border border-line bg-panel p-4 shadow-material">
       <div className="flex items-center gap-3">
         <div className="text-accent">{icon}</div>
         <div>
