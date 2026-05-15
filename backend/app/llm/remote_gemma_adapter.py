@@ -269,11 +269,17 @@ class RemoteGemmaAdapter(ModelAdapter):
         unique: list[str] = []
         for candidate in candidates:
             key = candidate.lower().strip()
-            if len(key) < 4 or key in seen:
+            if len(key) < 4 or key in seen or self._looks_like_pdf_fragment(key):
                 continue
             seen.add(key)
             unique.append(candidate)
         return unique[:8]
+
+    def _looks_like_pdf_fragment(self, value: str) -> bool:
+        first = value.split()[0] if value.split() else value
+        if first in {"tion", "sion", "ment", "sentation", "resentation", "pre", "rad"}:
+            return True
+        return value.startswith(("tion ", "sion ", "sentation ", "resentation "))
 
     def _fallback_phrases(self, text: str) -> list[dict[str, Any]]:
         candidates = [
@@ -304,6 +310,11 @@ class RemoteGemmaAdapter(ModelAdapter):
     def _fallback_concepts(self, text: str, terms: list[dict[str, Any]]) -> list[dict[str, Any]]:
         known_meanings = {
             "batch normalization": "A training technique that normalizes layer inputs within mini-batches to stabilize and accelerate neural network training.",
+            "bert": "A language representation model based on bidirectional Transformer encoders.",
+            "bidirectional encoder representations": "Representations built by conditioning on both left and right context in Transformer encoder layers.",
+            "bidirectional encoder representations from transformers": "The full expansion of BERT: a Transformer-based model that learns bidirectional contextual representations.",
+            "masked language model": "A pre-training task where the model predicts hidden tokens from surrounding context.",
+            "next sentence prediction": "A pre-training task that teaches whether two sentences naturally follow each other.",
             "internal covariate shift": "The paper's motivating idea: layer input distributions change as earlier layers update during training.",
             "optimization landscape": "The shape of the loss surface that determines how easy or hard gradient-based training is.",
             "mini-batch": "A small batch of training examples used for one parameter update.",

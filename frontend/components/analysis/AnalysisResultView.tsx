@@ -19,6 +19,7 @@ import { SentenceDecompositionCard } from "./SentenceDecompositionCard";
 import { buildRows, TermTable } from "./TermTable";
 import { AnalysisProgress } from "./AnalysisProgress";
 import { ConceptMapPanel } from "./ConceptMapPanel";
+import { DocumentPageReader } from "./DocumentPageReader";
 import { ExperimentSwitchPanel } from "./ExperimentSwitchPanel";
 import { ErrorState } from "../common/ErrorState";
 
@@ -188,6 +189,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
         </section>
       ) : null}
       <DomainOverviewCard analysis={analysis} />
+      {documentId !== DEMO_DOCUMENT_ID ? <DocumentPageReader documentId={documentId} /> : null}
       <ConceptMapPanel analysis={analysis} />
       {config.resultLayout === "tableFirst" ? (
         <>

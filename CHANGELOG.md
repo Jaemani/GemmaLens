@@ -2,6 +2,9 @@
 
 ## 2026-05-15
 
+- Added page-slice reader on analysis results so users can move through long papers and analyze the selected slice.
+- Fixed PDF hyphenation artifacts such as `representa- tion`, `repre- sentation`, and resulting junk candidates like `tion model`.
+- Analysis now uses the learner profile target level when the edge fast-meta path cannot estimate CEFR level.
 - Added first-class concept extraction to analysis results, separate from vocabulary and phrases.
 - Added concept saving to the dictionary/review store.
 - Added a concept map panel before vocabulary tables so paper reading starts from ideas, not only words.

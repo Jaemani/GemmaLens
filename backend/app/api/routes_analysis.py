@@ -5,6 +5,7 @@ from app.core.errors import not_found
 from app.db.session import get_db
 from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.document_repository import DocumentRepository
+from app.repositories.user_profile_repository import UserProfileRepository
 from app.schemas.analysis_schema import AnalysisResult
 from app.services.analysis_pipeline_service import AnalysisPipelineService
 
@@ -14,8 +15,9 @@ router = APIRouter(prefix="/documents", tags=["analysis"])
 @router.post("/{document_id}/analyze", response_model=AnalysisResult)
 async def analyze_document(document_id: str, db: Session = Depends(get_db)):
     service = AnalysisPipelineService(DocumentRepository(db), AnalysisRepository(db))
+    profile = UserProfileRepository(db).get_or_create()
     try:
-        result = await service.analyze(document_id)
+        result = await service.analyze(document_id, target_level=profile.target_level)
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     if not result:

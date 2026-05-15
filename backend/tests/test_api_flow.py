@@ -42,6 +42,20 @@ def test_profile_language_settings(client):
     assert body["onboarding_completed"] is True
 
 
+def test_analysis_uses_profile_level_when_model_level_unknown(client):
+    updated = client.patch("/profile", json={"target_level": "C2"})
+    assert updated.status_code == 200
+    created = client.post(
+        "/documents",
+        json={"title": "Short ML note", "content": "We introduce a new language representation model called BERT.", "source_type": "text"},
+    )
+    assert created.status_code == 200
+
+    analyzed = client.post(f"/documents/{created.json()['id']}/analyze")
+    assert analyzed.status_code == 200
+    assert analyzed.json()["difficulty"]["overall_level"] == "C2"
+
+
 def test_model_config_can_switch_provider(client):
     updated = client.post(
         "/models/config",

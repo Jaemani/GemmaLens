@@ -18,7 +18,7 @@ class AnalysisPipelineService:
         self.normalizer = AnalysisNormalizationService()
         self.academic_text = AcademicTextService()
 
-    async def analyze(self, document_id: str) -> AnalysisResult | None:
+    async def analyze(self, document_id: str, target_level: str | None = None) -> AnalysisResult | None:
         document = self.documents.get(document_id)
         if not document:
             return None
@@ -28,6 +28,17 @@ class AnalysisPipelineService:
         analysis_chunks = chunks[: self.settings.analysis_model_max_chunks]
         result = await self.adapter.analyze_document(document.id, analysis_text, analysis_chunks)
         result = self.normalizer.normalize_result(result, readable_text)
+        if target_level and target_level != "unknown":
+            result = result.model_copy(
+                update={
+                    "difficulty": result.difficulty.model_copy(
+                        update={
+                            "overall_level": target_level,
+                            "reason": f"Calibrated against your {target_level} reading setting. {result.difficulty.reason}",
+                        }
+                    )
+                }
+            )
         if len(" ".join(readable_text.split())) > len(analysis_text):
             result.quality_warnings.append(
                 "This is a section-level analysis from the first readable section. Full-document staged analysis is not implemented yet."

@@ -100,6 +100,7 @@ export const api = {
   updateModelConfig: (payload: ModelConfigUpdate) =>
     request<ModelStatus>("/models/config", { method: "POST", body: JSON.stringify(payload) }),
   listDocuments: () => request<DocumentListItem[]>("/documents"),
+  getDocument: (documentId: string) => request<DocumentRead>(`/documents/${documentId}`),
   createDocument: (payload: { title: string; content: string; source_type: string }) =>
     request<DocumentRead>("/documents", { method: "POST", body: JSON.stringify(payload) }),
   uploadDocument: async (file: File) => {

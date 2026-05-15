@@ -253,6 +253,7 @@ Recommended reading UX:
 
 - Start with a whole-paper map so the learner knows what the paper is trying to do.
 - Let the learner open one page or section at a time.
+- The current UI includes a page-slice reader with previous/next controls and an "Analyze this page" action. This is a bridge toward stored section analysis.
 - Each page should show: concept anchors, must-know terms, reusable academic phrases, hard sentence structures, and a short Korean/support-language guide.
 - Save concepts separately from words. A concept such as "internal covariate shift" may have related terms, cited references, and repeated mentions across the paper.
 - Track repeated concepts and references so the learner sees which ideas are central instead of memorizing every extracted phrase.

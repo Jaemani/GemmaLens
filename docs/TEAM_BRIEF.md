@@ -87,6 +87,8 @@ Near-term product stance: keep the document pipeline and schemas device-agnostic
 - Concept extraction has been added as a first-class step. For Q4 edge testing, concepts can be generated from source-grounded terms without another slow model call; larger/faster runtimes can use a dedicated concept extraction task.
 - The result page now includes a paper-map concept panel before the vocabulary table, because paper reading needs idea structure before word memorization.
 - Cached old analyses can be replaced with the re-analysis button after changing model/runtime logic.
+- The result page includes a page-slice reader with previous/next controls and "Analyze this page" so long papers are not trapped at the first analyzed section.
+- PDF hyphenation cleanup now repairs common extraction artifacts before term/concept selection.
 
 ## Paper Reading Direction
 

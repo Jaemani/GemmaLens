@@ -50,6 +50,9 @@ class AcademicTextService:
 
     def _normalize_for_model(self, text: str) -> str:
         text = re.sub(r"\n(?=\d+\s+[A-Z][A-Za-z ]{2,}\n)", "\n\n", text)
+        text = re.sub(r"([A-Za-z]{3,})-\s+([a-z]{2,})", r"\1\2", text)
+        text = re.sub(r"([A-Za-z]{3,})-\s*\n\s*([a-z]{2,})", r"\1\2", text)
         text = " ".join(text.split())
+        text = re.sub(r"\b(?:tion|sion|ment|sentation|resentation|pre)\s+(?:model|models|network|networks|training|representations)\b", "", text, flags=re.IGNORECASE)
         text = re.sub(r"\b(\d+)\s+([A-Z][A-Za-z ]{2,})\s+", r"\n\1 \2\n", text)
         return text.strip()

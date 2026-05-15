@@ -1,3 +1,5 @@
+import re
+
 from app.llm.json_utils import extract_json_object
 from app.services.academic_text_service import AcademicTextService
 from app.services.analysis_normalization_service import AnalysisNormalizationService
@@ -173,3 +175,19 @@ Deep learning has dramatically advanced.
     assert readable.startswith("Training Deep Neural Networks")
     assert "sioffe@google.com" not in readable
     assert not readable.startswith("arXiv")
+
+
+def test_academic_text_service_repairs_pdf_hyphen_fragments():
+    raw_text = """
+Abstract
+We introduce a new language representa- tion model called BERT.
+Unlike recent language repre- sentation models, BERT is designed to pre- train deep bidirectional representations.
+"""
+
+    readable = AcademicTextService().readable_section(raw_text)
+
+    assert "representation model" in readable
+    assert "representation models" in readable
+    assert "pretrain" in readable
+    assert not re.search(r"\btion model\b", readable)
+    assert not re.search(r"\bsentation models\b", readable)
