@@ -225,6 +225,9 @@ export function DocumentPageReader({
           <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">
             PDF pages are the visual source on the left. Sections are backend-cleaned text chunks sent to the model; one PDF page can contain several sections.
           </p>
+          <p className="mt-1 text-xs leading-5 text-neutral-600">
+            Page groups below show PDF page boundaries. Buttons inside each group are the text sections on that PDF page.
+          </p>
           <p className="mt-2 text-xs font-semibold text-neutral-600">
             {analyzedCount} / {sections.length || 1} sections analyzed
           </p>
@@ -299,7 +302,10 @@ export function DocumentPageReader({
         <div className="flex gap-3 overflow-x-auto border-b border-line px-5 py-3">
           {sectionGroups.map((group) => (
             <div key={group.key} className="shrink-0 rounded-md border border-line bg-surface p-2">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{group.label}</p>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{group.label}</p>
+                <p className="text-[11px] font-semibold text-neutral-500">{group.items.length} section{group.items.length === 1 ? "" : "s"}</p>
+              </div>
               <div className="flex gap-1">
                 {group.items.map(({ section, index, localNumber }) => (
                   <button
@@ -317,7 +323,7 @@ export function DocumentPageReader({
                       section.analyzed ? " analyzed" : " not analyzed"
                     }`}
                   >
-                    <span>P{group.pdfPage ?? "?"}-S{localNumber}</span>
+                    <span>S{localNumber}</span>
                     {section.analyzed && index !== pageIndex ? <CheckCircle2 size={12} className="ml-1" /> : null}
                   </button>
                 ))}
@@ -334,7 +340,7 @@ export function DocumentPageReader({
           className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-40"
         >
           <ChevronLeft size={15} />
-          Previous
+          Previous section
         </button>
         <div className="text-center">
           <p className="text-sm font-semibold text-ink">
@@ -353,7 +359,7 @@ export function DocumentPageReader({
           disabled={!sections.length || pageIndex >= sections.length - 1}
           className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-40"
         >
-          Next
+          Next section
           <ChevronRight size={15} />
         </button>
       </div>
@@ -643,8 +649,7 @@ function groupSectionsByPdfPage(sections: DocumentSection[]) {
       groups.push(group);
     }
     group.items.push({ section, index, localNumber: group.items.length + 1 });
-    const sectionCount = group.items.length;
-    group.label = pdfPage ? `PDF page ${pdfPage} · S1-S${sectionCount}` : `PDF page unknown · S1-S${sectionCount}`;
+    group.label = pdfPage ? `PDF page ${pdfPage}` : "PDF page unknown";
   });
 
   return groups;

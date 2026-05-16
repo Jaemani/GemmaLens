@@ -2,6 +2,7 @@ import type { AnalysisResult } from "@/lib/types";
 import { DifficultyBadge } from "./DifficultyBadge";
 
 export function DomainOverviewCard({ analysis }: { analysis: AnalysisResult }) {
+  const reason = userFacingDifficultyReason(analysis.difficulty.reason);
   return (
     <section className="rounded-lg border border-line bg-panel px-4 py-3 shadow-material">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -21,7 +22,7 @@ export function DomainOverviewCard({ analysis }: { analysis: AnalysisResult }) {
           <Metric label="Domain" value={analysis.difficulty.domain_difficulty} />
         </div>
       </div>
-      <p className="mt-2 text-xs leading-5 text-neutral-600">{analysis.difficulty.reason}</p>
+      {reason ? <p className="mt-2 text-xs leading-5 text-neutral-600">{reason}</p> : null}
     </section>
   );
 }
@@ -33,4 +34,12 @@ function Metric({ label, value }: { label: string; value: number }) {
       <p className="mt-0.5 text-base font-semibold">{value}/10</p>
     </div>
   );
+}
+
+function userFacingDifficultyReason(reason: string) {
+  const lowered = reason.toLowerCase();
+  if (lowered.includes("code-generated") || lowered.includes("model-generated") || lowered.includes("fast edge mode")) {
+    return "Difficulty is calibrated against the selected reading level and refined by the section learning guide below.";
+  }
+  return reason;
 }

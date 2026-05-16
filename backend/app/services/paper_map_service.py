@@ -158,8 +158,23 @@ class PaperMapService:
             "cifar-10",
             "imagenet",
         }
+        meta_signals = {
+            "appendix",
+            "architecture change checklist",
+            "architecture documentation purpose",
+            "architecture table navigation",
+            "bibliography navigation",
+            "citation metadata pattern",
+            "reference-to-appendix boundary",
+            "references",
+            "related-work trail",
+            "reproducibility appendix",
+            "source type recognition",
+        }
         if lowered in promoted:
             return 0
+        if lowered in meta_signals:
+            return 3
         if lowered in demoted:
             return 2
         return 1

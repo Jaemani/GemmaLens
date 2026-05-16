@@ -220,7 +220,7 @@ class RemoteGemmaAdapter(ModelAdapter):
                 "lexical_difficulty": 5,
                 "syntax_difficulty": 5,
                 "domain_difficulty": 6 if domain != "unknown" else 5,
-                "reason": "Fast edge mode uses code-generated meta and model-generated learning objects.",
+                "reason": "This section is treated as a fast local reading pass, so difficulty is a conservative estimate until the section guide is reviewed.",
             },
             "summaries": {"one_line": first_sentence, "simple": first_sentence, "academic": first_sentence, "study_notes": []},
         }
