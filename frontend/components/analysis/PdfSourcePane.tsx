@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Minus, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { DocumentRead } from "@/lib/types";
@@ -18,6 +18,7 @@ export function PdfSourcePane({
   const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
+  const [zoom, setZoom] = useState(1.2);
   const [status, setStatus] = useState("Loading PDF...");
   const [failed, setFailed] = useState(false);
 
@@ -55,7 +56,8 @@ export function PdfSourcePane({
         if (cancelled) return;
         const containerWidth = canvasRef.current?.parentElement?.clientWidth ?? 520;
         const initialViewport = page.getViewport({ scale: 1 });
-        const scale = Math.min(2, Math.max(0.8, (containerWidth - 32) / initialViewport.width));
+        const fitScale = Math.max(0.8, (containerWidth - 32) / initialViewport.width);
+        const scale = Math.min(3, fitScale * zoom);
         const viewport = page.getViewport({ scale });
         const canvas = canvasRef.current;
         const context = canvas?.getContext("2d");
@@ -63,8 +65,8 @@ export function PdfSourcePane({
         renderTaskRef.current?.cancel();
         canvas.width = Math.floor(viewport.width);
         canvas.height = Math.floor(viewport.height);
-        canvas.style.width = "100%";
-        canvas.style.height = "auto";
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
         const renderTask = page.render({ canvas, canvasContext: context, viewport });
         renderTaskRef.current = renderTask;
         await renderTask.promise;
@@ -82,7 +84,7 @@ export function PdfSourcePane({
       cancelled = true;
       renderTaskRef.current?.cancel();
     };
-  }, [fileUrl, pageNumber]);
+  }, [fileUrl, pageNumber, zoom]);
 
   return (
     <section className="overflow-hidden rounded-lg border border-line bg-panel shadow-material">
@@ -101,7 +103,7 @@ export function PdfSourcePane({
           Open
         </a>
       </div>
-      <div className="flex items-center justify-between gap-3 border-b border-line bg-surface px-4 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-surface px-4 py-2">
         <button
           type="button"
           onClick={() => setPageNumber((value) => Math.max(1, value - 1))}
@@ -114,15 +116,38 @@ export function PdfSourcePane({
         <p className="text-xs font-semibold text-neutral-600">
           PDF page {pageNumber} {pageCount ? `/ ${pageCount}` : ""}
         </p>
-        <button
-          type="button"
-          onClick={() => setPageNumber((value) => Math.min(pageCount || value, value + 1))}
-          disabled={!pageCount || pageNumber >= pageCount}
-          className="inline-flex items-center gap-1 rounded-md border border-line bg-panel px-2.5 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:opacity-40"
-        >
-          Next
-          <ChevronRight size={14} />
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-md border border-line bg-panel">
+            <button
+              type="button"
+              onClick={() => setZoom((value) => Math.max(0.9, Math.round((value - 0.1) * 10) / 10))}
+              className="inline-flex h-8 w-8 items-center justify-center text-ink hover:bg-white"
+              aria-label="Zoom out"
+            >
+              <Minus size={14} />
+            </button>
+            <span className="min-w-12 border-x border-line px-2 text-center text-xs font-semibold text-neutral-600">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => setZoom((value) => Math.min(2.2, Math.round((value + 0.1) * 10) / 10))}
+              className="inline-flex h-8 w-8 items-center justify-center text-ink hover:bg-white"
+              aria-label="Zoom in"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPageNumber((value) => Math.min(pageCount || value, value + 1))}
+            disabled={!pageCount || pageNumber >= pageCount}
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-panel px-2.5 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:opacity-40"
+          >
+            Next
+            <ChevronRight size={14} />
+          </button>
+        </div>
       </div>
       <div className="h-[calc(100vh-220px)] min-h-[620px] overflow-auto bg-neutral-100 p-4">
         {status ? (
@@ -130,7 +155,7 @@ export function PdfSourcePane({
             {failed ? "PDF preview failed. Use Open to view the source file in a browser tab." : status}
           </div>
         ) : null}
-        <canvas ref={canvasRef} className="mx-auto block max-w-full bg-white shadow-material" />
+        <canvas ref={canvasRef} className="mx-auto block bg-white shadow-material" />
       </div>
     </section>
   );

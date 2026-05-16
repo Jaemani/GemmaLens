@@ -5,11 +5,13 @@ export default async function AnalysisPage({ params }: { params: Promise<{ docum
   const { documentId } = await params;
   return (
     <AppShell>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Analysis result</h1>
-        <p className="mt-2 max-w-3xl text-sm text-neutral-600">
-          Read the original source beside a language-learning guide built from extracted text, concepts, expressions, and sentence structures.
-        </p>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Paper reading workspace</h1>
+          <p className="mt-1 max-w-3xl text-sm text-neutral-600">
+            Read the source on the left. Build the language guide section by section on the right.
+          </p>
+        </div>
       </div>
       <AnalysisResultView documentId={documentId} />
     </AppShell>

@@ -226,12 +226,12 @@ export function DocumentPageReader({
             {analyzedCount} / {sections.length || 1} sections analyzed
           </p>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
           <button
             type="button"
             onClick={goToNextUnanalyzed}
             disabled={targetUnanalyzedIndex < 0 || isBatchAnalyzing}
-            className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
           >
             <SkipForward size={16} />
             Next unstudied
@@ -240,7 +240,7 @@ export function DocumentPageReader({
             type="button"
             onClick={autoStudyNextSections}
             disabled={!plannedBatchIndices.length || isBatchAnalyzing || isAnalyzing}
-            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-4 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-3 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
           >
             <ScanText size={16} />
             {isBatchAnalyzing ? "Auto-studying..." : "Auto-study next 3"}
@@ -251,7 +251,7 @@ export function DocumentPageReader({
                 type="button"
                 onClick={() => attachInputRef.current?.click()}
                 disabled={isAttaching}
-                className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-50"
               >
                 <Paperclip size={16} />
                 {isAttaching ? "Attaching..." : "Attach original PDF"}
@@ -273,7 +273,7 @@ export function DocumentPageReader({
             type="button"
             onClick={analyzePage}
             disabled={isAnalyzing || isBatchAnalyzing || !currentSection || !page.trim()}
-            className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
+            className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
           >
             <ScanText size={16} />
             {isAnalyzing ? "Analyzing section..." : currentSection?.analyzed ? "Re-analyze section" : "Analyze this section"}
@@ -362,6 +362,7 @@ export function DocumentPageReader({
           sectionNumber={pageIndex + 1}
           onAnalyzeNext={targetUnanalyzedIndex >= 0 ? () => analyzeSectionAt(targetUnanalyzedIndex) : undefined}
           isAnalyzingNext={isAnalyzing}
+          embedded
         />
       ) : null}
     </section>
@@ -372,17 +373,22 @@ export function SectionLessonCard({
   analysis,
   sectionNumber,
   onAnalyzeNext,
-  isAnalyzingNext
+  isAnalyzingNext,
+  embedded = false
 }: {
   analysis: AnalysisResult;
   sectionNumber: number;
   onAnalyzeNext?: () => void;
   isAnalyzingNext: boolean;
+  embedded?: boolean;
 }) {
   const terms = analysis.terms.slice(0, 6);
   const phrases = analysis.phrases.slice(0, 6);
+  const className = embedded
+    ? "border-t border-line p-5"
+    : "rounded-lg border border-line bg-panel p-5 shadow-material";
   return (
-    <div className="border-t border-line p-5">
+    <div className={className}>
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section {sectionNumber} lesson</p>
       <h3 className="mt-1 text-lg font-semibold">{analysis.summaries.one_line}</h3>
       <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.summaries.simple}</p>

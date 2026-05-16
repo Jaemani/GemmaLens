@@ -198,7 +198,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
     </section>
   ) : null;
   const guideContent = (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {isDocumentSource ? (
         <DocumentPageReader
           documentId={documentId}
@@ -209,8 +209,8 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           hideInlineLesson
         />
       ) : null}
-      {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
       {sectionLesson ? <SectionLessonCard analysis={sectionLesson.analysis} sectionNumber={sectionLesson.sectionNumber} isAnalyzingNext={false} /> : null}
+      {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
       <section className="rounded-lg border border-line bg-panel shadow-material">
         <button
           type="button"
@@ -259,8 +259,8 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       ) : null}
       <DomainOverviewCard analysis={analysis} />
       {hasPdfViewer && document ? (
-        <div className="grid items-start gap-5 xl:grid-cols-[minmax(520px,0.95fr)_minmax(0,1.05fr)]">
-          <div className="xl:sticky xl:top-4">
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
+          <div className="min-w-0 xl:sticky xl:top-4">
             <PdfSourcePane document={document} requestedPage={requestedPdfPage} onPageChange={setRequestedPdfPage} />
           </div>
           {guideContent}

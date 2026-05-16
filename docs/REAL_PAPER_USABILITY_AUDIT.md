@@ -57,6 +57,9 @@ Local demo records currently include:
 - Updated stale scope copy so the analysis page explains the current staged section-analysis and paper-map draft behavior instead of implying full-paper staged analysis is still absent.
 - Already analyzed sections now load their cached lesson when selected, so the green analyzed state leads back to usable learning content rather than only acting as a status marker.
 - Analysis-column learning cards now stay single-column in the PDF workspace. The previous multi-column layout made concept and term cards too narrow on normal desktop widths.
+- The current section lesson now appears directly under the section reader instead of below the cumulative paper map. This makes the analyze/read loop visible immediately after a user studies a section.
+- The reading profile card was compacted, and the PDF/result grid was adjusted to avoid horizontal overflow on normal laptop-width viewports.
+- The PDF pane now has zoom controls and a higher default zoom. The original source is closer to a readable PDF view rather than a small page thumbnail.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
 - Added real-paper normalization fixtures for BatchNorm and BERT snippets so generic fragments and PDF split artifacts are rejected in tests.
 - Added an Attention/Transformer fixture so `the best performing models` is handled as a discourse signal rather than a saveable term/concept, while Transformer, self-attention, sequence transduction, and parallelization remain learnable.
@@ -68,6 +71,7 @@ Local demo records currently include:
 - PDF page navigation and extracted section navigation are partially aligned for new uploads. Section-to-PDF and PDF-to-section movement both work when source labels are available.
 - Full-paper staged analysis is partly automated. The user can trigger `Auto-study next 3`, and the backend analyzes the next unstudied sections sequentially, but there is no durable background job queue or full-paper final merge.
 - The lower analysis page still contains large report-style blocks. It is usable, but it is not yet a polished reading companion.
+- The right-side section lesson is more useful than before, but it still needs better prioritization between concepts, terms, expressions, sentence patterns, translation, and quiz actions.
 - The paper-map guide and whole-paper learning draft are deterministic and source-grounded, but still light synthesis. They do not yet perform model-backed final argument reconstruction across all analyzed sections.
 - Some source extraction remains lossy for multi-column papers and equations.
 - PDF extraction still cannot preserve full mathematical layout. The current policy is to use equation text as supporting context, not as the main reading surface or argument-flow summary.
