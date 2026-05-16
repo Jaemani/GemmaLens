@@ -77,7 +77,7 @@ def test_paper_map_normalizes_base_analysis_when_no_section_cache():
     assert "batch normalization" in mapped
     assert paper_map.guide.coverage_note == "1 of 1 sections analyzed. This is a complete section-level reading guide."
     assert paper_map.guide.reading_focus
-    assert paper_map.synthesis.status == "whole-paper draft"
+    assert paper_map.synthesis.status == "complete section guide"
     assert paper_map.synthesis.priority_terms
 
 

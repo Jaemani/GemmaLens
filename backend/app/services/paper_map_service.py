@@ -291,7 +291,12 @@ class PaperMapService:
             )
 
         coverage_ratio = analyzed_count / total_sections if total_sections else 0
-        status = "whole-paper draft" if total_sections and coverage_ratio >= 0.8 else "partial synthesis"
+        if total_sections and analyzed_count >= total_sections:
+            status = "complete section guide"
+        elif total_sections and coverage_ratio >= 0.8:
+            status = "whole-paper draft"
+        else:
+            status = "partial synthesis"
         flow_limit = max(20, analyzed_count) if total_sections and analyzed_count >= total_sections else 20
         flow = self._argument_flow(summaries, limit=flow_limit)
         unique_summary_count = len({str(item.get("meaning") or "").strip().lower() for item in summaries if item.get("meaning")})
@@ -307,7 +312,7 @@ class PaperMapService:
             "Save concept anchors first; they explain why the vocabulary matters.",
             "Then save recurring terms and reusable academic expressions separately.",
         ]
-        if status == "whole-paper draft":
+        if status in {"whole-paper draft", "complete section guide"}:
             review_plan[0] = "Review the argument flow, then use the priority lists as the paper-level study plan."
         if priority_concepts:
             review_plan.append(f"First review concept: {priority_concepts[0]['text']}.")

@@ -50,7 +50,7 @@ Local demo records currently include:
 - The whole-paper learning draft appears before raw concept/term/expression lists, so the user sees a study plan before lower-level signals.
 - Raw source-grounded signal lists are collapsed by default. This reduces the long report-like page and lets the user inspect raw concepts/terms/expressions only when needed.
 - Whole-paper draft priority lists show only the top three compact items by default, so the paper-level study plan remains scannable.
-- The old full generated-output report is collapsed by default. The main reading workspace now prioritizes PDF/source, section study, paper map, whole-paper draft, and current section lesson.
+- The old full generated-output report is collapsed by default. The main reading workspace now prioritizes PDF/source, section study, paper map, cumulative paper-level guide, and current section lesson.
 - Paper-map coverage now includes the base first-section analysis even when later section caches exist. This fixes a real BERT smoke-test mismatch where the reader showed section 1 analyzed but the paper map only summarized section 3.
 - Attention Is All You Need smoke test now produces useful first-section anchors: Transformer, self-attention, attention mechanism, sequence transduction, recurrent/convolutional baselines, and BLEU. Raw signal lists remain collapsed by default.
 - Attention staged analysis exposed a real extraction problem: author-contribution and conference-note text was treated as section 2. Section splitting and paper-map synthesis now filter those attribution sections.
