@@ -22,7 +22,7 @@ export default async function DocumentsPage() {
         <div className="mb-5">
           <h1 className="text-2xl font-semibold">Document input</h1>
           <p className="mt-2 max-w-3xl text-sm text-neutral-600">
-            Upload a document or paste a focused excerpt, then generate structured learning objects. Original PDF rendering is a separate viewer step; current analysis uses extracted text.
+            Upload a document or paste a focused excerpt, then build a source-grounded language guide. PDFs keep the original file for side-by-side reading while analysis works from extracted text.
           </p>
         </div>
         <div className="space-y-6">
