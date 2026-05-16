@@ -2027,3 +2027,75 @@ def test_bert_architecture_section_recovers_model_sizes_and_input_representation
     assert result.sentences[0].core_structure == "A distinctive feature of X is Y."
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
     assert "term_count_out_of_range:2" not in result.quality_warnings
+
+
+def test_bert_input_representation_section_recovers_masked_lm_transition():
+    document = (
+        "The first token of every sequence is always a special classification token ([CLS]). "
+        "The final hidden state corresponding to this token is used as the aggregate sequence representation for classification tasks. "
+        "Sentence pairs are packed together into a single sequence. We differentiate the sentences in two ways. "
+        "First, we separate them with a special token ([SEP]). Second, we add a learned embedding to every token indicating whether it belongs to sentence A or sentence B. "
+        "For a given token, its input representation is constructed by summing the corresponding token, segment, and position embeddings. "
+        "3.1 Pre-training BERT Unlike Peters et al. and Radford et al., we do not use traditional left-to-right or right-to-left language models to pre-train BERT. "
+        "Instead, we pre-train BERT using two unsupervised tasks, described in this section. Task #1: Masked LM."
+    )
+    payload = {
+        "terms": [
+            {"term": "hidden state", "meaning": "too generic alone"},
+            {"term": "embedding", "meaning": "too generic alone"},
+        ],
+        "concepts": [
+            {"concept": "hidden state", "explanation": "term duplicated as concept"},
+            {"concept": "embedding", "explanation": "term duplicated as concept"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "The first token of every sequence is always a special classification token ([CLS])."},
+        "sentences": [{"sentence": "The first token of every sequence is always a special classification token ([CLS]).", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:0", "term_count_out_of_range:2"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-input-masklm", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "[CLS]",
+        "aggregate sequence representation",
+        "[SEP]",
+        "segment embedding",
+        "position embeddings",
+        "token embeddings",
+        "masked LM",
+        "left-to-right language models",
+        "right-to-left language models",
+    }.issubset(terms)
+    assert "hidden state" not in terms
+    assert "embedding" not in terms
+    assert {
+        "classification-token aggregation",
+        "sentence-pair packing",
+        "segment identity encoding",
+        "summed input representation",
+        "masked-language-model transition",
+    }.issubset(concepts)
+    assert "hidden state" not in concepts
+    assert "embedding" not in concepts
+    assert "BERT" not in concepts
+    assert "pre-training" not in concepts
+    assert {
+        "The first token of every sequence is always",
+        "is used as the aggregate sequence representation",
+        "are packed together into a single sequence",
+        "We differentiate the sentences in two ways",
+        "we separate them with",
+        "we add a learned embedding",
+        "is constructed by summing",
+        "we do not use traditional",
+        "Instead, we pre-train",
+    }.issubset(phrases)
+    assert result.summaries.one_line == "This section explains BERT's input representation and transitions into masked language-model pre-training."
+    assert result.sentences[0].core_structure == "We differentiate X in two ways: first A; second B."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings
+    assert "term_count_out_of_range:2" not in result.quality_warnings
+    assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)

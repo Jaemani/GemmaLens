@@ -60,6 +60,16 @@ class AnalysisQualityService:
         source_lower = source.lower()
         if value_lower in source_lower:
             return True
+        support_aliases = {
+            "masked lm": "mask lm",
+            "segment embedding": "learned embedding",
+            "token embeddings": "token",
+            "left-to-right language models": "left-to-right",
+            "right-to-left language models": "right-to-left",
+        }
+        alias = support_aliases.get(value_lower)
+        if alias and alias in source_lower:
+            return True
         value_tokens = self._support_tokens(value_lower)
         source_tokens = self._support_tokens(source_lower)
         return bool(value_tokens) and value_tokens.issubset(source_tokens)

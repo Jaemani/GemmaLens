@@ -30,6 +30,8 @@ class AnalysisNormalizationService:
             phrases = self._filter_bert_pretraining_finetuning_procedure_phrases(phrases)
         if self._is_bert_architecture_model_size_section(document_text):
             terms = self._prefer_bert_architecture_model_size_terms(terms, document_text)
+        if self._is_bert_input_representation_masked_lm_transition_section(document_text):
+            terms = self._prefer_bert_input_representation_masked_lm_terms(terms, document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -92,6 +94,8 @@ class AnalysisNormalizationService:
             normalized["phrases"] = self._filter_bert_pretraining_finetuning_procedure_phrases(normalized["phrases"])
         if self._is_bert_architecture_model_size_section(document_text):
             normalized["concepts"] = self._prefer_bert_architecture_model_size_concepts(normalized["concepts"], document_text)
+        if self._is_bert_input_representation_masked_lm_transition_section(document_text):
+            normalized["concepts"] = self._prefer_bert_input_representation_masked_lm_concepts(normalized["concepts"], document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -1778,6 +1782,15 @@ class AnalysisNormalizationService:
                 ("was chosen to have the same model size as", "method", "Explains why BERTBASE is comparable with GPT."),
                 ("is able to unambiguously represent", "method", "Explains the design goal of BERT input representation."),
                 ("refers to the input token sequence", "general", "Defines what sequence means in the paper."),
+                ("The first token of every sequence is always", "general", "Defines a fixed input-format convention."),
+                ("is used as the aggregate sequence representation", "method", "Explains how [CLS] summarizes a sequence for classification."),
+                ("are packed together into a single sequence", "method", "Explains how sentence pairs are represented as one model input."),
+                ("We differentiate the sentences in two ways", "general", "Introduces an ordered method explanation."),
+                ("we separate them with", "method", "Explains one mechanism for separating sentence pairs."),
+                ("we add a learned embedding", "method", "Explains segment embeddings for sentence identity."),
+                ("is constructed by summing", "method", "Explains how BERT builds each token input vector."),
+                ("we do not use traditional", "contrast", "Contrasts BERT pre-training with left-to-right/right-to-left language models."),
+                ("Instead, we pre-train", "method", "Introduces the replacement method after rejecting a prior approach."),
             ]
         elif self._is_attention_text(document_text):
             phrase_specs = [
@@ -2880,6 +2893,27 @@ class AnalysisNormalizationService:
                     "The authors explain why BERT's input format works for both single-sentence and sentence-pair tasks.",
                     "'is able to'는 기능이나 capability를 설명하는 표현입니다.",
                     "This sentence shifts from model architecture to input representation.",
+                ),
+                (
+                    "We differentiate the sentences in two ways",
+                    "We differentiate X in two ways: first A; second B.",
+                    "The authors explain sentence-pair encoding with two ordered mechanisms.",
+                    "'in two ways'는 뒤에 두 가지 절차가 나온다는 신호입니다.",
+                    "The learner should track [SEP] and segment embeddings as separate mechanisms.",
+                ),
+                (
+                    "is constructed by summing",
+                    "X is constructed by summing A, B, and C.",
+                    "The authors define BERT's input representation as the sum of token, segment, and position embeddings.",
+                    "'is constructed by'는 구성 방식을 설명하는 수동태 표현입니다.",
+                    "The sentence is a definition; each listed embedding type has a different role.",
+                ),
+                (
+                    "Instead, we pre-train",
+                    "Instead, we pre-train X using Y.",
+                    "The authors move from rejecting traditional directional language models to introducing BERT's two unsupervised tasks.",
+                    "'Instead'는 앞 방법을 쓰지 않고 대체 방법을 제시한다는 신호입니다.",
+                    "This sentence is the transition from input representation to masked language modeling.",
                 ),
             ]
         elif self._is_attention_text(document_text):
@@ -4224,6 +4258,23 @@ class AnalysisNormalizationService:
                         "Separate model-size terms from input-format terms such as sentence, sequence, and WordPiece embeddings.",
                     ],
                 }
+            if self._is_bert_input_representation_masked_lm_transition_section(document_text):
+                return {
+                    "one_line": "This section explains BERT's input representation and transitions into masked language-model pre-training.",
+                    "simple": (
+                        "BERT packs one or two text spans into a single token sequence. [CLS] represents the whole sequence for classification, [SEP] separates spans, "
+                        "segment embeddings mark sentence A versus B, and each input vector sums token, segment, and position embeddings."
+                    ),
+                    "academic": (
+                        "The section defines BERT's input representation for single-sentence and sentence-pair tasks, then contrasts BERT with traditional directional language models "
+                        "before introducing masked language modeling as one of two unsupervised pre-training tasks."
+                    ),
+                    "study_notes": [
+                        "Separate token roles: [CLS] aggregates, [SEP] separates, segment embeddings label sentence identity.",
+                        "The formula idea is simple: input representation = token + segment + position embeddings.",
+                        "The final paragraph is a transition into Masked LM, not another input-format detail.",
+                    ],
+                }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
                 return {
                     "one_line": "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning.",
@@ -4777,6 +4828,112 @@ class AnalysisNormalizationService:
         ]
         return [*promoted, *rest][:8]
 
+    def _prefer_bert_input_representation_masked_lm_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"hidden state", "embedding", "bert"}
+        preferred = [
+            ("[CLS]", "A special classification token placed first in every BERT input sequence.", "field_term", "medium", "It provides the aggregate sequence representation for classification."),
+            ("aggregate sequence representation", "A single vector used to represent the whole input sequence.", "field_term", "hard", "This explains why the [CLS] hidden state matters."),
+            ("[SEP]", "A special separator token used to divide sentence pairs.", "useful", "medium", "It is one of BERT's sentence-pair encoding mechanisms."),
+            ("segment embedding", "A learned embedding that marks whether a token belongs to sentence A or sentence B.", "field_term", "medium", "It lets BERT distinguish packed sentence pairs."),
+            ("position embeddings", "Embeddings that encode token order inside the sequence.", "field_term", "medium", "They are one of the three summed components of BERT input vectors."),
+            ("token embeddings", "Embeddings representing the token identity.", "field_term", "medium", "They are combined with segment and position embeddings."),
+            ("masked LM", "A pre-training task where selected tokens are masked and predicted from context.", "field_term", "hard", "This is the next pre-training task introduced after input representation."),
+            ("left-to-right language models", "Language models that use only previous context.", "useful", "medium", "BERT explicitly contrasts its pre-training with these directional models."),
+            ("right-to-left language models", "Language models that use only following context.", "useful", "medium", "BERT contrasts its pre-training with separately directional models."),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            lowered = term.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = {
+                    "segment embedding": "learned embedding",
+                    "token embeddings": "token, segment, and position embeddings",
+                    "masked LM": "Masked LM",
+                    "left-to-right language models": "left-to-right",
+                    "right-to-left language models": "right-to-left",
+                }.get(term, term)
+                promoted.append(
+                    {
+                        "term": term,
+                        "meaning": meaning,
+                        "domain_relevance": "high" if priority == "field_term" else "medium",
+                        "difficulty": difficulty,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "should_save": True,
+                        "learning_priority": priority,
+                        "reason": reason,
+                        "context_meaning": meaning,
+                        "general_meaning": meaning,
+                        "confidence": 0.88,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}
+        ]
+        return [*promoted, *rest][:12]
+
+    def _prefer_bert_input_representation_masked_lm_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"hidden state", "embedding", "[cls]", "[sep]", "masked lm", "bert", "pre-training"}
+        preferred = {
+            "classification-token aggregation": (
+                "The final hidden state of [CLS] is used as the aggregate representation for classification.",
+                "This explains why [CLS] is more than a marker token.",
+                "aggregate sequence representation",
+            ),
+            "sentence-pair packing": (
+                "BERT packs sentence pairs into one sequence and distinguishes them with [SEP] plus segment embeddings.",
+                "This is how one input format handles pair tasks such as question answering.",
+                "Sentence pairs are packed together",
+            ),
+            "segment identity encoding": (
+                "A learned embedding marks whether each token belongs to sentence A or sentence B.",
+                "This prevents the two packed spans from becoming indistinguishable.",
+                "belongs to sentence A or sentence B",
+            ),
+            "summed input representation": (
+                "Each token input is the sum of token, segment, and position embeddings.",
+                "This is the core formula for reading BERT's input representation.",
+                "constructed by summing",
+            ),
+            "masked-language-model transition": (
+                "The section transitions from input formatting to BERT's non-directional masked LM pre-training task.",
+                "This connects architecture mechanics to the next method section.",
+                "Instead, we pre-train BERT using two unsupervised tasks",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            lowered = concept.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                promoted.append(
+                    {
+                        "concept": concept,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [concept],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.86,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -4820,6 +4977,8 @@ class AnalysisNormalizationService:
         if self._is_bert_pretraining_finetuning_procedure_section(document_text):
             return True
         if self._is_bert_architecture_model_size_section(document_text):
+            return True
+        if self._is_bert_input_representation_masked_lm_transition_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -5081,6 +5240,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_architecture_model_size_section(document_text):
             return True
+        if self._is_bert_input_representation_masked_lm_transition_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -5105,6 +5266,10 @@ class AnalysisNormalizationService:
     def _is_bert_architecture_model_size_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "distinctive feature of bert is its unified architecture" in lowered and "bertbase" in lowered and "bertlarge" in lowered
+
+    def _is_bert_input_representation_masked_lm_transition_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "first token of every sequence" in lowered and "constructed by summing" in lowered and "task #1: masked lm" in lowered
 
     def _is_attention_text(self, document_text: str) -> bool:
         lowered = document_text.lower()
