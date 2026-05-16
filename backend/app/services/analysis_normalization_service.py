@@ -7492,6 +7492,14 @@ class AnalysisNormalizationService:
             "hyperparameters",
             "dropout",
             "byte-pair encoding",
+            "learning rate",
+            "constituency parsing",
+            "rnn sequence-to-sequence models",
+            "self-attention",
+            "sequence transduction",
+            "encoder-decoder",
+            "ensembles",
+            "modalities",
             "transduction",
             "desiderata",
             "extrapolate",
@@ -7548,6 +7556,12 @@ class AnalysisNormalizationService:
             "flops",
             "dropout rate",
             "attention heads",
+            "constituency parsing",
+            "rnn sequence-to-sequence models",
+            "encoder-decoder",
+            "discriminative",
+            "ensembles",
+            "modalities",
         }
         return self._prefer_rows(
             rows,
@@ -9208,6 +9222,140 @@ class AnalysisNormalizationService:
                 "The ablation implies that query-key compatibility may need more capacity than simple dot products provide.",
                 "'This suggests that'은 table result에서 해석을 조심스럽게 끌어낼 때 쓰는 표현입니다.",
                 "The section is difficult because the useful lesson is in prose interpretation, not the raw numeric table.",
+            )
+        if "english constituency parsing" in lowered and "wall street journal" in lowered and "penn treebank" in lowered:
+            return profile(
+                "This section tests whether the Transformer generalizes to English constituency parsing.",
+                (
+                    "The paper applies a 4-layer Transformer to constituency parsing, a task with structural output constraints and longer outputs than inputs. "
+                    "It uses WSJ/Penn Treebank data, a semi-supervised setting, and mostly keeps translation-model parameters unchanged."
+                ),
+                (
+                    "The passage is a task-transfer setup: it motivates constituency parsing as a challenging non-translation benchmark, describes WSJ and semi-supervised training data, "
+                    "sets vocabulary sizes, and lists limited tuning choices before reporting parsing results."
+                ),
+                [
+                    "Read this as evidence for generalization beyond translation.",
+                    "Do not confuse task terms with architecture terms.",
+                    "The key phrase is 'To evaluate if X can generalize to Y'.",
+                ],
+                [
+                    ("English constituency parsing", "Parsing task used to test generalization beyond translation.", "English Constituency Parsing"),
+                    ("structural constraints", "Output constraints that make parsing harder than plain generation.", "structural constraints"),
+                    ("small-data regimes", "Low-data setting where previous RNN sequence-to-sequence models struggle.", "small-data regimes"),
+                    ("Wall Street Journal", "WSJ portion of the Penn Treebank used for training.", "Wall Street Journal"),
+                    ("Penn Treebank", "Dataset source for WSJ parsing experiments.", "Penn Treebank"),
+                    ("semi-supervised setting", "Training setup using extra high-confidence parsed corpora.", "semi-supervised setting"),
+                    ("beam size", "Inference hyperparameter tuned for parsing.", "beam size"),
+                    ("Section 22 development set", "Development set used for limited tuning.", "Section 22 development set"),
+                ],
+                [
+                    ("generalization test", "The paper tests whether Transformer works outside translation.", "generalize to other tasks"),
+                    ("parsing task difficulty", "Parsing has structural constraints and outputs longer than inputs.", "specific challenges"),
+                    ("limited task-specific tuning", "Most parameters remain from the English-to-German base model.", "all other parameters remained unchanged"),
+                ],
+                [
+                    ("To evaluate if", "method", "Introduces a generalization test."),
+                    ("This task presents specific challenges", "claim", "Signals why the task is hard."),
+                    ("Furthermore", "general", "Adds another reason or evidence."),
+                    ("We also trained it in", "method", "Introduces an additional training setting."),
+                    ("all other parameters remained unchanged", "method", "States controlled reuse of settings."),
+                ],
+                "To evaluate if the Transformer can generalize to other tasks",
+                "To evaluate if X can generalize to Y, we performed experiments on Z.",
+                "The authors test whether the Transformer transfers from translation to constituency parsing.",
+                "'To evaluate if'는 모델의 일반화 가능성을 실험으로 확인할 때 쓰는 표현입니다.",
+                "The section mixes task motivation, dataset names, and tuning details.",
+            )
+        if "table 4:" in lowered and "generalizes well to english constituency parsing" in lowered:
+            return profile(
+                "This section interprets the Transformer constituency-parsing result table and starts the conclusion.",
+                (
+                    "Table 4 compares WSJ parsing F1 scores. The Transformer performs well with little task-specific tuning and beats BerkeleyParser when trained only on the small WSJ set."
+                ),
+                (
+                    "The passage is a table-interpretation section: it compares discriminative, semi-supervised, multi-task, and generative parsers, "
+                    "then argues that Transformer generalizes surprisingly well before transitioning to the conclusion."
+                ),
+                [
+                    "Read parser names as references, not vocabulary to memorize.",
+                    "The useful result is the comparison claim, not every numeric row.",
+                    "The conclusion begins in this section after the parsing result.",
+                ],
+                [
+                    ("WSJ 23 F1", "Evaluation score on WSJ section 23.", "WSJ 23 F1"),
+                    ("discriminative", "Parser training type listed in Table 4.", "discriminative"),
+                    ("semi-supervised", "Training setting using additional data.", "semi-supervised"),
+                    ("generative", "Parser category of the RNN Grammar comparison.", "generative"),
+                    ("task-specific tuning", "Tuning that the Transformer mostly lacks here.", "task-specific tuning"),
+                    ("Berkeley- Parser", "Prior parser outperformed by the Transformer in the WSJ-only comparison.", "Berkeley- Parser"),
+                    ("sequence transduction model", "Model family restated in the conclusion.", "sequence transduction model"),
+                    ("multi-headed self-attention", "Attention mechanism replacing recurrent layers in the conclusion.", "multi-headed self-attention"),
+                ],
+                [
+                    ("parsing result comparison", "The Transformer performs strongly versus prior parsers.", "performs surprisingly well"),
+                    ("small-data comparison", "Transformer beats BerkeleyParser with only 40K WSJ sentences.", "training only on the WSJ training set"),
+                    ("conclusion thesis", "The Transformer is an attention-only sequence transduction model.", "first sequence transduction model"),
+                ],
+                [
+                    ("despite the lack of", "contrast", "Frames a strong result under limited tuning."),
+                    ("with the exception of", "limitation", "States the remaining better comparator."),
+                    ("In contrast to", "contrast", "Introduces a comparison against prior models."),
+                    ("even when", "contrast", "Strengthens a comparison under a constraint."),
+                    ("In this work, we presented", "claim", "Introduces the conclusion thesis."),
+                    ("based entirely on", "method", "States the defining mechanism."),
+                    ("replacing X with Y", "method", "Explains the architecture substitution."),
+                ],
+                "despite the lack of task-specific tuning",
+                "Despite the lack of X, our model performs Y.",
+                "Even without much task-specific tuning, the Transformer performs strongly on constituency parsing.",
+                "'despite the lack of'는 불리한 조건에도 결과가 좋다는 contrast를 만드는 표현입니다.",
+                "The section is difficult because a result table and the conclusion opening are merged by PDF extraction.",
+            )
+        if "future of attention-based models" in lowered and "modalities other than text" in lowered:
+            return profile(
+                "This conclusion states the Transformer's translation results and future research directions.",
+                (
+                    "The paper concludes that Transformer achieves state-of-the-art translation results, including beating ensembles on English-German, "
+                    "and proposes future work on non-text modalities, restricted attention for large inputs, and less sequential generation."
+                ),
+                (
+                    "The passage summarizes the final contribution and roadmap: attention-based models reach new translation performance, may extend to images/audio/video, "
+                    "may use local restricted attention for large inputs, and motivate generation methods that are less sequential."
+                ),
+                [
+                    "This is conclusion language: result claim plus future work.",
+                    "Do not save acknowledgements or citation fragments as vocabulary.",
+                    "The reusable expressions are 'We plan to' and 'other than'.",
+                ],
+                [
+                    ("state of the art", "Best reported performance claim.", "state of the art"),
+                    ("previously reported ensembles", "Strong prior systems outperformed in English-German.", "previously reported ensembles"),
+                    ("attention-based models", "Future model family the authors want to extend.", "attention-based models"),
+                    ("modalities other than text", "Images, audio, and video as non-text targets.", "modalities other than text"),
+                    ("local, restricted attention mechanisms", "Attention variant proposed for large inputs and outputs.", "local, restricted attention mechanisms"),
+                    ("large inputs and outputs", "Scale challenge for restricted attention.", "large inputs and outputs"),
+                    ("generation less sequential", "Future goal of reducing sequential generation.", "generation less sequential"),
+                ],
+                [
+                    ("final benchmark claim", "Transformer achieves new state of the art on both translation tasks.", "new state of the art"),
+                    ("future multimodal extension", "The authors plan to apply attention models beyond text.", "modalities other than text"),
+                    ("efficient large-input direction", "Restricted attention is proposed for images, audio, and video.", "large inputs and outputs"),
+                ],
+                [
+                    ("On both", "result", "States a result across two tasks."),
+                    ("In the former task", "general", "Refers back to the first of two tasks."),
+                    ("We are excited about", "general", "Signals future-facing conclusion language."),
+                    ("plan to apply", "future", "States future work."),
+                    ("other than text", "future", "Defines modality expansion."),
+                    ("to efficiently handle", "method", "States the purpose of a future mechanism."),
+                    ("another research goal", "future", "Adds a future direction."),
+                ],
+                "We plan to extend the Transformer to problems involving input and output modalities other than text",
+                "We plan to extend X to problems involving Y other than Z.",
+                "The authors want to apply Transformer-style attention beyond text, including images, audio, and video.",
+                "'other than text'는 기존 적용 영역을 넘어서는 범위를 설명할 때 유용합니다.",
+                "The section is easy conceptually but PDF extraction mixes conclusion, acknowledgements, and references.",
             )
         return None
 
