@@ -41,6 +41,9 @@ class AnalysisNormalizationService:
         if self._is_bert_finetuning_unification_section(document_text):
             terms = self._prefer_bert_finetuning_unification_terms(terms, document_text)
             phrases = self._filter_bert_finetuning_unification_phrases(phrases)
+        if self._is_bert_glue_setup_results_section(document_text):
+            terms = self._prefer_bert_glue_setup_results_terms(terms, document_text)
+            phrases = self._filter_bert_glue_setup_results_phrases(phrases)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -114,6 +117,8 @@ class AnalysisNormalizationService:
         if self._is_bert_finetuning_unification_section(document_text):
             normalized["concepts"] = self._prefer_bert_finetuning_unification_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_bert_finetuning_unification_phrases(normalized["phrases"])
+        if self._is_bert_glue_setup_results_section(document_text):
+            normalized["concepts"] = self._prefer_bert_glue_setup_results_concepts(normalized["concepts"], document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -1842,6 +1847,15 @@ class AnalysisNormalizationService:
                 ("finetune all the parameters end-to-end", "method", "States that the whole model is updated during fine-tuning."),
                 ("are analogous to", "general", "Maps BERT sentence slots to task-specific input pairs."),
                 ("Compared to pre-training", "contrast", "Contrasts fine-tuning cost with pre-training cost."),
+                ("we present BERT fine-tuning results on", "result", "Introduces the experiment scope."),
+                ("is a collection of", "general", "Defines a benchmark or dataset group."),
+                ("To fine-tune on", "method", "Introduces the fine-tuning setup for a benchmark."),
+                ("use the final hidden vector", "method", "Explains which representation is used for classification."),
+                ("The only new parameters introduced", "method", "Identifies what is newly learned during fine-tuning."),
+                ("We compute a standard classification loss", "method", "Describes the training objective for classification tasks."),
+                ("scored by the evaluation server", "result", "Explains how benchmark results are evaluated."),
+                ("The number below each task denotes", "general", "Explains how to read the table header."),
+                ("is slightly different than", "contrast", "Warns that a reported average differs from the official score."),
             ]
         elif self._is_attention_text(document_text):
             phrase_specs = [
@@ -2837,6 +2851,17 @@ class AnalysisNormalizationService:
                         "difficulty_reason": "The contrast is spread across prior-work and BERT-alternative clauses.",
                     }
                 ]
+            if self._is_bert_glue_setup_results_section(document_text):
+                sentence = self._source_sentence(None, "To fine-tune on GLUE", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "To fine-tune on X, we use Y as Z.",
+                        "simplified_version": "For GLUE tasks, BERT uses the final [CLS] vector C as the classifier's aggregate representation.",
+                        "korean_explanation": "'To fine-tune on'은 특정 벤치마크에 맞춘 실험 절차를 소개하고, 'as'는 C의 역할을 설명합니다.",
+                        "difficulty_reason": "The sentence combines benchmark setup, prior input-format reference, vector notation, and representation role.",
+                    }
+                ]
             specs = [
                 (
                     "There are two existing strategies",
@@ -3054,6 +3079,20 @@ class AnalysisNormalizationService:
                     "The authors summarize BERT fine-tuning as a reusable recipe.",
                     "'plug in'은 기존 구조에 필요한 입출력만 끼워 넣는다는 실용적 표현입니다.",
                     "The sentence is important because it describes how one model handles many tasks.",
+                ),
+                (
+                    "To fine-tune on GLUE",
+                    "To fine-tune on X, we use Y as Z.",
+                    "The authors explain how [CLS]/C is used as the aggregate representation for GLUE classification.",
+                    "'To fine-tune on'은 특정 벤치마크에 맞춘 실험 절차를 소개합니다.",
+                    "The sentence is dense because it packs input format, vector notation, and classification representation together.",
+                ),
+                (
+                    "The only new parameters introduced",
+                    "The only new parameters introduced during X are Y.",
+                    "The authors emphasize that GLUE fine-tuning adds only a classification layer.",
+                    "'The only new parameters'는 모델 변경 범위가 작다는 것을 강조합니다.",
+                    "This is a method detail, not just a parameter symbol.",
                 ),
             ]
         elif self._is_attention_text(document_text):
@@ -4466,6 +4505,23 @@ class AnalysisNormalizationService:
                         "Map input/output examples instead of memorizing isolated task names.",
                     ],
                 }
+            if self._is_bert_glue_setup_results_section(document_text):
+                return {
+                    "one_line": "This section sets up the GLUE benchmark fine-tuning experiment and reports BERT's test-table results.",
+                    "simple": (
+                        "GLUE is a group of language-understanding tasks. For GLUE, BERT uses the final [CLS] vector C as the aggregate representation, "
+                        "adds only classification-layer weights, computes a classification loss, and reports BERTBASE/BERTLARGE results in the table."
+                    ),
+                    "academic": (
+                        "The section specifies the GLUE fine-tuning protocol: [CLS]-based aggregate representation, task-specific classification layer W, "
+                        "standard classification loss, evaluation-server scoring, and comparison against prior systems across GLUE task columns."
+                    ),
+                    "study_notes": [
+                        "Treat the large number block as a result table, not prose to memorize line by line.",
+                        "Separate setup terms ([CLS] vector C, W, classification loss) from benchmark names.",
+                        "The table-reading point is BERTBASE/BERTLARGE improvement over prior systems, not every score.",
+                    ],
+                }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
                 return {
                     "one_line": "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning.",
@@ -5498,6 +5554,123 @@ class AnalysisNormalizationService:
         blocked = {"are fed into"}
         return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
 
+    def _prefer_bert_glue_setup_results_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"bert fine-tuning", "hidden vector c ∈ rh", "bert", "fine-tuning"}
+        preferred = [
+            ("GLUE benchmark", "A collection of diverse natural language understanding tasks.", "field_term", "medium", "This is the experiment benchmark for the section."),
+            ("11 NLP tasks", "The scope of BERT fine-tuning results in this experiment section.", "useful", "medium", "This gives the experimental breadth without memorizing every task."),
+            ("final hidden vector C", "The [CLS] vector used as the aggregate representation for GLUE classification.", "field_term", "hard", "This is the representation fed into the classifier."),
+            ("aggregate representation", "A single vector summarizing the input sequence for classification.", "field_term", "hard", "This explains what C does in GLUE fine-tuning."),
+            ("classification layer weights W", "The new task-specific weights added during GLUE fine-tuning.", "field_term", "hard", "The section says these are the only new parameters."),
+            ("number of labels K", "The label count determining the classifier output size.", "useful", "medium", "This explains the K dimension in W."),
+            ("classification loss", "The loss computed from C and W for GLUE classification.", "field_term", "medium", "This is the training objective for the benchmark."),
+            ("evaluation server", "The GLUE server used to score test results.", "useful", "medium", "This explains the table's scoring source."),
+            ("BERTBASE", "The smaller BERT model variant reported in the GLUE table.", "field_term", "medium", "This is one row in the result comparison."),
+            ("BERTLARGE", "The larger BERT model variant reported in the GLUE table.", "field_term", "medium", "This is the strongest BERT row in the table."),
+            ("Average column", "The table's aggregate score column, excluding WNLI in this paper.", "useful", "medium", "This helps read the table without overtrusting the official-score comparison."),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            lowered = term.lower()
+            target = {
+                "GLUE benchmark": "General Language Understanding Evaluation",
+                "11 NLP tasks": "fine-tuning results",
+                "final hidden vector C": "final hidden vector C",
+                "classification layer weights W": "classification layer weights W",
+                "number of labels K": "number of labels",
+                "classification loss": "standard classification loss",
+                "Average column": "official GLUE score",
+            }.get(term, term)
+            row = keyed.get(lowered, {})
+            promoted.append(
+                {
+                    **row,
+                    "term": term,
+                    "meaning": row.get("meaning") or meaning,
+                    "domain_relevance": row.get("domain_relevance") or ("high" if priority == "field_term" else "medium"),
+                    "difficulty": row.get("difficulty") or difficulty,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "should_save": bool(row.get("should_save", True)),
+                    "learning_priority": row.get("learning_priority") or priority,
+                    "reason": row.get("reason") or reason,
+                    "context_meaning": row.get("context_meaning") or meaning,
+                    "general_meaning": row.get("general_meaning") or meaning,
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}
+        ]
+        return [*promoted, *rest][:12]
+
+    def _prefer_bert_glue_setup_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"bert fine-tuning", "hidden vector c ∈ rh", "glue benchmark", "fine-tuning", "bert"}
+        preferred = {
+            "GLUE experiment scope": (
+                "The paper reports BERT fine-tuning results on 11 NLP tasks from GLUE.",
+                "This frames the section as experiment setup and evaluation, not model definition.",
+                "11 NLP tasks",
+            ),
+            "[CLS]-based aggregate representation": (
+                "For GLUE, BERT uses the final hidden vector C for the first [CLS] token as the aggregate input representation.",
+                "This connects the earlier input-format section to classification fine-tuning.",
+                "aggregate representation",
+            ),
+            "minimal new classifier parameters": (
+                "The only new fine-tuning parameters are classification layer weights W.",
+                "This shows how small the task-specific addition is.",
+                "only new parameters introduced",
+            ),
+            "classification-loss setup": (
+                "The model computes a standard classification loss from C and W.",
+                "This explains the training objective without dwelling on the formula.",
+                "standard classification loss",
+            ),
+            "GLUE table reading": (
+                "The table compares systems across GLUE tasks and reports BERTBASE/BERTLARGE improvements.",
+                "This teaches how to read the result table rather than memorize every number.",
+                "Table 1: GLUE Test results",
+            ),
+            "official-score caveat": (
+                "The paper's Average column differs from the official GLUE score because WNLI is excluded.",
+                "This prevents overinterpreting the average column.",
+                "Average column",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            lowered = concept.lower()
+            row = keyed.get(lowered, {})
+            promoted.append(
+                {
+                    **row,
+                    "concept": concept,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "related_terms": row.get("related_terms") or [concept],
+                    "why_it_matters": row.get("why_it_matters") or why_it_matters,
+                    "references": row.get("references") or self._references_near("", document_text),
+                    "learning_priority": row.get("learning_priority") or "field_term",
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_bert_glue_setup_results_phrases(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        blocked = {"for example", "during fine-tuning"}
+        return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -5532,6 +5705,7 @@ class AnalysisNormalizationService:
             or self._is_bert_masked_lm_procedure_section(document_text)
             or self._is_bert_nsp_procedure_section(document_text)
             or self._is_bert_finetuning_unification_section(document_text)
+            or self._is_bert_glue_setup_results_section(document_text)
         )
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
@@ -5554,6 +5728,8 @@ class AnalysisNormalizationService:
         if self._is_bert_nsp_procedure_section(document_text):
             return True
         if self._is_bert_finetuning_unification_section(document_text):
+            return True
+        if self._is_bert_glue_setup_results_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -5823,6 +5999,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_finetuning_unification_section(document_text):
             return True
+        if self._is_bert_glue_setup_results_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -5863,6 +6041,15 @@ class AnalysisNormalizationService:
     def _is_bert_finetuning_unification_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "fine-tuning is straightforward" in lowered and "swapping out the appropriate inputs and outputs" in lowered and "finetune all the parameters" in lowered
+
+    def _is_bert_glue_setup_results_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "glue" in lowered
+            and "general language understanding evaluation" in lowered
+            and "classification layer weights" in lowered
+            and "glue test results" in lowered
+        )
 
     def _is_attention_text(self, document_text: str) -> bool:
         lowered = document_text.lower()

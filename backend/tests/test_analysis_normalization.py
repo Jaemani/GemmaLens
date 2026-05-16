@@ -2349,3 +2349,89 @@ def test_bert_finetuning_section_recovers_task_unification():
     assert result.sentences[0].core_structure == "A common pattern is X. BERT instead uses Y to do Z."
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
     assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)
+
+
+def test_bert_glue_section_recovers_benchmark_setup_and_table_reading():
+    document = (
+        "4 Experiments In this section, we present BERT fine-tuning results on 11 NLP tasks. "
+        "4.1 GLUE The General Language Understanding Evaluation (GLUE) benchmark is a collection of diverse natural language understanding tasks. "
+        "To fine-tune on GLUE, we represent the input sequence as described in Section 3, and use the final hidden vector C ∈ RH "
+        "corresponding to the first input token ([CLS]) as the aggregate representation. "
+        "The only new parameters introduced during fine-tuning are classification layer weights W ∈ RK×H, where K is the number of labels. "
+        "We compute a standard classification loss with C and W, i.e., log(softmax(CW T)). "
+        "Table 1: GLUE Test results, scored by the evaluation server. "
+        "The number below each task denotes the number of training examples. "
+        "BERTBASE 84.6/83.4 71.2 90.5 93.5 52.1 85.8 88.9 66.4 79.6 "
+        "BERTLARGE 86.7/85.9 72.1 92.7 94.9 60.5 86.5 89.3 70.1 82.1 "
+        "The Average column is slightly different than the official GLUE score, since we exclude the problematic WNLI set."
+    )
+    payload = {
+        "terms": [
+            {"term": "BERT fine-tuning", "meaning": "too generic for this section"},
+            {"term": "hidden vector C ∈ RH", "meaning": "notation fragment"},
+        ],
+        "concepts": [
+            {"concept": "BERT fine-tuning", "explanation": "too generic"},
+            {"concept": "hidden vector C ∈ RH", "explanation": "notation fragment"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "7 We describe the task-specific details in the corresponding subsections of Section 4."},
+        "sentences": [
+            {
+                "sentence": "7 We describe the task-specific details in the corresponding subsections of Section 4.",
+                "core_structure": "Main claim + explanation.",
+            }
+        ],
+        "quality_warnings": ["phrase_count_out_of_range:0", "term_count_out_of_range:2"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-glue", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "GLUE benchmark",
+        "11 NLP tasks",
+        "final hidden vector C",
+        "aggregate representation",
+        "classification layer weights W",
+        "number of labels K",
+        "classification loss",
+        "evaluation server",
+        "BERTBASE",
+        "BERTLARGE",
+        "Average column",
+    }.issubset(terms)
+    assert "BERT fine-tuning" not in terms
+    assert "hidden vector C ∈ RH" not in terms
+    assert {
+        "GLUE experiment scope",
+        "[CLS]-based aggregate representation",
+        "minimal new classifier parameters",
+        "classification-loss setup",
+        "GLUE table reading",
+        "official-score caveat",
+    }.issubset(concepts)
+    assert "BERT fine-tuning" not in concepts
+    assert "hidden vector C ∈ RH" not in concepts
+    assert "fine-tuning" not in concepts
+    assert "BERT" not in concepts
+    assert {
+        "we present BERT fine-tuning results on",
+        "is a collection of",
+        "To fine-tune on",
+        "use the final hidden vector",
+        "The only new parameters introduced",
+        "We compute a standard classification loss",
+        "scored by the evaluation server",
+        "The number below each task denotes",
+        "is slightly different than",
+    }.issubset(phrases)
+    assert "For example" not in phrases
+    assert "During fine-tuning" not in phrases
+    assert result.summaries.one_line == "This section sets up the GLUE benchmark fine-tuning experiment and reports BERT's test-table results."
+    assert result.sentences[0].core_structure == "To fine-tune on X, we use Y as Z."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings
+    assert "term_count_out_of_range:2" not in result.quality_warnings
+    assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)
