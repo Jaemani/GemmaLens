@@ -7588,6 +7588,19 @@ class AnalysisNormalizationService:
                 "convolutional layers",
                 "stochastic optimization methods",
                 "regularization",
+                "stochastic gradient",
+                "architecture",
+                "parameters",
+                "inception modules",
+                "separable convolution",
+                "patch size/stride",
+                "depth",
+                "1x1 convolution",
+                "3x3 reduction",
+                "pool + projection",
+                "#1×1",
+                "#3×3 reduce",
+                "pool +proj",
             },
         )
 
@@ -9841,6 +9854,134 @@ class AnalysisNormalizationService:
                 "'Our future work includes'는 결론에서 아직 하지 않은 연구 방향을 제시하는 표현입니다.",
                 "The section is difficult because future-work prose and bibliography entries are extracted together.",
             )
+        if "mean-normalized stochastic gradient" in lowered and "appendix variant of the inception model used" in lowered:
+            return profile(
+                "This section ends the references and starts the appendix describing the Inception variant.",
+                (
+                    "The first part is bibliography metadata. The appendix then explains that the BN-Inception experiments used a modified GoogLeNet/Inception architecture documented in Figure 5."
+                ),
+                (
+                    "The passage is a reference-to-appendix boundary: it closes the citation list with deep-learning and recognition references, then introduces architecture changes relative to GoogLeNet."
+                ),
+                [
+                    "Skim the reference entries unless you need a source trail.",
+                    "The appendix is not a new method claim; it documents the exact Inception architecture used for experiments.",
+                    "Figure 5 is architecture documentation for reproducibility.",
+                ],
+                [
+                    ("Mean-normalized stochastic gradient", "Reference title ending the bibliography section.", "Mean-normalized stochastic gradient"),
+                    ("Deep image", "Reference title about scaling image recognition.", "Deep image"),
+                    ("Appendix", "Supplementary section after the main paper.", "Appendix"),
+                    ("Variant of the Inception Model", "Appendix topic documenting the experiment architecture.", "Variant of the Inception Model"),
+                    ("GoogLeNet architecture", "Baseline architecture the appendix compares against.", "GoogleNet archictecture"),
+                    ("Figure 5", "Appendix figure documenting architecture changes.", "Figure 5"),
+                    ("5 ×5 convolutional layers", "Original layers replaced in the modified architecture.", "5 ×5 convolutional layers"),
+                    ("3 ×3 convolutional layers", "Replacement layers used in the variant.", "3 ×3 convolutional layers"),
+                ],
+                [
+                    ("reference-to-appendix boundary", "The section switches from citations into reproducibility details.", "Appendix"),
+                    ("architecture documentation purpose", "Figure 5 records changes made for the experimental Inception variant.", "documents the changes"),
+                    ("GoogLeNet comparison", "The appendix describes notable changes compared to GoogLeNet.", "compared to the GoogLeNet"),
+                ],
+                [
+                    ("Appendix", "general", "Marks supplementary material."),
+                    ("documents the changes", "method", "Explains the appendix purpose."),
+                    ("with respect to", "general", "States the comparison target."),
+                    ("include", "general", "Introduces a list of changes."),
+                    ("are replaced by", "method", "Describes architecture substitution."),
+                ],
+                "Figure 5 documents the changes",
+                "Figure X documents the changes that were performed compared to Y.",
+                "The appendix uses Figure 5 to document architecture changes relative to GoogLeNet.",
+                "'documents the changes'는 재현성을 위해 무엇이 달라졌는지 기록한다는 표현입니다.",
+                "The section is difficult because reference entries and appendix prose are extracted together.",
+            )
+        if "the number 28 ×28 inception modules is increased" in lowered and "separable convolution" in lowered:
+            return profile(
+                "This appendix section lists architecture changes in the modified Inception model.",
+                (
+                    "The appendix says the modified model adds depth and cost, increases 28x28 Inception modules, changes pooling choices inside modules, "
+                    "avoids some across-the-board pooling, and uses separable convolution in the first layer."
+                ),
+                (
+                    "The passage is an architecture-change checklist for reproducibility: it records layer-depth increase, parameter/computation cost changes, "
+                    "module-count changes, pooling placement, stride-2 modules, and separable convolution."
+                ),
+                [
+                    "This is not core language-learning prose; it is technical appendix documentation.",
+                    "Use it to understand the experimental model, not the BatchNorm theory.",
+                    "The important skill is reading bullet-style architecture changes without treating every number as vocabulary.",
+                ],
+                [
+                    ("weight layers", "Network depth units increased by the architecture modification.", "weight layers"),
+                    ("parameters", "Model parameters increased by about 25%.", "parameters"),
+                    ("computational cost", "Compute increased by about 30%.", "computational cost"),
+                    ("28 ×28 inception modules", "Modules whose count increased from 2 to 3.", "28 ×28 inception modules"),
+                    ("average pooling", "Pooling type used inside some modules.", "average"),
+                    ("maximum-pooling", "Pooling type used inside some modules.", "maximum-pooling"),
+                    ("stride-2 convolution/pooling", "Downsampling operation before filter concatenation.", "stride-2 convolution"),
+                    ("separable convolution", "First-layer convolution used to reduce compute cost.", "separable convolution"),
+                ],
+                [
+                    ("architecture-change checklist", "The section lists reproducibility details for the modified Inception model.", "increased"),
+                    ("cost-depth tradeoff", "The variant increases depth, parameter count, and compute cost.", "computational cost"),
+                    ("pooling-layout change", "Pooling choices and stride-2 placements differ from GoogLeNet.", "pooling"),
+                    ("separable-convolution tradeoff", "Separable convolution reduces compute but increases training memory.", "memory consumption"),
+                ],
+                [
+                    ("Also", "general", "Adds another consequence."),
+                    ("is increased from", "claim", "States a count change."),
+                    ("This is indicated in", "general", "Points to table notation."),
+                    ("There are no", "claim", "States a removed architecture pattern."),
+                    ("while increasing", "contrast", "States a tradeoff."),
+                ],
+                "This reduces the computational cost while increasing the memory consumption",
+                "This reduces X while increasing Y.",
+                "The separable convolution trades lower compute for higher memory use during training.",
+                "'reduces X while increasing Y'는 설계의 tradeoff를 설명하는 구조입니다.",
+                "The section is hard because it is bullet-style appendix prose with many architecture details.",
+            )
+        if "type patch size" in lowered and "inception architecture" in lowered:
+            return profile(
+                "This section is the Figure 5 Inception architecture table.",
+                (
+                    "The table lists layer types, patch sizes, strides, output sizes, depths, channel counts, reduction layers, and pooling/projection choices for the Inception variant."
+                ),
+                (
+                    "This is not ordinary prose. It is a compact architecture specification used to reproduce the modified Inception network in the BatchNorm experiments."
+                ),
+                [
+                    "Skim this as an architecture table unless you are implementing the model.",
+                    "Do not save every numeric cell as vocabulary.",
+                    "The useful reading task is identifying columns: type, patch size/stride, output size, depth, channel reductions, and pooling/projection.",
+                ],
+                [
+                    ("patch size/stride", "Convolution or pooling kernel size and stride column.", "patch size/ stride"),
+                    ("output size", "Feature-map size after each stage.", "output size"),
+                    ("depth", "Number of stacked layers or module depth in the table.", "depth"),
+                    ("#1×1", "Channel projection column in Inception modules.", "#1×1"),
+                    ("#3×3 reduce", "Channel-reduction column before 3x3 convolutions.", "#3×3 reduce"),
+                    ("Pool +proj", "Pooling branch plus projection column.", "Pool"),
+                    ("inception", "Repeated Inception block rows such as 3a, 4e, and 5b.", "inception"),
+                    ("avg pool", "Final global pooling layer in the architecture.", "avg pool"),
+                ],
+                [
+                    ("architecture-table navigation", "The section should be read by columns, not as prose.", "type patch size"),
+                    ("Inception-stage progression", "Rows progress from convolution/pooling into Inception modules.", "inception"),
+                    ("reproducibility appendix", "The table documents exact architecture dimensions.", "Figure"),
+                ],
+                [
+                    ("type", "general", "Architecture table column naming layer type."),
+                    ("patch size/stride", "general", "Architecture table column naming kernel/stride."),
+                    ("output size", "general", "Architecture table column naming tensor size."),
+                    ("Figure 5", "general", "Names the appendix architecture table."),
+                ],
+                "Figure 5: Inception architecture",
+                "Figure X: architecture.",
+                "This is an architecture table, not a paragraph to summarize.",
+                "표 형식의 appendix는 문장 해석보다 column 의미를 파악하는 것이 중요합니다.",
+                "The section is difficult because table cells were extracted as a long text stream.",
+            )
         return None
 
     def _attention_profile(self, document_text: str) -> dict[str, Any] | None:
@@ -12048,6 +12189,7 @@ class AnalysisNormalizationService:
             "empty_phrase_explanation:",
             "phrase_source_sentence_not_in_document:",
             "phrase_not_in_source_sentence:",
+            "analysis_mode:",
         )
         return [warning for warning in self._string_list(warnings) if not warning.startswith(stale_prefixes)]
 

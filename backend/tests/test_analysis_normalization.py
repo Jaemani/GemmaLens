@@ -1460,7 +1460,7 @@ def test_resnet_detection_improvements_section_recovers_method_recipe():
     assert {"partially follows", "followed by", "is concatenated with", "trained end-to-end", "because of limited time"}.issubset(phrases)
     assert result.summaries.one_line == "This appendix section describes three detector improvements: box refinement, global context, and multi-scale testing."
     assert result.sentences[0].core_structure == "A is applied on B, followed by C."
-    assert "analysis_mode:atomic_remote" in result.quality_warnings
+    assert "analysis_mode:atomic_remote" not in result.quality_warnings
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
 
 

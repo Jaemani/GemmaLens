@@ -169,6 +169,8 @@ Local demo records currently include:
 - Real BatchNorm sections 23-25 exposed conclusion/result failures: ensemble setup, Figure 4 benchmark table text, and the final prior-method comparison were either copied as fragments or even contaminated by a ResNet-style summary. BatchNorm profiles now teach ensemble averaging, state-of-the-art claims, Figure 4 top-1/top-5 reading, conclusion method recap, final ImageNet claims, and the standardization-layer contrast.
 - Source-grounding checks now accept `deterministic inference` when the PDF evidence appears as a broken line around `does not depend on the mini-batch`, preventing a false warning on BatchNorm conclusion prose.
 - Real BatchNorm sections 26-28 exposed conclusion/reference boundary failures: future-work prose and bibliography entries were mixed, and reference pages were analyzed as normal learning sections. BatchNorm profiles now teach the future-work roadmap while reference-only sections become skim-oriented citation-navigation lessons. Reference-list sections no longer trigger term/phrase count warnings.
+- Real BatchNorm sections 29-31 exposed appendix/table failures: the final reference-to-appendix boundary, Inception architecture bullets, and Figure 5 architecture table were treated as ordinary prose or empty sections. BatchNorm profiles now teach appendix navigation, architecture-change checklists, cost/depth/pooling/separable-convolution tradeoffs, and table-column navigation for Figure 5.
+- Completed BatchNorm 31/31 live API audit. Every section is analyzed, non-section quality warnings are empty, and non-reference sections pass a minimum learning-density check.
 
 ## Still Weak
 
