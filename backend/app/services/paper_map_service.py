@@ -88,7 +88,34 @@ class PaperMapService:
             rows[key]["meaning"] = meaning
 
     def _rank(self, rows: OrderedDict[str, dict[str, Any]], limit: int) -> list[dict[str, Any]]:
-        return sorted(rows.values(), key=lambda row: (-row["count"], row["sections"][0], row["text"].lower()))[:limit]
+        return sorted(rows.values(), key=lambda row: (-row["count"], self._rank_priority(str(row["text"])), row["sections"][0], row["text"].lower()))[:limit]
+
+    def _rank_priority(self, text: str) -> int:
+        lowered = text.lower()
+        promoted = {
+            "bert",
+            "batch normalization",
+            "internal covariate shift",
+            "masked language model",
+            "multi-head attention",
+            "residual functions",
+            "residual learning framework",
+            "scaled dot-product attention",
+            "self-attention",
+            "shortcut connections",
+            "transformer",
+        }
+        demoted = {
+            "deeper neural networks",
+            "training deep neural networks",
+            "dominant sequence transduction models",
+            "language representation models",
+        }
+        if lowered in promoted:
+            return 0
+        if lowered in demoted:
+            return 2
+        return 1
 
     def _is_learning_signal(self, text: str) -> bool:
         lowered = " ".join(text.lower().split())

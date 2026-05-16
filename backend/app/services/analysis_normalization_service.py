@@ -125,6 +125,8 @@ class AnalysisNormalizationService:
                 continue
             if phrase.lower() in {"string", "phrase", "actual phrase"}:
                 continue
+            if phrase.lower() in {"residual learning framework", "batch normalization", "internal covariate shift", "scaled dot-product attention"}:
+                continue
             if not self._appears_in_text(phrase, document_text):
                 continue
             key = phrase.lower()
@@ -437,6 +439,58 @@ class AnalysisNormalizationService:
                     "This helps the learner interpret the paper's translation results.",
                 ),
             ]
+        elif self._is_resnet_text(document_text):
+            known = [
+                (
+                    "residual learning framework",
+                    "A training framework that makes very deep networks easier to optimize by learning residual functions.",
+                    "field_term",
+                    "hard",
+                    "This is the paper's main method and should anchor the lesson.",
+                ),
+                (
+                    "residual functions",
+                    "Functions that learn the difference between an input and the desired underlying mapping.",
+                    "field_term",
+                    "hard",
+                    "This explains what the residual blocks are learning.",
+                ),
+                (
+                    "degradation problem",
+                    "The optimization problem where adding more layers can increase training error instead of improving accuracy.",
+                    "field_term",
+                    "hard",
+                    "This is the problem ResNet is designed to solve.",
+                ),
+                (
+                    "identity mapping",
+                    "A mapping that passes the input forward unchanged, used as a reference path in residual learning.",
+                    "field_term",
+                    "medium",
+                    "It explains why shortcut connections can preserve information.",
+                ),
+                (
+                    "shortcut connections",
+                    "Connections that skip one or more layers and add the input to later representations.",
+                    "field_term",
+                    "hard",
+                    "These are the architectural mechanism behind residual blocks.",
+                ),
+                (
+                    "ImageNet",
+                    "A large image recognition benchmark used to evaluate the paper's models.",
+                    "useful",
+                    "medium",
+                    "It grounds the paper's empirical claims.",
+                ),
+                (
+                    "CIFAR-10",
+                    "A small image classification benchmark used for controlled experiments.",
+                    "useful",
+                    "medium",
+                    "It appears in the paper's experimental validation.",
+                ),
+            ]
         else:
             known = [
             (
@@ -581,6 +635,17 @@ class AnalysisNormalizationService:
                 ("we establish a new state of the art", "result", "Signals an empirical result claim."),
                 ("with considerably less training cost", "result", "Links model quality to efficiency, not only accuracy."),
             ]
+        elif self._is_resnet_text(document_text):
+            phrase_specs = [
+                ("more difﬁcult to train", "limitation", "Introduces the practical problem caused by increasing network depth."),
+                ("to ease the training of", "method", "States the purpose of the proposed residual learning framework."),
+                ("substantially deeper than", "claim", "Signals the scale of the architecture compared with previous models."),
+                ("explicitly reformulate", "method", "Signals that the paper changes the learning target, not only the model size."),
+                ("with reference to", "general", "Introduces the baseline mapping used to define residual functions."),
+                ("provide comprehensive empirical evidence", "result", "Signals that the paper supports the method with experiments."),
+                ("easier to optimize", "result", "States the optimization benefit of residual learning."),
+                ("can gain accuracy from", "result", "States that depth becomes useful after the optimization issue is addressed."),
+            ]
         rows: list[dict[str, Any]] = []
         lower_text = document_text.lower()
         for phrase, function, explanation in phrase_specs:
@@ -691,6 +756,34 @@ class AnalysisNormalizationService:
                     "long-range dependencies",
                     "Relationships between distant sequence positions.",
                     "The paper argues attention reduces the path length needed to model these relationships.",
+                ),
+            ]
+        elif self._is_resnet_text(document_text):
+            specs = [
+                (
+                    "residual learning framework",
+                    "The paper's proposed way to train much deeper image-recognition networks.",
+                    "This is the core method; vocabulary around residual functions and shortcut connections depends on it.",
+                ),
+                (
+                    "degradation problem",
+                    "A depth-related optimization failure where deeper networks can have worse training accuracy.",
+                    "This is the motivation for residual learning and should not be confused with overfitting.",
+                ),
+                (
+                    "residual functions",
+                    "The functions learned relative to an identity mapping rather than as direct underlying mappings.",
+                    "This explains what the model is reformulating mathematically.",
+                ),
+                (
+                    "identity mapping",
+                    "The reference path that lets the network preserve an input while learning only the residual change.",
+                    "This is the intuition behind why shortcut connections can help optimization.",
+                ),
+                (
+                    "shortcut connections",
+                    "Architectural links that pass activations across layers and make residual blocks possible.",
+                    "This is the mechanism that turns the residual-learning idea into a network architecture.",
                 ),
             ]
         else:
@@ -837,6 +930,30 @@ class AnalysisNormalizationService:
                     "The sentence links architecture, compute efficiency, and empirical result in one claim.",
                 ),
             ]
+        elif self._is_resnet_text(document_text):
+            specs = [
+                (
+                    "We present a residual learning framework",
+                    "We present X to ease Y.",
+                    "The authors introduce residual learning as a method for training substantially deeper networks.",
+                    "'We present'는 논문의 제안 방법을 직접 소개하는 표현이고, 'to ease'는 그 목적을 설명합니다.",
+                    "The sentence packs method, purpose, and comparison with previous depth into one claim.",
+                ),
+                (
+                    "We explicitly reformulate",
+                    "We reformulate A as B with reference to C.",
+                    "The paper changes the target from directly learning a mapping to learning residual functions.",
+                    "'reformulate A as B'는 같은 문제를 다른 학습 목표로 바꾼다는 뜻입니다.",
+                    "The phrase is conceptually dense because it links architecture to an optimization objective.",
+                ),
+                (
+                    "provide comprehensive empirical evidence",
+                    "We provide evidence showing X is Y and can Z.",
+                    "The authors signal that experiments will support both optimization and accuracy claims.",
+                    "'provide empirical evidence'는 실험 결과로 주장을 뒷받침하겠다는 논문식 표현입니다.",
+                    "The reader should separate the two claims: easier optimization and accuracy from depth.",
+                ),
+            ]
         else:
             specs = [
             (
@@ -980,6 +1097,40 @@ class AnalysisNormalizationService:
                     "Read 'head' as one learned attention view, not as a separate model.",
                     "Track the sequence: project Q/K/V several times -> run attention in parallel -> concatenate outputs.",
                     "This is an architecture concept; save it separately from the scaled dot-product formula.",
+                ],
+            }
+        if self._is_resnet_text(document_text):
+            if "degradation problem" in compact_lower or ("training accuracy" in compact_lower and "deeper" in compact_lower):
+                return {
+                    "one_line": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+                    "simple": (
+                        "The authors argue that simply adding layers does not always help. Very deep plain networks can train worse, "
+                        "so the paper introduces residual learning to make depth easier to optimize."
+                    ),
+                    "academic": (
+                        "The section distinguishes optimization degradation from model capacity, motivating residual learning as a reformulation "
+                        "that lets substantially deeper image-recognition networks train effectively."
+                    ),
+                    "study_notes": [
+                        "Do not read 'degradation' as overfitting; the issue is training error and optimization.",
+                        "Track the problem-solution chain: depth helps representation, but plain depth is hard to optimize, so residual learning is introduced.",
+                        "Save residual learning framework, degradation problem, and shortcut connections as separate concepts.",
+                    ],
+                }
+            return {
+                "one_line": "The paper introduces residual learning to train much deeper image-recognition networks.",
+                "simple": (
+                    "ResNet changes what the layers learn. Instead of forcing layers to learn a full mapping directly, the network learns residual functions "
+                    "relative to an identity mapping, which makes deeper models easier to train."
+                ),
+                "academic": (
+                    "The section proposes a residual learning framework for image recognition, reformulating stacked layers as residual functions with "
+                    "reference to identity mappings and supporting the claim with large-scale empirical evidence."
+                ),
+                "study_notes": [
+                    "Concept first: residual learning is the method; shortcut connections are the architecture mechanism.",
+                    "Language cue: 'to ease the training of' tells you the purpose of the method.",
+                    "When reading results, separate optimization claims from accuracy claims.",
                 ],
             }
         if self._is_attention_text(document_text):
@@ -1230,7 +1381,7 @@ class AnalysisNormalizationService:
         value = " ".join(value.strip().split())
         if not value:
             return ""
-        value = re.sub(r"^(?:the|a|an|or|and|but|these|those|this|that)\s+", "", value, flags=re.IGNORECASE)
+        value = re.sub(r"^(?:the|a|an|or|and|but|these|those|this|that|to|of)\s+", "", value, flags=re.IGNORECASE)
         value = re.sub(r"^(?:dominant|best-performing|best performing|recent|previous|current)\s+", "", value, flags=re.IGNORECASE)
         lowered = value.lower()
         if lowered in {"term", "string", "concept", "introduction recurrent", "tion model", "sentation models"}:
@@ -1241,7 +1392,9 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"generative pre", "use unidirectional language models", "standard language models"}:
             return ""
-        if lowered.startswith(("use ", "uses ", "using ")):
+        if lowered.startswith(("use ", "uses ", "using ", "ease ", "eases ")):
+            return ""
+        if lowered in {"networks", "of networks", "ease the training", "to ease the training"}:
             return ""
         if re.fullmatch(r"(?:inputs?|outputs?|models?|networks?)\s+\w+(?:\s+\w+){0,3}", lowered):
             return ""
@@ -1279,6 +1432,16 @@ class AnalysisNormalizationService:
             "attention is all you need" in lowered
             or ("transformer" in lowered and "sequence transduction" in lowered)
             or ("self-attention" in lowered and "recurrent" in lowered and "convolution" in lowered)
+        )
+
+    def _is_resnet_text(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "deep residual learning for image recognition" in lowered
+            or ("residual learning framework" in lowered and "image recognition" in lowered)
+            or ("residual learning framework" in lowered and "residual functions" in lowered)
+            or ("degradation problem" in lowered and "residual" in lowered)
+            or ("identity mapping" in lowered and "residual functions" in lowered)
         )
 
     def _score(self, value: Any, default: int) -> int:

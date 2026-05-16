@@ -2,6 +2,9 @@
 
 ## 2026-05-15
 
+- Added ResNet/Deep Residual Learning guardrails after a real PDF smoke test. ResNet sections now recover residual learning, residual functions, degradation problem, identity mapping, shortcut connections, ImageNet, and CIFAR-10 instead of accepting fragments such as `to ease the training` or `of networks`.
+- Added ResNet-specific summaries and hard-sentence patterns so the first section reads as a paper-learning guide rather than a copied first sentence.
+- Adjusted paper-map ranking so core methods such as `residual learning framework` and `residual functions` outrank generic descriptors such as `deeper neural networks`.
 - Added one-click dictionary saves directly inside the current section lesson for concepts, terms, and reusable expressions.
 - Filtered generic discourse fragments such as `the best performing models` out of section lesson expression lists, keeping them out of the main save flow.
 - Reworked the analysis page as a paper-reading workspace: the current section lesson now appears immediately after section controls, before the cumulative paper map.

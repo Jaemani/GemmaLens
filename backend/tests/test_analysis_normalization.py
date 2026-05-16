@@ -437,3 +437,45 @@ def test_multi_head_attention_summary_replaces_formula_lead_sentence():
 
     assert result.summaries.one_line == "This section explains multi-head attention as parallel learned projections of queries, keys, and values."
     assert "architecture concept" in result.summaries.study_notes[2]
+
+
+def test_resnet_real_paper_snippet_repairs_fragments_and_summary():
+    document = (
+        "Deeper neural networks are more difficult to train. We present a residual learning framework to ease the training of networks "
+        "that are substantially deeper than those used previously. We explicitly reformulate the layers as learning residual functions "
+        "with reference to the layer inputs, instead of learning unreferenced functions. We provide comprehensive empirical evidence "
+        "showing that these residual networks are easier to optimize, and can gain accuracy from considerably increased depth."
+    )
+    payload = {
+        "terms": [
+            {"term": "residual learning framework", "meaning": "method for deeper networks"},
+            {"term": "to ease the training", "meaning": "bad verb fragment"},
+            {"term": "of networks", "meaning": "bad prepositional fragment"},
+        ],
+        "concepts": [
+            {"concept": "residual learning framework", "explanation": "main method"},
+            {"concept": "to ease the training", "explanation": "bad verb fragment"},
+            {"concept": "of networks", "explanation": "bad prepositional fragment"},
+        ],
+        "sentences": [],
+        "summaries": {
+            "one_line": "Deeper neural networks are more difficult to train.",
+            "simple": "Deeper neural networks are more difficult to train.",
+            "academic": "Deeper neural networks are more difficult to train.",
+        },
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+
+    assert "to ease the training" not in terms
+    assert "of networks" not in terms
+    assert "to ease the training" not in concepts
+    assert "of networks" not in concepts
+    assert {"residual learning framework", "residual functions"}.issubset(terms)
+    assert {"residual learning framework", "residual functions"}.issubset(concepts)
+    assert "residual learning framework" not in {phrase.phrase for phrase in result.phrases}
+    assert "to ease the training of" in {phrase.phrase for phrase in result.phrases}
+    assert result.summaries.one_line == "The paper introduces residual learning to train much deeper image-recognition networks."
+    assert result.sentences[0].core_structure == "We present X to ease Y."

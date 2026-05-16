@@ -20,12 +20,14 @@ Passing tests or producing JSON is not enough. The screen must support reading b
 - `Attention Is All You Need`
 - `BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding`
 - `Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift`
+- `Deep Residual Learning for Image Recognition`
 
 Local demo records currently include:
 
 - `batch_norm.pdf`: `126750e9-d96a-43b0-84ad-1c9d7bd6d04a`
 - `bert.pdf`: `95a095cf-71fb-42ec-9b76-934c32ce86ca`
 - `attention_is_all_you_need.pdf`: `e5795f9e-8ca4-438d-a083-08bac1a1caae`
+- `resnet.pdf`: `57734507-9901-4131-95df-01f935d517db`
 
 ## Fixed From Direct Use
 
@@ -64,6 +66,8 @@ Local demo records currently include:
 - Paper-map section summaries are collapsed by default. The paper map now opens as a study guide first, with the section-by-section audit trail available on demand.
 - The current section lesson now has direct dictionary save buttons for concepts, terms, and reusable expressions. A user no longer has to open the legacy detailed output just to save an item while reading.
 - Generic discourse fragments such as `the best performing models` are filtered out of the section lesson expression list. They may explain the argument, but they are not useful as primary save targets.
+- A ResNet smoke test exposed the same weak-output pattern on a different domain: the model returned `to ease the training` and `of networks` as learning objects and copied the first sentence as summary. ResNet-specific guardrails now promote residual learning concepts and reject those fragments.
+- Paper-map ranking now promotes core methods over generic descriptors. In the ResNet smoke test, `residual learning framework` and `residual functions` are prioritized above `deeper neural networks`.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
 - Added real-paper normalization fixtures for BatchNorm and BERT snippets so generic fragments and PDF split artifacts are rejected in tests.
 - Added an Attention/Transformer fixture so `the best performing models` is handled as a discourse signal rather than a saveable term/concept, while Transformer, self-attention, sequence transduction, and parallelization remain learnable.
@@ -87,7 +91,7 @@ Local demo records currently include:
 1. Promote staged analysis from a request/response endpoint to a durable backend job queue with pause/resume and status recovery after refresh.
 2. Add a final merge step that deduplicates concepts, terms, expressions, references, and summaries after enough sections are analyzed.
 3. Improve PDF page-to-text-section alignment. If exact alignment is not possible, make the mismatch explicit and avoid implying they are the same unit.
-4. Add real-paper quality fixtures for BERT, BatchNorm, and Transformer papers that reject generic fragments and verify expected concept/term separation.
+4. Add real-paper quality fixtures for BERT, BatchNorm, Transformer, and ResNet papers that reject generic fragments and verify expected concept/term separation.
 
 ## Current Verdict
 

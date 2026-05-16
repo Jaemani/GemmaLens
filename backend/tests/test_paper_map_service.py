@@ -271,3 +271,33 @@ def test_paper_map_argument_flow_groups_duplicates_and_trims_long_entries():
     assert paper_map.synthesis.argument_flow[0].startswith("S1, 2:")
     assert len(paper_map.synthesis.argument_flow) == 2
     assert len(paper_map.synthesis.argument_flow[1]) < 190
+
+
+def test_paper_map_ranks_core_methods_before_generic_descriptors():
+    text = "We present a residual learning framework for deeper neural networks and learning residual functions."
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-7",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [
+                {"term": "deeper neural networks", "meaning": "generic descriptor", "domain_relevance": "high", "difficulty": "hard", "source_sentence": text, "should_save": True},
+                {"term": "residual learning framework", "meaning": "main method", "domain_relevance": "high", "difficulty": "hard", "source_sentence": text, "should_save": True},
+                {"term": "residual functions", "meaning": "learning target", "domain_relevance": "high", "difficulty": "hard", "source_sentence": text, "should_save": True},
+            ],
+            "phrases": [],
+            "concepts": [
+                {"concept": "deeper neural networks", "explanation": "generic descriptor", "source_sentence": text},
+                {"concept": "residual learning framework", "explanation": "main method", "source_sentence": text},
+                {"concept": "residual functions", "explanation": "learning target", "source_sentence": text},
+            ],
+            "sentences": [],
+            "summaries": {"one_line": "The paper introduces residual learning.", "simple": "The paper introduces residual learning.", "academic": "The paper introduces residual learning.", "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepository()).build("doc-7", [text])
+
+    assert [item.text for item in paper_map.synthesis.priority_concepts[:2]] == ["residual functions", "residual learning framework"]
+    assert paper_map.synthesis.priority_concepts[2].text == "deeper neural networks"
