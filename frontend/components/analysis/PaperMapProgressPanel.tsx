@@ -78,18 +78,14 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
           {expanded ? "Collapse" : "Open map"}
         </button>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {complete ? (
-            <span className="inline-flex rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Complete map</span>
-          ) : (
+        {!complete ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <>
               <span className="h-2 w-36 overflow-hidden rounded-full bg-surface">
                 <span className="block h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
               </span>
               <span className="text-xs font-semibold text-neutral-600">{progress}% mapped</span>
             </>
-          )}
-          {!complete ? (
             <button
               type="button"
               onClick={load}
@@ -99,12 +95,12 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               Refresh
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
       {expanded ? (
         <div className="grid gap-4 border-t border-line p-5">
-          <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="grid gap-4 min-[1800px]:grid-cols-[0.95fr_1.05fr]">
             <div className="rounded-md border border-line bg-surface p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{guide.title}</p>
               <p className="mt-2 text-sm leading-6 text-ink">{guide.thesis_so_far}</p>
@@ -132,14 +128,14 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
             </button>
           </div>
           {showStudyLists ? (
-            <div className="grid gap-4 lg:grid-cols-3">
-              <div className="rounded-md border border-line bg-surface p-4 lg:col-span-1">
-                <SynthesisList title="Priority terms" rows={synthesis.priority_terms} limit={8} />
+            <div className="grid gap-4 min-[1800px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]">
+              <div className="rounded-md border border-line bg-surface p-4">
+                <SynthesisList title="Priority terms" rows={synthesis.priority_terms} limit={8} spacious />
               </div>
-              <div className="rounded-md border border-line bg-surface p-4 lg:col-span-1">
-                <SynthesisList title="Reusable expressions" rows={synthesis.reusable_expressions} limit={6} />
+              <div className="rounded-md border border-line bg-surface p-4">
+                <SynthesisList title="Reusable expressions" rows={synthesis.reusable_expressions} limit={6} spacious />
               </div>
-              <div className="rounded-md border border-line bg-surface p-4 lg:col-span-1">
+              <div className="rounded-md border border-line bg-surface p-4">
                 <GuideList title="Review plan" rows={synthesis.review_plan} />
               </div>
             </div>
@@ -160,7 +156,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
             </button>
           </div>
           {showSignals ? (
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 min-[1800px]:grid-cols-3">
               <MapList title="Concepts" rows={paperMap.top_concepts} />
               <MapList title="Terms" rows={paperMap.top_terms} />
               <MapList title="Expressions" rows={paperMap.top_phrases} />
@@ -242,19 +238,34 @@ function SynthesisPanel({ synthesis, complete }: { synthesis: NonNullable<PaperM
   );
 }
 
-function SynthesisList({ title, rows, limit }: { title: string; rows: PaperMap["top_terms"]; limit: number }) {
+function SynthesisList({ title, rows, limit, spacious = false }: { title: string; rows: PaperMap["top_terms"]; limit: number; spacious?: boolean }) {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
       {rows.length ? (
-        <div className="mt-2 space-y-3">
+        <div className={spacious ? "mt-3 space-y-3" : "mt-2 space-y-3"}>
           {rows.slice(0, limit).map((row) => (
-            <div key={row.text} className="border-t border-line pt-3 first:border-t-0 first:pt-0">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-sm font-semibold text-ink">{row.text}</p>
-                <span className="shrink-0 text-[11px] font-semibold text-neutral-500">S{row.sections.join(", ")}</span>
+            <div
+              key={row.text}
+              className={
+                spacious
+                  ? "rounded-md border border-line bg-panel px-3 py-3"
+                  : "border-t border-line pt-3 first:border-t-0 first:pt-0"
+              }
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className={spacious ? "min-w-0 text-base font-semibold leading-6 text-ink" : "text-sm font-semibold text-ink"}>{row.text}</p>
+                <span
+                  className={
+                    spacious
+                      ? "shrink-0 rounded-full bg-blue-50 px-2 py-1 text-[11px] font-semibold text-accent"
+                      : "shrink-0 text-[11px] font-semibold text-neutral-500"
+                  }
+                >
+                  S{row.sections.join(", ")}
+                </span>
               </div>
-              <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-600">{row.meaning}</p>
+              <p className={spacious ? "mt-2 text-sm leading-6 text-neutral-700" : "mt-1 line-clamp-2 text-xs leading-5 text-neutral-600"}>{row.meaning}</p>
             </div>
           ))}
         </div>
