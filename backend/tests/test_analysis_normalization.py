@@ -469,6 +469,52 @@ def test_multi_head_attention_summary_replaces_formula_lead_sentence():
     assert "representational diversity" in result.summaries.study_notes[2]
 
 
+def test_attention_why_self_attention_handles_pdf_heading_break():
+    document = (
+        "We chose the sinusoidal version because it may allow the model to extrapolate to sequence lengths longer than the ones encountered during training. "
+        "4 Why\nSelf-Attention In this section we compare various aspects of self-attention layers to the recurrent and convolutional layers. "
+        "Motivating our use of self-attention we consider three desiderata. One is the total computational complexity per layer. "
+        "Another is the amount of computation that can be parallelized, as measured by the minimum number of sequential operations required. "
+        "The third is the path length between long-range dependencies in the network."
+    )
+    payload = {
+        "terms": [{"term": "desiderata", "meaning": "generic extracted word"}],
+        "concepts": [{"concept": "desiderata", "explanation": "generic extracted word"}],
+        "phrases": [],
+        "sentences": [],
+        "summaries": {"one_line": "The paper introduces the Transformer.", "simple": "The paper introduces the Transformer.", "academic": "The paper introduces the Transformer."},
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "attention-why-self-attention", document)
+
+    assert result.summaries.one_line == "This section motivates self-attention using complexity, parallelism, and path length."
+    assert "three desiderata" in {concept.concept for concept in result.concepts}
+    assert "desiderata" not in {term.term for term in result.terms}
+
+
+def test_attention_training_section_replaces_training_sentence_copy():
+    document = (
+        "1 Training Data and Batching We trained on the standard WMT 2014 English-German dataset consisting of about 4.5 million sentence pairs. "
+        "Sentences were encoded using byte-pair encoding, which has a shared sourcetarget vocabulary of about 37000 tokens. "
+        "Sentence pairs were batched together by approximate sequence length. We trained our models on one machine with 8 NVIDIA P100 GPUs. "
+        "We used the Adam optimizer with beta values and varied the learning rate over the course of training. "
+        "This corresponds to increasing the learning rate linearly for the first warmup_steps training steps, and decreasing it thereafter proportionally to the inverse square root of the step number."
+    )
+    payload = {
+        "terms": [{"term": "learning rate", "meaning": "generic training term"}],
+        "concepts": [{"concept": "learning rate", "explanation": "generic training term"}],
+        "phrases": [],
+        "sentences": [],
+        "summaries": {"one_line": document.split(".")[0] + ".", "simple": document.split(".")[0] + ".", "academic": document.split(".")[0] + "."},
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "attention-training", document)
+
+    assert result.summaries.one_line.startswith("This section specifies the Transformer's training data")
+    assert "warmup learning-rate schedule" in {concept.concept for concept in result.concepts}
+    assert "This corresponds to" in {phrase.phrase for phrase in result.phrases}
+
+
 def test_resnet_real_paper_snippet_repairs_fragments_and_summary():
     document = (
         "Deeper neural networks are more difficult to train. We present a residual learning framework to ease the training of networks "

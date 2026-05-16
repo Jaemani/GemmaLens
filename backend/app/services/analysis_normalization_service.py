@@ -7486,6 +7486,11 @@ class AnalysisNormalizationService:
             "values",
             "keys",
             "queries",
+            "dimensionality",
+            "convolutional layers",
+            "transduction",
+            "desiderata",
+            "extrapolate",
         }
         return self._prefer_rows(
             rows,
@@ -7518,6 +7523,21 @@ class AnalysisNormalizationService:
             "positional encodings",
             "representation dimension",
             "self-attention",
+            "sequence transduction",
+            "long-range dependencies",
+            "neighborhood of size r",
+            "maximum path length",
+            "dilated convolutions",
+            "separable convolutions",
+            "dimensionality",
+            "convolutional layers",
+            "transduction",
+            "desiderata",
+            "extrapolate",
+            "learning rate",
+            "byte-pair encoding",
+            "hyperparameters",
+            "adam optimizer",
         }
         return self._prefer_rows(
             rows,
@@ -8905,7 +8925,7 @@ class AnalysisNormalizationService:
                 "'Since our model contains no...'는 설계상 빠진 요소가 어떤 보완책을 요구하는지 설명합니다.",
                 "The section is difficult because a table, architecture rationale, and sinusoidal formula are packed together.",
             )
-        if "why self-attention" in lowered and "three desiderata" in lowered:
+        if "why self-attention" in compact_lowered and "three desiderata" in lowered:
             return profile(
                 "This section motivates self-attention using complexity, parallelism, and path length.",
                 (
@@ -8994,6 +9014,53 @@ class AnalysisNormalizationService:
                 "For long sequences, attention can be restricted locally, but that increases path length.",
                 "'could be restricted to'는 확정된 방법이 아니라 가능한 변형을 조심스럽게 제시합니다.",
                 "The section alternates between complexity caveats, convolution comparisons, and qualitative attention behavior.",
+            )
+        if "training data and batching" in compact_lowered and "adam optimizer" in lowered:
+            return profile(
+                "This section specifies the Transformer's training data, batching, hardware schedule, optimizer, and warmup learning-rate rule.",
+                (
+                    "The paper describes WMT English-German and English-French data, byte-pair or word-piece tokenization, approximate-length batching, "
+                    "P100 GPU training time, Adam optimizer settings, and the warmup-then-decay learning-rate schedule."
+                ),
+                (
+                    "The passage is an experimental-reproducibility section: it gives dataset sizes, tokenization vocabulary sizes, token-based batching, "
+                    "base/big model training schedules, Adam hyperparameters, and the inverse-square-root learning-rate decay after warmup."
+                ),
+                [
+                    "Read this as reproducibility information, not the main architecture claim.",
+                    "The important language pattern is reporting setup: 'We trained on', 'We used', 'This corresponds to'.",
+                    "Save optimizer and batching terms only if they help you read ML experiment sections.",
+                ],
+                [
+                    ("WMT 2014 English-German dataset", "Translation dataset used for training.", "WMT 2014 English-German dataset"),
+                    ("byte-pair encoding", "Subword tokenization used for the English-German data.", "byte-pair encoding"),
+                    ("shared sourcetarget vocabulary", "Vocabulary shared between source and target languages.", "shared sourcetarget vocabulary"),
+                    ("word-piece vocabulary", "Subword vocabulary used for the English-French data.", "word-piece vocabulary"),
+                    ("approximate sequence length", "Batching criterion used to group sentence pairs.", "approximate sequence length"),
+                    ("P100 GPUs", "Hardware used for Transformer training.", "P100 GPUs"),
+                    ("Adam optimizer", "Optimizer used with specified beta and epsilon values.", "Adam optimizer"),
+                    ("warmup_steps", "Initial steps where learning rate increases linearly.", "warmup_steps"),
+                    ("inverse square root", "Decay pattern after warmup.", "inverse square root"),
+                ],
+                [
+                    ("training reproducibility recipe", "The section gives datasets, tokenization, batches, hardware, and optimizer settings.", "Training Data and Batching"),
+                    ("token-based batching", "Batches are built by approximate length and token count rather than fixed sentence count.", "approximately 25000 source tokens"),
+                    ("warmup learning-rate schedule", "The learning rate rises during warmup and then decays by inverse square root of step number.", "warmup_steps"),
+                ],
+                [
+                    ("We trained on", "method", "Introduces training data."),
+                    ("consisting of", "method", "Gives dataset size or composition."),
+                    ("were encoded using", "method", "States preprocessing method."),
+                    ("were batched together by", "method", "Explains batching criterion."),
+                    ("For our base models", "comparison", "Introduces one model scale."),
+                    ("For our big models", "comparison", "Introduces the larger model scale."),
+                    ("This corresponds to", "method", "Explains what an equation means in words."),
+                ],
+                "This corresponds to increasing the learning rate linearly",
+                "This corresponds to X for A, and Y thereafter.",
+                "The formula means the learning rate first warms up linearly, then decays with the inverse square root of the step number.",
+                "'This corresponds to'는 수식이나 설정의 의미를 prose로 다시 설명할 때 쓰는 표현입니다.",
+                "The section is dense because dataset, tokenization, hardware, optimizer, and schedule details are compressed into one passage.",
             )
         return None
 
