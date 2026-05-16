@@ -46,6 +46,9 @@ class AnalysisNormalizationService:
         if self._is_resnet_detection_result_narrative_section(document_text):
             terms = self._filter_resnet_detection_result_narrative_noise(terms, "term")
             terms = self._prefer_resnet_detection_result_narrative_terms(terms, document_text)
+        if self._is_resnet_imagenet_detection_setup_section(document_text):
+            terms = self._filter_resnet_imagenet_detection_setup_noise(terms, "term")
+            terms = self._prefer_resnet_imagenet_detection_setup_terms(terms, document_text)
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -96,6 +99,9 @@ class AnalysisNormalizationService:
         if self._is_resnet_detection_result_narrative_section(document_text):
             normalized["concepts"] = self._prefer_resnet_detection_result_narrative_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_resnet_detection_result_narrative_noise(normalized["phrases"], "phrase")
+        if self._is_resnet_imagenet_detection_setup_section(document_text):
+            normalized["concepts"] = self._prefer_resnet_imagenet_detection_setup_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_resnet_imagenet_detection_setup_noise(normalized["phrases"], "phrase")
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -1326,6 +1332,48 @@ class AnalysisNormalizationService:
                     "medium",
                     "The PASCAL VOC 2012 result is described as 10 points higher than this.",
                 ),
+                (
+                    "ImageNet Detection (DET)",
+                    "The ImageNet object-detection task with 200 object categories.",
+                    "field_term",
+                    "medium",
+                    "This names the benchmark setting for the section.",
+                ),
+                (
+                    "mAP@.5",
+                    "Mean average precision at IoU threshold 0.5.",
+                    "field_term",
+                    "hard",
+                    "This is the evaluation metric used for ImageNet DET.",
+                ),
+                (
+                    "pretrained on ImageNet classification",
+                    "The detector networks start from weights learned on the 1000-class ImageNet classification task.",
+                    "field_term",
+                    "medium",
+                    "This explains the transfer path before DET fine-tuning.",
+                ),
+                (
+                    "DET training set",
+                    "The ImageNet Detection training data used to fine-tune detection models.",
+                    "field_term",
+                    "medium",
+                    "This is the target-task data used for fine-tuning.",
+                ),
+                (
+                    "val1/val2 split",
+                    "A validation-set split where val1 is used for fine-tuning and val2 for validation.",
+                    "field_term",
+                    "medium",
+                    "This explains the experiment protocol in the section.",
+                ),
+                (
+                    "ILSVRC 2015 data",
+                    "Additional competition data that the authors explicitly do not use here.",
+                    "useful",
+                    "medium",
+                    "This is a fairness/data-constraint statement.",
+                ),
             ]
         else:
             known = [
@@ -1609,6 +1657,14 @@ class AnalysisNormalizationService:
                 ("based on the above model", "method", "Signals reuse of the COCO-trained detector for PASCAL VOC."),
                 ("fine-tune this model", "method", "Explains the adaptation step from COCO to PASCAL VOC."),
                 ("higher than the previous state-of-the-art", "result", "States the benchmark improvement over prior work."),
+                ("task involves", "general", "Introduces what a benchmark task contains."),
+                ("is evaluated by", "general", "Names the metric used to score a task."),
+                ("is the same as that for", "method", "States that the method is reused from another benchmark setup."),
+                ("are pretrained on", "method", "Explains the source task used before fine-tuning."),
+                ("are fine-tuned on", "method", "Explains the target data used to adapt the detector."),
+                ("We split the validation set", "method", "Describes the validation protocol."),
+                ("is used for validation", "method", "Explains the role of the held-out validation split."),
+                ("We do not use", "limitation", "States a data restriction or fairness constraint."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
                 ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
@@ -2185,6 +2241,26 @@ class AnalysisNormalizationService:
                     "This is the benchmark significance of the appendix narrative.",
                 ),
                 (
+                    "ImageNet DET benchmark setup",
+                    "The section defines ImageNet DET as a 200-category object detection task evaluated by mAP@.5.",
+                    "This gives the reader the benchmark context before reading protocol details.",
+                ),
+                (
+                    "classification-to-detection transfer",
+                    "Networks are pretrained on 1000-class ImageNet classification and fine-tuned on ImageNet DET.",
+                    "This is the same transfer-learning pattern used throughout the detection appendix.",
+                ),
+                (
+                    "val1/val2 validation protocol",
+                    "The validation set is split so val1 helps fine-tuning and val2 remains validation.",
+                    "This explains how the paper avoids using the same validation data for every role.",
+                ),
+                (
+                    "restricted competition data use",
+                    "The authors state that they do not use other ILSVRC 2015 data.",
+                    "This is an experimental constraint worth noticing when comparing results.",
+                ),
+                (
                     "zero-padding shortcuts",
                     "The parameter-free shortcut option that pads increased dimensions with zeros.",
                     "This is option A in the projection-shortcut comparison.",
@@ -2371,6 +2447,27 @@ class AnalysisNormalizationService:
             ]
         elif self._is_resnet_text(document_text):
             specs = [
+                (
+                    "is evaluated by",
+                    "A is evaluated by B.",
+                    "The authors name the metric used for ImageNet DET.",
+                    "'is evaluated by'는 어떤 기준으로 평가되는지 설명합니다.",
+                    "This is benchmark setup language, not a model component.",
+                ),
+                (
+                    "are pretrained on",
+                    "A are pretrained on B and fine-tuned on C.",
+                    "The authors describe transfer from ImageNet classification to ImageNet detection.",
+                    "'pretrained on'은 먼저 학습한 데이터나 과제를 말합니다.",
+                    "This sentence is a transfer-learning protocol sentence.",
+                ),
+                (
+                    "We do not use",
+                    "We do not use A.",
+                    "The authors state a data-use restriction.",
+                    "'do not use'는 실험 조건에서 제외한 데이터를 명확히 말합니다.",
+                    "This matters for fair comparison across competition systems.",
+                ),
                 (
                     "as easy as stacking more layers",
                     "Is learning better X as easy as doing Y?",
@@ -2776,6 +2873,27 @@ class AnalysisNormalizationService:
                     "The authors state the size of the PASCAL VOC 2012 improvement over prior work.",
                     "'higher than'은 수치 비교 결과를 말할 때 쓰는 기본 구조입니다.",
                     "The important part is the comparison target: previous state of the art.",
+                ),
+                (
+                    "are pretrained on",
+                    "A are pretrained on B and fine-tuned on C.",
+                    "The authors describe transfer from ImageNet classification to ImageNet detection.",
+                    "'pretrained on'은 먼저 학습한 데이터나 과제를 말합니다.",
+                    "This sentence is a transfer-learning protocol sentence.",
+                ),
+                (
+                    "is evaluated by",
+                    "A is evaluated by B.",
+                    "The authors name the metric used for ImageNet DET.",
+                    "'is evaluated by'는 어떤 기준으로 평가되는지 설명합니다.",
+                    "This is benchmark setup language, not a model component.",
+                ),
+                (
+                    "We do not use",
+                    "We do not use A.",
+                    "The authors state a data-use restriction.",
+                    "'do not use'는 실험 조건에서 제외한 데이터를 명확히 말합니다.",
+                    "This matters for fair comparison across competition systems.",
                 ),
                 (
                     "The baseline is",
@@ -3320,6 +3438,23 @@ class AnalysisNormalizationService:
                         "Track the transfer step from COCO training to PASCAL VOC fine-tuning.",
                     ],
                 }
+            if self._is_resnet_imagenet_detection_setup_section(document_text):
+                return {
+                    "one_line": "This section defines the ImageNet DET setup: 200 categories, mAP@.5 scoring, pretraining, fine-tuning, and val1/val2 validation.",
+                    "simple": (
+                        "The authors set up the ImageNet Detection experiment. They reuse the COCO-style detector, pretrain on ImageNet classification, "
+                        "fine-tune on DET data, split validation into val1/val2, and state that no other ILSVRC 2015 data is used."
+                    ),
+                    "academic": (
+                        "The section specifies the ImageNet DET protocol: 200 object categories scored by mAP@.5, classification-pretrained networks "
+                        "fine-tuned on DET train/val1 data, val2 held for validation, and restricted competition data usage."
+                    ),
+                    "study_notes": [
+                        "Read this as benchmark protocol rather than a new method.",
+                        "Track the transfer chain: ImageNet classification pretraining -> DET fine-tuning.",
+                        "Notice the data-use constraint: no other ILSVRC 2015 data.",
+                    ],
+                }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
                 return {
                     "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
@@ -3609,6 +3744,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_resnet_detection_result_narrative_section(document_text):
             return True
+        if self._is_resnet_imagenet_detection_setup_section(document_text):
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -3846,6 +3983,7 @@ class AnalysisNormalizationService:
             or self._is_resnet_detection_improvements_section(document_text)
             or self._is_resnet_detection_results_table_section(document_text)
             or self._is_resnet_detection_result_narrative_section(document_text)
+            or self._is_resnet_imagenet_detection_setup_section(document_text)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
@@ -3898,6 +4036,15 @@ class AnalysisNormalizationService:
             ("test-dev set has no publicly available ground truth" in lowered or "testdev set has no publicly available ground truth" in lowered)
             and "won the 1st place in the detection task in coco 2015" in lowered
             and "higher than the previous state-of-the-art" in lowered
+        )
+
+    def _is_resnet_imagenet_detection_setup_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "imagenet detection" in lowered
+            and "200 object categories" in lowered
+            and "fine-tuned on the det data" in lowered
+            and "we do not use other ilsvrc 2015 data" in lowered
         )
 
     def _prefer_resnet_deep_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
@@ -4443,6 +4590,143 @@ class AnalysisNormalizationService:
     def _filter_resnet_detection_result_narrative_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {"roi pooling", "map@.5", "feature maps", "imagenet", "resnet-101", "coco dataset", "map@[.5, .95]", "faster r-cnn", "pascal voc", "map"}
         return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_imagenet_detection_setup_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"imagenet classification", "map@.5", "fine-tuned", "object categories"}
+        preferred = {
+            "ImageNet DET benchmark setup": (
+                "ImageNet DET is a 200-category object-detection task evaluated by mAP@.5.",
+                "This is the benchmark frame for the section.",
+            ),
+            "classification-to-detection transfer": (
+                "Networks are pretrained on ImageNet classification and fine-tuned on DET data.",
+                "This explains how classification representations become detection models.",
+            ),
+            "val1/val2 validation protocol": (
+                "The validation set is split into val1 for fine-tuning and val2 for validation.",
+                "This explains the experiment's data protocol.",
+            ),
+            "restricted competition data use": (
+                "The authors state they do not use other ILSVRC 2015 data.",
+                "This is an important fairness constraint for benchmark comparison.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = (
+                    "ImageNet Detection"
+                    if "setup" in lowered
+                    else "pretrained on"
+                    if "transfer" in lowered
+                    else "val1"
+                    if "validation" in lowered
+                    else "We do not use"
+                )
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_resnet_imagenet_detection_setup_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {"imagenet classification", "fine-tuned", "object categories", "imagenet", "map", "ilsvrc 2015"}
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_imagenet_detection_setup_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        preferred = [
+            (
+                "ImageNet Detection (DET)",
+                "The 200-category ImageNet object detection task.",
+                "field_term",
+                "medium",
+                "ImageNet Detection",
+                "This names the benchmark setting for the section.",
+            ),
+            (
+                "mAP@.5",
+                "Mean average precision at IoU threshold 0.5.",
+                "field_term",
+                "hard",
+                "mAP@.5",
+                "This is the metric used to evaluate ImageNet DET.",
+            ),
+            (
+                "ImageNet classification pretraining",
+                "Starting from weights learned on the 1000-class ImageNet classification task.",
+                "field_term",
+                "medium",
+                "pretrained on",
+                "This explains the source task before DET fine-tuning.",
+            ),
+            (
+                "DET training set",
+                "The ImageNet Detection training data used to fine-tune detection models.",
+                "field_term",
+                "medium",
+                "DET training set",
+                "This is the target-task data for fine-tuning.",
+            ),
+            (
+                "val1/val2 split",
+                "A validation split where val1 supports fine-tuning and val2 is held for validation.",
+                "field_term",
+                "medium",
+                "val1/val2",
+                "This explains the experiment protocol.",
+            ),
+            (
+                "ILSVRC 2015 data",
+                "Additional competition data that the authors explicitly do not use.",
+                "useful",
+                "medium",
+                "ILSVRC 2015 data",
+                "This is a data-use constraint.",
+            ),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, target, reason in preferred:
+            lowered = term.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                promoted.append(
+                    {
+                        "term": term,
+                        "meaning": meaning,
+                        "domain_relevance": "high" if priority == "field_term" else "medium",
+                        "difficulty": difficulty,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "should_save": True,
+                        "learning_priority": priority,
+                        "reason": reason,
+                        "context_meaning": meaning,
+                        "general_meaning": meaning,
+                        "confidence": 0.9,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [row for row in rows if str(row.get("term") or "").strip().lower() not in {term.lower() for term, *_ in preferred}]
+        return [*promoted, *rest][:12]
 
     def _prefer_resnet_detection_result_narrative_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         preferred = [

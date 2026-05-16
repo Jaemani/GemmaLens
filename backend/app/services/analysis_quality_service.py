@@ -27,7 +27,7 @@ class AnalysisQualityService:
                 warnings.append(f"empty_term_meaning:{term.term}")
             if term.source_sentence and not self._source_in_text(term.source_sentence, text_lower):
                 warnings.append(f"source_sentence_not_in_document:{term.term}")
-            if term.term.lower() not in term.source_sentence.lower():
+            if not self._value_supported_by_source(term.term, term.source_sentence):
                 warnings.append(f"term_not_in_source_sentence:{term.term}")
             if term.confidence < 0.4 and term.should_save:
                 warnings.append(f"low_confidence_should_save:{term.term}")
@@ -48,3 +48,28 @@ class AnalysisQualityService:
             return True
         trimmed = source_lower.strip(". ")
         return bool(trimmed and trimmed in text_lower)
+
+    def _value_supported_by_source(self, value: str, source: str) -> bool:
+        value_lower = value.lower()
+        source_lower = source.lower()
+        if value_lower in source_lower:
+            return True
+        value_tokens = self._support_tokens(value_lower)
+        source_tokens = self._support_tokens(source_lower)
+        return bool(value_tokens) and value_tokens.issubset(source_tokens)
+
+    def _support_tokens(self, value: str) -> set[str]:
+        stopwords = {"the", "a", "an", "and", "or", "of", "on", "in", "to", "for", "by", "with", "set"}
+        tokens = set()
+        for token in value.replace("/", " ").replace("-", " ").split():
+            cleaned = "".join(ch for ch in token if ch.isalnum()).lower()
+            if not cleaned or cleaned in stopwords or len(cleaned) < 3:
+                continue
+            tokens.add(self._light_stem(cleaned))
+        return tokens
+
+    def _light_stem(self, token: str) -> str:
+        for suffix in ("ing", "ed", "s"):
+            if len(token) > len(suffix) + 3 and token.endswith(suffix):
+                return token[: -len(suffix)]
+        return token

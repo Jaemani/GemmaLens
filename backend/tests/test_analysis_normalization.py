@@ -1505,3 +1505,49 @@ def test_resnet_detection_result_narrative_recovers_protocol_and_transfer():
     assert result.summaries.one_line == "This section explains COCO test-dev evaluation, ensemble gains, and COCO-to-PASCAL fine-tuning results."
     assert result.sentences[0].core_structure == "A has no B and the result is reported by C."
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
+
+
+def test_resnet_imagenet_detection_setup_recovers_protocol():
+    document = (
+        "ImageNet Detection The ImageNet Detection (DET) task involves 200 object categories. "
+        "The accuracy is evaluated by mAP@.5. "
+        "Our object detection algorithm for ImageNet DET is the same as that for MS COCO in Table 9. "
+        "The networks are pretrained on the 1000-class ImageNet classification set, and are fine-tuned on the DET data. "
+        "We split the validation set into two parts (val1/val2) following prior work. "
+        "We fine-tune the detection models using the DET training set and the val1 set. "
+        "The val2 set is used for validation. We do not use other ILSVRC 2015 data."
+    )
+    payload = {
+        "terms": [
+            {"term": "ImageNet classification", "meaning": "too broad"},
+            {"term": "mAP@.5", "meaning": "metric"},
+            {"term": "fine-tuned", "meaning": "verb fragment"},
+            {"term": "object categories", "meaning": "generic"},
+        ],
+        "concepts": [
+            {"concept": "ImageNet classification", "explanation": "too broad"},
+            {"concept": "mAP@.5", "explanation": "metric"},
+            {"concept": "fine-tuned", "explanation": "verb fragment"},
+            {"concept": "object categories", "explanation": "generic"},
+        ],
+        "phrases": [{"phrase": "is evaluated by mAP@.5", "explanation": "metric phrase"}],
+        "summaries": {"one_line": "ImageNet Detection The ImageNet Detection (DET) task involves 200 object categories."},
+        "sentences": [{"sentence": "ImageNet Detection The ImageNet Detection (DET) task involves 200 object categories.", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:1"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-imagenet-det", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert not {"ImageNet classification", "fine-tuned", "object categories"} & terms
+    assert not {"ImageNet classification", "mAP@.5", "fine-tuned", "object categories"} & concepts
+    assert {"ImageNet Detection (DET)", "mAP@.5", "ImageNet classification pretraining", "DET training set", "val1/val2 split", "ILSVRC 2015 data"}.issubset(terms)
+    assert {"ImageNet DET benchmark setup", "classification-to-detection transfer", "val1/val2 validation protocol", "restricted competition data use"}.issubset(concepts)
+    assert {"task involves", "is evaluated by", "is the same as that for", "are pretrained on", "are fine-tuned on", "We split the validation set", "is used for validation", "We do not use"}.issubset(phrases)
+    assert result.summaries.one_line.startswith("This section defines the ImageNet DET setup")
+    assert result.sentences[0].core_structure == "A is evaluated by B."
+    assert "phrase_count_out_of_range:1" not in result.quality_warnings
+    assert "term_not_in_source_sentence:ImageNet classification pretraining" not in result.quality_warnings
+    assert "term_not_in_source_sentence:val1/val2 split" not in result.quality_warnings
