@@ -185,6 +185,7 @@ Local demo records currently include:
 - Dictionary audit exposed that saved items looked like a small raw word list, not a review queue. The dictionary now summarizes saved concepts, terms, expressions, and sentence patterns separately and adds a review-focus filter by item type.
 - Analysis page audit exposed that internal A/B experiment controls and user-fit mode copy still appeared on real paper results. Those controls now stay out of real analysis pages and remain limited to the demo result path.
 - Navigation audit exposed that the internal Experiments page was still visible in the primary learner sidebar. The route remains available, but the main navigation now focuses on learner-facing surfaces only.
+- Quiz audit exposed two issues: it still presented itself as experimental, and it requested analysis for documents that only had section-level caches, producing browser 404 noise. The quiz page now uses learner-facing review copy, cleaned source previews, display-deduplicated sources, and the document list API exposes `has_analysis` so the quiz only requests valid base-analysis records.
 
 ## Still Weak
 

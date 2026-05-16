@@ -16,6 +16,7 @@ export type DocumentListItem = {
   created_at: string;
   total_sections?: number;
   analyzed_sections?: number;
+  has_analysis?: boolean;
 };
 
 export type DocumentSection = {

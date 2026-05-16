@@ -4,6 +4,7 @@ import { RefreshCw, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
+import { cleanDocumentPreview, displayableDocuments } from "@/lib/documentDisplay";
 import type { AnalysisResult, DocumentListItem } from "@/lib/types";
 
 type Source = { document: DocumentListItem; analysis: AnalysisResult };
@@ -21,7 +22,7 @@ export default function QuizPage() {
     let cancelled = false;
     async function loadSources() {
       try {
-        const documents = await api.listDocuments();
+        const documents = displayableDocuments((await api.listDocuments()).filter((document) => document.has_analysis));
         const settled = await Promise.allSettled(
           documents.map(async (document) => ({ document, analysis: await api.getAnalysis(document.id) }))
         );
@@ -67,10 +68,9 @@ export default function QuizPage() {
     <AppShell>
       <div className="w-full">
         <div className="mb-5">
-          <p className="text-sm font-semibold text-accent">Experimental</p>
-          <h1 className="mt-2 text-2xl font-semibold">Quiz maker</h1>
+          <h1 className="text-2xl font-semibold">Review quiz</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
-            Build review prompts from analyzed documents and video transcripts. Drafts are cached in this browser.
+            Build quick review prompts from analyzed sources. This is a lightweight practice layer; the document reader remains the main paper-learning workspace.
           </p>
         </div>
         <section className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
@@ -89,6 +89,7 @@ export default function QuizPage() {
               >
                 <span className="block font-semibold">{document.title}</span>
                 <span className="mt-1 block text-xs uppercase text-neutral-500">{document.source_type}</span>
+                <span className="mt-2 line-clamp-2 block text-xs leading-5 text-neutral-600">{cleanDocumentPreview(document)}</span>
               </button>
             ))}
           </div>
@@ -97,7 +98,7 @@ export default function QuizPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-semibold">{selected?.document.title ?? "No source selected"}</h2>
-              <p className="mt-1 text-sm text-neutral-600">{items.length} draft quiz items</p>
+              <p className="mt-1 text-sm text-neutral-600">{items.length} review prompts from this source</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={regenerate} disabled={!selected} className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold hover:bg-surface disabled:opacity-50">
@@ -106,18 +107,22 @@ export default function QuizPage() {
               </button>
               <button type="button" onClick={cacheQuiz} disabled={!selected || !items.length} className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600">
                 <Save size={16} />
-                Cache
+                Save draft
               </button>
             </div>
           </div>
           <div className="mt-5 space-y-3">
-            {items.map((item, index) => (
+            {items.length ? items.map((item, index) => (
               <details key={`${item.type}-${item.prompt}-${index}`} className="rounded-lg border border-line bg-surface p-4 text-sm">
                 <summary className="cursor-pointer font-semibold">Q{index + 1}. {item.prompt}</summary>
                 <p className="mt-3 leading-6 text-neutral-800">{item.answer}</p>
                 <p className="mt-2 text-xs text-neutral-500">{item.source}</p>
               </details>
-            ))}
+            )) : (
+              <div className="rounded-lg border border-dashed border-line bg-surface p-6 text-sm leading-6 text-neutral-600">
+                Analyze a document first, then return here to generate review prompts.
+              </div>
+            )}
           </div>
           </div>
         </section>

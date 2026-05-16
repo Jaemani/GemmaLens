@@ -62,6 +62,7 @@ def list_documents(db: Session = Depends(get_db)):
     for document in documents:
         sections = _document_sections(document.content)
         analyzed_indices = _analyzed_section_indices(document.id, db)
+        has_analysis = AnalysisRepository(db).get_result(document.id) is not None
         items.append(
             DocumentListItem(
                 id=document.id,
@@ -71,6 +72,7 @@ def list_documents(db: Session = Depends(get_db)):
                 created_at=document.created_at,
                 total_sections=len(sections),
                 analyzed_sections=len(analyzed_indices),
+                has_analysis=has_analysis,
             )
         )
     return items

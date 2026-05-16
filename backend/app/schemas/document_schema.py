@@ -32,6 +32,7 @@ class DocumentListItem(BaseModel):
     created_at: datetime
     total_sections: int = 0
     analyzed_sections: int = 0
+    has_analysis: bool = False
 
 
 class DocumentSectionRead(BaseModel):
