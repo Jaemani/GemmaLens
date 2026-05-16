@@ -403,3 +403,46 @@ def test_paper_map_promotes_argument_expressions_over_early_generic_phrases():
     expressions = [item.text for item in paper_map.synthesis.reusable_expressions]
 
     assert expressions[:2] == ["not caused by overfitting", "There exists a solution by construction"]
+
+
+def test_paper_map_reusable_expressions_include_latest_section_signals():
+    base_text = "Unexpectedly, such degradation is not caused by overfitting."
+    latest_text = "Instead of hoping layers directly fit the target, the original mapping is recast into F(x)+x."
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-10",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [],
+            "phrases": [{"phrase": "not caused by overfitting", "function": "contrast", "explanation": "rejects a cause", "source_sentence": base_text}],
+            "concepts": [],
+            "sentences": [],
+            "summaries": {"one_line": "The section rejects overfitting.", "simple": "The section rejects overfitting.", "academic": "The section rejects overfitting.", "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+    section_two = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "phrases": [{"phrase": "There exists a solution by construction", "function": "claim", "explanation": "existence argument", "source_sentence": "There exists a solution by construction."}],
+            "summaries": {**base.summaries.model_dump(), "one_line": "The section gives an existence argument."},
+        }
+    )
+    section_three = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "phrases": [
+                {"phrase": "Instead of hoping", "function": "contrast", "explanation": "contrast learning targets", "source_sentence": latest_text},
+                {"phrase": "is recast into", "function": "method", "explanation": "mathematical reformulation", "source_sentence": latest_text},
+            ],
+            "summaries": {**base.summaries.model_dump(), "one_line": "The section defines residual mapping."},
+        }
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows([(1, section_two), (2, section_three)])).build(
+        "doc-10", [base_text, "There exists a solution by construction.", latest_text]
+    )
+    expressions = [item.text for item in paper_map.synthesis.reusable_expressions]
+
+    assert "Instead of hoping" in expressions
+    assert "is recast into" in expressions

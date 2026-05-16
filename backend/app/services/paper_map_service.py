@@ -110,6 +110,11 @@ class PaperMapService:
             "no higher training error than",
             "experiments show that",
             "has been exposed",
+            "instead of hoping",
+            "fit a residual mapping",
+            "is recast into",
+            "neither extra parameter nor computational complexity",
+            "trained end-to-end",
         }
         demoted = {
             "deeper neural networks",
@@ -236,7 +241,7 @@ class PaperMapService:
 
         priority_concepts = top_concepts[:5]
         priority_terms = top_terms[:8]
-        reusable_expressions = top_phrases[:6]
+        reusable_expressions = self._select_reusable_expressions(top_phrases, analyzed_sections, 6)
 
         review_plan = [
             "Read the next unanalyzed section before treating this as a final whole-paper view.",
@@ -256,6 +261,29 @@ class PaperMapService:
             reusable_expressions=reusable_expressions,
             review_plan=review_plan[:5],
         )
+
+    def _select_reusable_expressions(self, top_phrases: list[dict[str, Any]], analyzed_sections: list[int], limit: int) -> list[dict[str, Any]]:
+        if not top_phrases:
+            return []
+        selected: list[dict[str, Any]] = []
+        seen: set[str] = set()
+
+        def add(item: dict[str, Any]) -> None:
+            key = str(item.get("text") or "").lower()
+            if key and key not in seen and len(selected) < limit:
+                seen.add(key)
+                selected.append(item)
+
+        for item in top_phrases[:4]:
+            add(item)
+        latest_section = max(analyzed_sections) if analyzed_sections else None
+        if latest_section is not None:
+            for item in top_phrases:
+                if latest_section in [int(section) for section in item.get("sections") or []]:
+                    add(item)
+        for item in top_phrases:
+            add(item)
+        return selected
 
     def _argument_flow(self, summaries: list[dict[str, Any]], limit: int) -> list[str]:
         grouped: OrderedDict[str, dict[str, Any]] = OrderedDict()

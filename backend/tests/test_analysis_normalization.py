@@ -247,6 +247,18 @@ Unlike recent language repre- sentation models, BERT is designed to pre- train d
     assert not re.search(r"\bsentation models\b", readable)
 
 
+def test_academic_text_service_repairs_short_pdf_hyphen_fragments():
+    raw_text = """
+Abstract
+In- stead of fitting the full mapping, residual networks fit a residual mapping.
+"""
+
+    readable = AcademicTextService().readable_section(raw_text)
+
+    assert "Instead of fitting" in readable
+    assert "In- stead" not in readable
+
+
 def test_academic_text_service_repairs_pdf_ligatures():
     raw_text = """
 Abstract
@@ -597,3 +609,45 @@ def test_resnet_constructed_solution_section_rejects_fragments():
     assert {"There exists a solution by construction", "no higher training error than", "experiments show that"}.issubset(phrases)
     assert result.summaries.one_line == "This section explains why degradation is surprising: a deeper model should be able to copy a shallower one."
     assert result.sentences[0].core_structure == "There exists a solution by construction to X: A are B, and C are copied from D."
+
+
+def test_resnet_residual_block_section_recovers_method_structure():
+    document = (
+        "In this paper, we address the degradation problem by introducing a deep residual learning framework. "
+        "Instead of hoping each few stacked layers directly fit a desired underlying mapping, we explicitly let these layers fit a residual mapping. "
+        "Formally, denoting the desired underlying mapping as H(x), we let the stacked nonlinear layers fit another mapping of F(x) := H(x)-x. "
+        "The original mapping is recast into F(x)+x. We hypothesize that it is easier to optimize the residual mapping than to optimize the original, "
+        "unreferenced mapping. The formulation of F(x)+x can be realized by feedforward neural networks with shortcut connections. "
+        "Shortcut connections are those skipping one or more layers. In our case, the shortcut connections simply perform identity mapping, "
+        "and their outputs are added to the outputs of the stacked layers. Identity shortcut connections add neither extra parameter nor computational complexity."
+    )
+    payload = {
+        "terms": [
+            {"term": "by feedforward neural networks", "meaning": "bad prepositional fragment"},
+            {"term": "Residual learning", "meaning": "heading-level duplicate"},
+        ],
+        "concepts": [{"concept": "by feedforward neural networks", "explanation": "bad prepositional fragment"}],
+        "phrases": [],
+        "summaries": {"one_line": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize."},
+        "sentences": [
+            {
+                "sentence": "Instead of hoping each few stacked layers directly fit a desired underlying mapping, we explicitly let these layers fit a residual mapping.",
+                "core_structure": "Main claim + explanation.",
+            }
+        ],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-block", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "by feedforward neural networks" not in terms
+    assert "by feedforward neural networks" not in concepts
+    assert "Residual learning" not in terms
+    assert {"residual mapping", "underlying mapping", "F(x)+x", "shortcut connections", "identity shortcut connections"}.issubset(terms)
+    assert {"residual mapping", "underlying mapping", "F(x)+x", "identity shortcut connections"}.issubset(concepts)
+    assert {"fit a residual mapping", "is recast into", "neither extra parameter nor computational complexity"}.issubset(phrases)
+    assert "shortcut connections" not in phrases
+    assert result.summaries.one_line == "This section defines the residual block: learn F(x), add back x, and implement it with shortcut connections."
+    assert result.sentences[0].core_structure == "Instead of hoping A directly fits B, we let A fit C."

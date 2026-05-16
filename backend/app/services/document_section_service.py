@@ -55,8 +55,8 @@ class DocumentSectionService:
     def _clean(self, text: str) -> str:
         text = normalize_pdf_ligatures(text)
         text = text.replace("\r\n", "\n")
-        text = re.sub(r"([A-Za-z]{3,})-\s+([a-z]{2,})", r"\1\2", text)
-        text = re.sub(r"([A-Za-z]{3,})-\s*\n\s*([a-z]{2,})", r"\1\2", text)
+        text = re.sub(r"([A-Za-z]{2,})-\s+([a-z]{2,})", r"\1\2", text)
+        text = re.sub(r"([A-Za-z]{2,})-\s*\n\s*([a-z]{2,})", r"\1\2", text)
         text = re.sub(
             r"\b(?:tion|sion|ment|sentation|resentation|pre)\s+(?:model|models|network|networks|training|representations)\b",
             "",

@@ -135,6 +135,7 @@ class AnalysisNormalizationService:
                 "internal covariate shift",
                 "scaled dot-product attention",
                 "very deep models",
+                "shortcut connections",
             }:
                 continue
             if not self._appears_in_text(phrase, document_text):
@@ -482,6 +483,27 @@ class AnalysisNormalizationService:
                     "This explains what the residual blocks are learning.",
                 ),
                 (
+                    "residual mapping",
+                    "The mapping F(x)=H(x)-x that the stacked layers learn instead of directly learning H(x).",
+                    "field_term",
+                    "hard",
+                    "This is the mathematical target behind the residual block.",
+                ),
+                (
+                    "underlying mapping",
+                    "The desired mapping H(x) that the network ultimately wants to represent.",
+                    "field_term",
+                    "hard",
+                    "It is the reference target used to define the residual mapping.",
+                ),
+                (
+                    "F(x)+x",
+                    "The residual block output: the learned residual F(x) added back to the input x.",
+                    "field_term",
+                    "hard",
+                    "This is the formula that turns residual learning into a layer block.",
+                ),
+                (
                     "degradation problem",
                     "The optimization problem where adding more layers can increase training error instead of improving accuracy.",
                     "field_term",
@@ -564,6 +586,13 @@ class AnalysisNormalizationService:
                     "field_term",
                     "hard",
                     "These are the architectural mechanism behind residual blocks.",
+                ),
+                (
+                    "identity shortcut connections",
+                    "Shortcut connections that pass the input forward unchanged and add it to the stacked layer output.",
+                    "field_term",
+                    "hard",
+                    "They implement the residual block without extra parameters or computational complexity.",
                 ),
                 (
                     "ImageNet",
@@ -740,6 +769,14 @@ class AnalysisNormalizationService:
                 ("There exists a solution by construction", "claim", "Signals a theoretical existence argument."),
                 ("no higher training error than", "result", "States what the deeper model should achieve in principle."),
                 ("experiments show that", "result", "Introduces empirical evidence against the theoretical expectation."),
+                ("Instead of hoping", "contrast", "Contrasts direct mapping with residual mapping."),
+                ("directly fit a desired underlying mapping", "method", "Names the mapping that plain stacked layers would need to learn."),
+                ("fit a residual mapping", "method", "States the new target learned by the stacked layers."),
+                ("is recast into", "method", "Signals a mathematical reformulation of the original mapping."),
+                ("easier to optimize", "result", "States the optimization benefit of residual mapping."),
+                ("skipping one or more layers", "general", "Defines shortcut connections in plain architectural terms."),
+                ("neither extra parameter nor computational complexity", "result", "States that identity shortcuts are cheap to add."),
+                ("trained end-to-end", "method", "Signals that the whole network remains trainable as one model."),
                 ("to ease the training of", "method", "States the purpose of the proposed residual learning framework."),
                 ("substantially deeper than", "claim", "Signals the scale of the architecture compared with previous models."),
                 ("explicitly reformulate", "method", "Signals that the paper changes the learning target, not only the model size."),
@@ -896,6 +933,26 @@ class AnalysisNormalizationService:
                     "constructed solution",
                     "A theoretical deeper-network solution made by copying the shallower model and using identity mappings for added layers.",
                     "This explains why worse training error is surprising and important.",
+                ),
+                (
+                    "residual mapping",
+                    "The function F(x)=H(x)-x learned by the stacked layers.",
+                    "This is the local learning target inside a residual block.",
+                ),
+                (
+                    "underlying mapping",
+                    "The desired function H(x) that the network ultimately needs to represent.",
+                    "This lets the learner understand why the residual is added back to x.",
+                ),
+                (
+                    "F(x)+x",
+                    "The recast original mapping: residual output plus the original input.",
+                    "This is the formula form of the residual block.",
+                ),
+                (
+                    "identity shortcut connections",
+                    "Cheap skip connections that pass x forward and add it to the stacked-layer output.",
+                    "This is how the residual mapping is implemented in a feedforward network.",
                 ),
                 (
                     "shallower architecture",
@@ -1086,6 +1143,27 @@ class AnalysisNormalizationService:
                     "The sentence is difficult because it presents a theoretical construction before returning to experimental failure.",
                 ),
                 (
+                    "Instead of hoping",
+                    "Instead of hoping A directly fits B, we let A fit C.",
+                    "The authors contrast a hard direct-mapping target with an easier residual-mapping target.",
+                    "'Instead of'는 기존 방식이나 직관적인 목표를 버리고 새 목표를 제시하는 대조 표현입니다.",
+                    "The sentence is difficult because it contrasts two mathematical learning targets in one move.",
+                ),
+                (
+                    "The original mapping is recast into",
+                    "The original mapping is recast into F(x)+x.",
+                    "The authors rewrite the target function so the network learns the residual part and adds back the input.",
+                    "'is recast into'는 같은 대상을 다른 수식/관점으로 다시 표현한다는 뜻입니다.",
+                    "The sentence is short but conceptually dense because it introduces the residual-block formula.",
+                ),
+                (
+                    "Shortcut connections are those",
+                    "Shortcut connections are those doing X.",
+                    "The authors define shortcut connections as links that skip one or more layers.",
+                    "'are those ~ing'은 앞의 용어를 정의하는 논문식 구조입니다.",
+                    "The sentence is a definition; it should be saved as concept support, not as a random phrase.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -1253,6 +1331,23 @@ class AnalysisNormalizationService:
                 ],
             }
         if self._is_resnet_text(document_text):
+            if "residual mapping" in compact_lower and "shortcut connections" in compact_lower:
+                return {
+                    "one_line": "This section defines the residual block: learn F(x), add back x, and implement it with shortcut connections.",
+                    "simple": (
+                        "Instead of making stacked layers learn the full mapping H(x), ResNet makes them learn the residual F(x)=H(x)-x. "
+                        "The block outputs F(x)+x using shortcut connections, which add no extra parameters in the identity case."
+                    ),
+                    "academic": (
+                        "The section formalizes residual learning as a reparameterization of the desired mapping and explains how identity shortcut "
+                        "connections realize the formulation inside standard feedforward networks trained by backpropagation."
+                    ),
+                    "study_notes": [
+                        "Concept path: underlying mapping H(x) -> residual mapping F(x) -> block output F(x)+x.",
+                        "Architecture path: shortcut connections carry x around stacked layers and add it back.",
+                        "Language cue: 'Instead of' marks the contrast between direct learning and residual learning.",
+                    ],
+                }
             if "degradation problem" in compact_lower or ("training accuracy" in compact_lower and "deeper" in compact_lower):
                 if "solution by construction" in compact_lower or "shallower architecture" in compact_lower:
                     return {
@@ -1443,6 +1538,8 @@ class AnalysisNormalizationService:
         if any(not value for value in values):
             return True
         summary_signal = " ".join(value.lower() for value in values)
+        if "residual mapping" in compact_lower and "shortcut connections" in compact_lower and "degradation problem" in summary_signal:
+            return True
         if values[0].lower().startswith("figure") or " figure " in summary_signal:
             return True
         if (
@@ -1567,6 +1664,8 @@ class AnalysisNormalizationService:
         lowered = value.lower()
         if lowered in {"term", "string", "concept", "introduction recurrent", "tion model", "sentation models"}:
             return ""
+        if lowered == "residual learning":
+            return ""
         if lowered in {"training deep neural networks", "inputs changes during training"}:
             return ""
         if lowered in {"new language representation model", "language representation models", "pre-trained bert model"}:
@@ -1579,7 +1678,7 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"reveals that network", "has higher training", "higher training", "deeper network"}:
             return ""
-        if lowered in {"training", "degradation", "deeper model", "learned shallower model", "current solvers on hand"}:
+        if lowered in {"training", "degradation", "deeper model", "learned shallower model", "current solvers on hand", "by feedforward neural networks"}:
             return ""
         if lowered.startswith(("reveals that ", "shows that ", "has ", "have ", "is ", "are ")):
             return ""
@@ -1634,6 +1733,8 @@ class AnalysisNormalizationService:
             or ("solution by construction" in lowered and "identity mapping" in lowered)
             or ("shallower architecture" in lowered and "deeper counterpart" in lowered)
             or ("identity mapping" in lowered and "residual functions" in lowered)
+            or ("residual mapping" in lowered and "shortcut connections" in lowered)
+            or ("underlying mapping" in lowered and "residual mapping" in lowered)
         )
 
     def _score(self, value: Any, default: int) -> int:
