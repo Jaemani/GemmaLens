@@ -136,6 +136,51 @@ def test_paper_map_argument_flow_skips_reference_boundary_artifacts():
     assert "implementation details" in flow_text
 
 
+def test_paper_map_priority_lists_skip_bibliography_items():
+    text = "BERT uses masked language modeling for bidirectional pre-training."
+    result = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-biblio",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [
+                {"term": "BERT", "meaning": "language representation model", "domain_relevance": "high", "difficulty": "hard", "source_sentence": text, "should_save": True},
+                {"term": "ACL", "meaning": "conference metadata", "domain_relevance": "low", "difficulty": "easy", "source_sentence": text, "should_save": False},
+                {
+                    "term": "Advances in neural information processing systems",
+                    "meaning": "conference metadata",
+                    "domain_relevance": "low",
+                    "difficulty": "easy",
+                    "source_sentence": text,
+                    "should_save": False,
+                },
+                {"term": "Proceedings", "meaning": "venue metadata", "domain_relevance": "low", "difficulty": "easy", "source_sentence": text, "should_save": False},
+                {"term": "arXiv preprint", "meaning": "bibliography metadata", "domain_relevance": "low", "difficulty": "easy", "source_sentence": text, "should_save": False},
+            ],
+            "phrases": [
+                {"phrase": "In ACL", "function": "general", "explanation": "conference marker", "source_sentence": text},
+                {"phrase": "In Proceedings of", "function": "general", "explanation": "bibliography marker", "source_sentence": text},
+                {"phrase": "In contrast to", "function": "contrast", "explanation": "contrast signal", "source_sentence": text},
+            ],
+            "concepts": [{"concept": "masked language model", "explanation": "paper concept", "source_sentence": text}],
+            "sentences": [],
+            "summaries": {"one_line": text, "simple": text, "academic": text, "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(result), FakeSectionAnalysisRepository()).build("doc-biblio", [text])
+    top_text = {item.text.lower() for item in [*paper_map.synthesis.priority_terms, *paper_map.synthesis.reusable_expressions]}
+
+    assert "bert" in top_text
+    assert "acl" not in top_text
+    assert "advances in neural information processing systems" not in top_text
+    assert "in acl" not in top_text
+    assert "proceedings" not in top_text
+    assert "arxiv preprint" not in top_text
+    assert "in proceedings of" not in top_text
+
+
 def test_paper_map_guide_separates_partial_coverage_from_whole_paper_claim():
     text = (
         "We propose a new simple network architecture, the Transformer, based solely on attention mechanisms. "

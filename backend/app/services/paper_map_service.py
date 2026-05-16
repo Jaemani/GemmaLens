@@ -58,9 +58,9 @@ class PaperMapService:
             for phrase in result.phrases:
                 self._add(phrases, phrase.phrase, phrase.explanation, section_number)
 
-        top_concepts = self._rank(concepts, 10)
-        top_terms = self._rank(terms, 12)
-        top_phrases = self._rank(phrases, 40)
+        top_concepts = [item for item in self._rank(concepts, 20) if not self._is_bibliography_study_item(str(item["text"]))][:10]
+        top_terms = [item for item in self._rank(terms, 30) if not self._is_bibliography_study_item(str(item["text"]))][:12]
+        top_phrases = [item for item in self._rank(phrases, 80) if not self._is_bibliography_study_item(str(item["text"]))][:40]
 
         return PaperMapResponse(
             document_id=document_id,
@@ -178,6 +178,22 @@ class PaperMapService:
         if lowered in demoted:
             return 2
         return 1
+
+    def _is_bibliography_study_item(self, text: str) -> bool:
+        lowered = " ".join(text.lower().split())
+        bibliography_items = {
+            "acl",
+            "advances in neural information processing systems",
+            "arxiv preprint",
+            "association for computational linguistics",
+            "proceedings",
+            "in acl",
+            "in proceedings of",
+            "in advances in",
+            "journal of machine learning research",
+            "corr",
+        }
+        return lowered in bibliography_items
 
     def _is_learning_signal(self, text: str) -> bool:
         lowered = " ".join(text.lower().split())
