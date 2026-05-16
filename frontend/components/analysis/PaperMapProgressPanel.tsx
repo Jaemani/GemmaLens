@@ -63,12 +63,16 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
           <p className="mt-1 max-w-2xl text-xs leading-5 text-neutral-600">
             Auto-refreshes as section lessons finish. Expand when you want the argument flow and priority concepts.
           </p>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs font-semibold text-neutral-600">
-            <span className="h-2 w-36 overflow-hidden rounded-full bg-surface">
-              <span className="block h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
-            </span>
-            <span>{progress}% mapped</span>
-          </div>
+          {complete ? (
+            <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Complete map</span>
+          ) : (
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs font-semibold text-neutral-600">
+              <span className="h-2 w-36 overflow-hidden rounded-full bg-surface">
+                <span className="block h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
+              </span>
+              <span>{progress}% mapped</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
