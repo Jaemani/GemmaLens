@@ -178,6 +178,7 @@ Local demo records currently include:
 - Playwright inspection exposed two more user-facing polish problems: completed papers still showed top-level rebuild actions and internal implementation language, and whole-paper priority concepts could rank citation-navigation metadata above actual paper concepts. The rebuild action now lives inside detailed output, difficulty copy is user-facing, completed PDF pages no longer show the stale first-section scope notice, and paper-map ranking demotes reference/appendix/navigation concepts below real content concepts.
 - Multi-page UI audit exposed a first-impression failure on Dashboard/Documents: recent-document previews displayed raw extraction markers, author/email clutter, and duplicate partial uploads next to complete paper guides. The document lists now deduplicate by title/source type for display, keep the most complete version, and show study-state summaries instead of raw PDF extraction residue.
 - Mobile analysis audit exposed an excessive-scroll problem: complete papers expanded every section in the whole-paper argument flow before the current section lesson. The paper map now shows the first six argument-flow steps by default and lets the user expand the remaining sections on demand.
+- Translate page audit exposed a blank-output problem: the result panel looked like an empty card until translation finished. The page now has a purposeful empty state, a clearer local-model loading state, a copied state for the copy action, and labels model notes as learner notes.
 
 ## Still Weak
 
