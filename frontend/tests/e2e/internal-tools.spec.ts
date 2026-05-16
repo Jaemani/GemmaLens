@@ -3,8 +3,9 @@ import { expect, test } from "@playwright/test";
 test("internal experiment route is not part of the learner app", async ({ page }) => {
   await page.goto("/experiments");
 
+  await expect(page).toHaveURL(/\/guide$/);
   await expect(page.getByRole("heading", { name: "Experiment dashboard" })).toHaveCount(0);
-  await expect(page.getByText(/404|not found/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "How to use GemmaLens" })).toBeVisible();
 });
 
 test("real analysis pages do not expose experiment controls", async ({ page }) => {

@@ -32,7 +32,7 @@ Evaluate GemmaLens as a real user reading famous academic PDFs end to end. The a
 | Video has usable empty/progress/result state | Video page empty/fetch/parse states verified; video analysis result now shows transcript learning content immediately instead of hiding it behind detailed output | Mostly met; full YouTube caption variability still lightly tested |
 | Dictionary is a review queue | Dictionary shows type counts and review-focus filters; Quiz can now use saved dictionary items as a review source and marks them viewed when opened | Partly met; no spaced repetition scheduler yet |
 | Guide matches current product | Guide rewritten around PDF source, section study, paper map, current limits | Met |
-| Internal experiment tooling hidden | Sidebar nav no longer links experiments, real analysis pages hide A/B panels, and the standalone `/experiments` route has been removed from the build | Met |
+| Internal experiment tooling hidden | Sidebar nav no longer links experiments, real analysis pages hide A/B panels, and stale `/experiments` links redirect to Guide instead of showing internal tooling | Met |
 | Responsive layout | Latest Playwright desktop/mobile audit on Dashboard, Documents, Translate, Video, Dictionary, Settings, Guide, Quiz, and Analysis showed no console errors, no horizontal overflow, no visible PDF markers, and no Experiments nav leakage | Met for inspected routes |
 | Build/test health | `npm --prefix frontend run build`, `pytest backend/tests`, `ruff check backend` passed | Met |
 
