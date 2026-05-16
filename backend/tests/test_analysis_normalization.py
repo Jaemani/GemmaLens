@@ -1551,3 +1551,64 @@ def test_resnet_imagenet_detection_setup_recovers_protocol():
     assert "phrase_count_out_of_range:1" not in result.quality_warnings
     assert "term_not_in_source_sentence:ImageNet classification pretraining" not in result.quality_warnings
     assert "term_not_in_source_sentence:val1/val2 split" not in result.quality_warnings
+
+
+def test_resnet_imagenet_localization_setup_recovers_task_and_rpn_adaptation():
+    document = (
+        "LOC method LOC network testing LOC error on GT CLS classification network top-5 LOC error on predicted CLS. "
+        "Localization error (%) on the ImageNet validation. In the column of LOC error on GT class, the ground truth class is used. "
+        "In the testing column, 1-crop denotes testing on a center crop and dense denotes fully convolutional and multi-scale testing. "
+        "This result won the 1st place in the ImageNet detection task in ILSVRC 2015, surpassing the second place by 8.5 points. "
+        "C. ImageNet Localization The ImageNet Localization (LOC) task requires to classify and localize the objects. "
+        "Following prior work, we assume that the image-level classifiers are first adopted for predicting the class labels of an image, "
+        "and the localization algorithm only accounts for predicting bounding boxes based on the predicted classes. "
+        "We adopt the per-class regression (PCR) strategy, learning a bounding box regressor for each class. "
+        "Unlike the way that is category-agnostic, our RPN for localization is designed in a per-class form. "
+        "This RPN ends with two sibling 1x1 convolutional layers for binary classification and box regression."
+    )
+    payload = {
+        "terms": [
+            {"term": "ImageNet classification", "meaning": "wrong section"},
+            {"term": "LOC", "meaning": "acronym alone"},
+            {"term": "mAP", "meaning": "wrong metric emphasis"},
+            {"term": "RPN", "meaning": "too broad alone"},
+            {"term": "ensemble", "meaning": "previous result"},
+            {"term": "convolutional layers", "meaning": "too generic"},
+            {"term": "ResNet-101", "meaning": "too broad"},
+        ],
+        "concepts": [
+            {"concept": "ImageNet classification", "explanation": "wrong section"},
+            {"concept": "LOC", "explanation": "acronym alone"},
+            {"concept": "mAP", "explanation": "wrong metric emphasis"},
+            {"concept": "RPN", "explanation": "too broad alone"},
+            {"concept": "convolutional layers", "explanation": "too generic"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "LOC method LOC network testing LOC error on GT CLS classification network top-5."},
+        "sentences": [{"sentence": "LOC method LOC network testing LOC error on GT CLS classification network top-5.", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:0"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-imagenet-loc", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert not {"ImageNet classification", "LOC", "mAP", "RPN", "ensemble", "convolutional layers", "ResNet-101"} & terms
+    assert not {"ImageNet classification", "LOC", "mAP", "RPN", "convolutional layers"} & concepts
+    assert {"ImageNet Localization (LOC)", "localization error", "ground truth class", "predicted class", "per-class regression", "category-agnostic"}.issubset(terms)
+    assert {"ImageNet LOC task framing", "classifier-then-localizer pipeline", "per-class regression strategy", "per-class RPN modification"}.issubset(concepts)
+    assert {
+        "requires to classify and localize",
+        "only accounts for",
+        "based on the predicted classes",
+        "We adopt",
+        "per-class regression",
+        "Unlike the way",
+        "is designed in a per-class form",
+        "ends with two sibling",
+        "surpassing the second place",
+    }.issubset(phrases)
+    assert result.summaries.one_line.startswith("This section transitions from ImageNet detection results")
+    assert result.sentences[0].core_structure == "A requires to classify and localize B."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings

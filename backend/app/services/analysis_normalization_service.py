@@ -49,6 +49,8 @@ class AnalysisNormalizationService:
         if self._is_resnet_imagenet_detection_setup_section(document_text):
             terms = self._filter_resnet_imagenet_detection_setup_noise(terms, "term")
             terms = self._prefer_resnet_imagenet_detection_setup_terms(terms, document_text)
+        if self._is_resnet_imagenet_localization_setup_section(document_text):
+            terms = self._filter_resnet_imagenet_localization_setup_noise(terms, "term")
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -102,6 +104,9 @@ class AnalysisNormalizationService:
         if self._is_resnet_imagenet_detection_setup_section(document_text):
             normalized["concepts"] = self._prefer_resnet_imagenet_detection_setup_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_resnet_imagenet_detection_setup_noise(normalized["phrases"], "phrase")
+        if self._is_resnet_imagenet_localization_setup_section(document_text):
+            normalized["concepts"] = self._prefer_resnet_imagenet_localization_setup_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_resnet_imagenet_localization_setup_noise(normalized["phrases"], "phrase")
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -1374,6 +1379,48 @@ class AnalysisNormalizationService:
                     "medium",
                     "This is a fairness/data-constraint statement.",
                 ),
+                (
+                    "ImageNet Localization (LOC)",
+                    "The ImageNet task that requires both class prediction and object localization.",
+                    "field_term",
+                    "medium",
+                    "This is the new benchmark section after ImageNet DET.",
+                ),
+                (
+                    "localization error",
+                    "The percentage error metric reported for ImageNet localization.",
+                    "field_term",
+                    "medium",
+                    "This is the table's main metric.",
+                ),
+                (
+                    "ground truth class",
+                    "The true image class used in one localization-error evaluation setting.",
+                    "field_term",
+                    "medium",
+                    "This explains the `LOC error on GT class` column.",
+                ),
+                (
+                    "predicted class",
+                    "The class predicted by the image-level classifier before localization.",
+                    "field_term",
+                    "medium",
+                    "This explains the harder predicted-class localization setting.",
+                ),
+                (
+                    "per-class regression",
+                    "A localization strategy that learns a separate bounding-box regressor for each class.",
+                    "field_term",
+                    "hard",
+                    "This is the main localization method described in the section.",
+                ),
+                (
+                    "category-agnostic",
+                    "A detector design that does not use category-specific localization heads.",
+                    "field_term",
+                    "hard",
+                    "The section contrasts this with the per-class RPN design.",
+                ),
             ]
         else:
             known = [
@@ -1665,6 +1712,15 @@ class AnalysisNormalizationService:
                 ("We split the validation set", "method", "Describes the validation protocol."),
                 ("is used for validation", "method", "Explains the role of the held-out validation split."),
                 ("We do not use", "limitation", "States a data restriction or fairness constraint."),
+                ("requires to classify and localize", "general", "Defines the localization task as classification plus bounding-box prediction."),
+                ("only accounts for", "method", "Explains the division of labor between classifier and localization algorithm."),
+                ("based on the predicted classes", "method", "Shows that localization depends on image-level class predictions."),
+                ("We adopt", "method", "Introduces a chosen strategy from prior work."),
+                ("per-class regression", "method", "Names the class-specific bounding-box regression strategy."),
+                ("Unlike the way", "contrast", "Contrasts this RPN with the category-agnostic version."),
+                ("is designed in a per-class form", "method", "States the key RPN modification for localization."),
+                ("ends with two sibling", "method", "Describes the final RPN heads for classification and box regression."),
+                ("surpassing the second place", "result", "States the competition margin over the runner-up."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
                 ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
@@ -2261,6 +2317,26 @@ class AnalysisNormalizationService:
                     "This is an experimental constraint worth noticing when comparing results.",
                 ),
                 (
+                    "ImageNet LOC task framing",
+                    "The LOC task requires both class prediction and object localization.",
+                    "This explains why the section talks about classifiers before bounding boxes.",
+                ),
+                (
+                    "classifier-then-localizer pipeline",
+                    "Image-level classifiers first predict class labels, then the localization algorithm predicts boxes for those classes.",
+                    "This is the workflow behind the reported localization system.",
+                ),
+                (
+                    "per-class regression strategy",
+                    "The method learns a bounding-box regressor for each class.",
+                    "This is the key localization adaptation from prior work.",
+                ),
+                (
+                    "per-class RPN modification",
+                    "The RPN is changed from category-agnostic to per-class form with sibling classification and regression heads.",
+                    "This is the architecture modification worth learning from the section.",
+                ),
+                (
                     "zero-padding shortcuts",
                     "The parameter-free shortcut option that pads increased dimensions with zeros.",
                     "This is option A in the projection-shortcut comparison.",
@@ -2467,6 +2543,27 @@ class AnalysisNormalizationService:
                     "The authors state a data-use restriction.",
                     "'do not use'는 실험 조건에서 제외한 데이터를 명확히 말합니다.",
                     "This matters for fair comparison across competition systems.",
+                ),
+                (
+                    "requires to classify and localize",
+                    "A requires to classify and localize B.",
+                    "The authors define the ImageNet localization task.",
+                    "'requires to'는 과제가 요구하는 동작을 설명합니다.",
+                    "This sentence defines the task before the method details.",
+                ),
+                (
+                    "only accounts for",
+                    "A only accounts for B based on C.",
+                    "The authors separate class prediction from box localization.",
+                    "'only accounts for'는 어떤 구성요소가 담당하는 범위를 제한합니다.",
+                    "This prevents the reader from thinking the localization module also predicts classes.",
+                ),
+                (
+                    "Unlike the way",
+                    "Unlike A, B is designed in C.",
+                    "The authors contrast category-agnostic RPN with the per-class localization RPN.",
+                    "'Unlike'는 기존 방식과 새 변형의 차이를 여는 표현입니다.",
+                    "This is the architecture-change sentence in the section.",
                 ),
                 (
                     "as easy as stacking more layers",
@@ -3455,6 +3552,23 @@ class AnalysisNormalizationService:
                         "Notice the data-use constraint: no other ILSVRC 2015 data.",
                     ],
                 }
+            if self._is_resnet_imagenet_localization_setup_section(document_text):
+                return {
+                    "one_line": "This section transitions from ImageNet detection results to the ImageNet localization task and its per-class RPN design.",
+                    "simple": (
+                        "The section first reports ImageNet DET competition results, then introduces ImageNet Localization. "
+                        "For LOC, classifiers predict image classes first, and a per-class regression/RPN system predicts bounding boxes."
+                    ),
+                    "academic": (
+                        "The section frames ImageNet LOC as classification plus localization, adopts per-class regression, and modifies the RPN "
+                        "from category-agnostic detection to class-specific localization with sibling classification and box-regression heads."
+                    ),
+                    "study_notes": [
+                        "Ignore the mangled table dump first; the prose after `ImageNet Localization` is the main reading material.",
+                        "Separate classifier role from localization role.",
+                        "Track the contrast: category-agnostic RPN versus per-class RPN.",
+                    ],
+                }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
                 return {
                     "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
@@ -3746,6 +3860,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_resnet_imagenet_detection_setup_section(document_text):
             return True
+        if self._is_resnet_imagenet_localization_setup_section(document_text):
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -3984,6 +4100,7 @@ class AnalysisNormalizationService:
             or self._is_resnet_detection_results_table_section(document_text)
             or self._is_resnet_detection_result_narrative_section(document_text)
             or self._is_resnet_imagenet_detection_setup_section(document_text)
+            or self._is_resnet_imagenet_localization_setup_section(document_text)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
@@ -4045,6 +4162,15 @@ class AnalysisNormalizationService:
             and "200 object categories" in lowered
             and "fine-tuned on the det data" in lowered
             and "we do not use other ilsvrc 2015 data" in lowered
+        )
+
+    def _is_resnet_imagenet_localization_setup_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "imagenet localization" in lowered
+            and "per-class regression" in lowered
+            and "category-agnostic" in lowered
+            and "two sibling" in lowered
         )
 
     def _prefer_resnet_deep_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
@@ -4649,6 +4775,77 @@ class AnalysisNormalizationService:
 
     def _filter_resnet_imagenet_detection_setup_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {"imagenet classification", "fine-tuned", "object categories", "imagenet", "map", "ilsvrc 2015"}
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_imagenet_localization_setup_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"imagenet classification", "loc", "map", "rpn", "convolutional layers"}
+        preferred = {
+            "ImageNet LOC task framing": (
+                "ImageNet Localization requires classification and object localization.",
+                "This explains the task before the method adaptation.",
+            ),
+            "classifier-then-localizer pipeline": (
+                "Classifiers first predict image labels, then localization predicts boxes based on those labels.",
+                "This explains the division of labor in the system.",
+            ),
+            "per-class regression strategy": (
+                "A bounding-box regressor is learned for each class.",
+                "This is the key localization strategy borrowed from prior work.",
+            ),
+            "per-class RPN modification": (
+                "The RPN is changed from category-agnostic to per-class form with classification and regression heads.",
+                "This is the section's architecture adaptation.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = (
+                    "requires to classify"
+                    if "task" in lowered
+                    else "predicted classes"
+                    if "pipeline" in lowered
+                    else "per-class regression"
+                    if "regression" in lowered
+                    else "per-class form"
+                )
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_resnet_imagenet_localization_setup_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {
+            "imagenet classification",
+            "loc",
+            "map",
+            "rpn",
+            "ensemble",
+            "ilsvrc 2015",
+            "convolutional layers",
+            "imagenet",
+            "resnet-101",
+            "multi-scale testing",
+        }
         return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
 
     def _prefer_resnet_imagenet_detection_setup_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
