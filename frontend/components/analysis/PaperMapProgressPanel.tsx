@@ -8,6 +8,7 @@ import type { PaperMap } from "@/lib/types";
 export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { documentId: string; refreshKey?: number }) {
   const [paperMap, setPaperMap] = useState<PaperMap | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [showSignals, setShowSignals] = useState(false);
   const [showSectionSummaries, setShowSectionSummaries] = useState(false);
 
@@ -42,7 +43,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
     thesis_so_far: analyzedCount ? "This map is built from analyzed sections only." : "No section has been analyzed yet.",
     coverage_note: `${analyzedCount} / ${totalSections} sections analyzed.`,
     reading_focus: [],
-    next_steps: ["Analyze the next unstudied section."]
+    next_steps: ["Analyze the next section without a lesson."]
   };
   const synthesis = paperMap.synthesis ?? {
     status: "partial",
@@ -55,16 +56,11 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
 
   return (
     <section className="rounded-lg border border-line bg-panel shadow-material">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3 p-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Paper map</p>
-          <h2 className="mt-1 text-lg font-semibold">{complete ? "Whole-paper learning guide" : "What this paper is teaching so far"}</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">
-            {complete
-              ? "Built from every analyzed section: argument flow, priority concepts, vocabulary, expressions, and review plan."
-              : "Built from analyzed sections only. It grows as you analyze more sections, so it does not pretend the whole paper is complete."}
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-neutral-600">
+          <h2 className="mt-1 text-base font-semibold">{complete ? "Whole-paper guide ready" : guide.thesis_so_far || "Building from ready sections"}</h2>
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs font-semibold text-neutral-600">
             <span>
               {analyzedCount} / {totalSections} sections analyzed
             </span>
@@ -73,18 +69,29 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
             </span>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={load}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-50"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={load}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-xs font-semibold text-white"
+          >
+            {expanded ? "Collapse" : "Expand"}
+            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+        </div>
       </div>
-      <div className="grid gap-4 p-5">
-        <div className="rounded-md border border-line bg-surface p-4">
+      {expanded ? (
+        <div className="grid gap-4 border-t border-line p-5">
+          <div className="rounded-md border border-line bg-surface p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{guide.title}</p>
           <p className="mt-2 text-sm leading-6 text-ink">{guide.thesis_so_far}</p>
           <p className="mt-2 text-xs leading-5 text-neutral-600">{guide.coverage_note}</p>
@@ -92,62 +99,63 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
             <GuideList title="Reading focus" rows={guide.reading_focus} />
             <GuideList title="Next steps" rows={guide.next_steps} />
           </div>
-        </div>
-        <SynthesisPanel synthesis={synthesis} complete={complete} />
-        <div className="rounded-md border border-line bg-panel p-4">
-          <button
-            type="button"
-            onClick={() => setShowSignals((value) => !value)}
-            className="flex w-full items-center justify-between gap-3 text-left"
-          >
-            <span>
-              <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">Source-grounded signals</span>
-              <span className="mt-1 block text-sm leading-6 text-neutral-600">
-                Raw concepts, terms, and expressions behind the draft. Open when you want to inspect or save items.
-              </span>
-            </span>
-            {showSignals ? <ChevronDown size={18} className="shrink-0 text-neutral-500" /> : <ChevronRight size={18} className="shrink-0 text-neutral-500" />}
-          </button>
-        </div>
-        {showSignals ? (
-          <>
-            <MapList title="Concepts" rows={paperMap.top_concepts} />
-            <MapList title="Terms" rows={paperMap.top_terms} />
-            <MapList title="Expressions" rows={paperMap.top_phrases} />
-          </>
-        ) : null}
-      </div>
-      <div className="border-t border-line p-5">
-        <button
-          type="button"
-          onClick={() => setShowSectionSummaries((value) => !value)}
-          className="flex w-full items-center justify-between gap-3 text-left"
-        >
-          <span>
-            <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">Analyzed sections</span>
-            <span className="mt-1 block text-sm leading-6 text-neutral-600">
-              {paperMap.section_summaries.length
-                ? `${paperMap.section_summaries.length} section summaries are available. Open when you want to audit the section-by-section trail.`
-                : "Analyze a section to start building the paper map."}
-            </span>
-          </span>
-          {showSectionSummaries ? (
-            <ChevronDown size={18} className="shrink-0 text-neutral-500" />
-          ) : (
-            <ChevronRight size={18} className="shrink-0 text-neutral-500" />
-          )}
-        </button>
-        {showSectionSummaries && paperMap.section_summaries.length ? (
-          <div className="mt-3 grid gap-3">
-            {paperMap.section_summaries.map((summary) => (
-              <article key={summary.text} className="rounded-md border border-line bg-surface p-3">
-                <p className="text-sm font-semibold text-ink">{summary.text}</p>
-                <p className="mt-1 text-xs leading-5 text-neutral-600">{summary.meaning}</p>
-              </article>
-            ))}
           </div>
-        ) : null}
-      </div>
+          <SynthesisPanel synthesis={synthesis} complete={complete} />
+          <div className="rounded-md border border-line bg-panel p-4">
+            <button
+              type="button"
+              onClick={() => setShowSignals((value) => !value)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <span>
+                <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">Source-grounded signals</span>
+                <span className="mt-1 block text-sm leading-6 text-neutral-600">
+                  Raw concepts, terms, and expressions behind the draft. Open when you want to inspect or save items.
+                </span>
+              </span>
+              {showSignals ? <ChevronDown size={18} className="shrink-0 text-neutral-500" /> : <ChevronRight size={18} className="shrink-0 text-neutral-500" />}
+            </button>
+          </div>
+          {showSignals ? (
+            <>
+              <MapList title="Concepts" rows={paperMap.top_concepts} />
+              <MapList title="Terms" rows={paperMap.top_terms} />
+              <MapList title="Expressions" rows={paperMap.top_phrases} />
+            </>
+          ) : null}
+          <div className="border-t border-line pt-5">
+            <button
+              type="button"
+              onClick={() => setShowSectionSummaries((value) => !value)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <span>
+                <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">Analyzed sections</span>
+                <span className="mt-1 block text-sm leading-6 text-neutral-600">
+                  {paperMap.section_summaries.length
+                    ? `${paperMap.section_summaries.length} section summaries are available. Open when you want to audit the section-by-section trail.`
+                    : "Analyze a section to start building the paper map."}
+                </span>
+              </span>
+              {showSectionSummaries ? (
+                <ChevronDown size={18} className="shrink-0 text-neutral-500" />
+              ) : (
+                <ChevronRight size={18} className="shrink-0 text-neutral-500" />
+              )}
+            </button>
+            {showSectionSummaries && paperMap.section_summaries.length ? (
+              <div className="mt-3 grid gap-3">
+                {paperMap.section_summaries.map((summary) => (
+                  <article key={summary.text} className="rounded-md border border-line bg-surface p-3">
+                    <p className="text-sm font-semibold text-ink">{summary.text}</p>
+                    <p className="mt-1 text-xs leading-5 text-neutral-600">{summary.meaning}</p>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

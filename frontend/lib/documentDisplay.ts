@@ -19,7 +19,7 @@ export function cleanDocumentPreview(document: DocumentListItem) {
     return `Complete paper guide ready: ${total} sections analyzed with concepts, terms, expressions, and review flow.`;
   }
   if (total > 1 && analyzed > 0) {
-    return `In progress: ${analyzed} of ${total} sections studied. Continue from the next unstudied section.`;
+    return `In progress: ${analyzed} of ${total} sections ready. Continue from the next section without a lesson.`;
   }
 
   const cleaned = document.preview
@@ -38,10 +38,10 @@ export function cleanDocumentPreview(document: DocumentListItem) {
 export function documentProgressText(document: DocumentListItem) {
   const total = document.total_sections ?? 0;
   const analyzed = document.analyzed_sections ?? 0;
-  if (total <= 1) return analyzed > 0 ? "Ready" : "Not studied";
+  if (total <= 1) return analyzed > 0 ? "Ready" : "Not ready";
   if (analyzed >= total) return "Complete";
-  if (analyzed > 0) return `${analyzed}/${total} studied`;
-  return "Not studied";
+  if (analyzed > 0) return `${analyzed}/${total} ready`;
+  return "Not ready";
 }
 
 export function isVideoSource(sourceType: string) {

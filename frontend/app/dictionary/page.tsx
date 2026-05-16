@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenCheck, GitBranch, Layers, Quote, RotateCcw, ScanText, Sparkles } from "lucide-react";
+import { GitBranch, Layers, Quote, ScanText, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { DictionaryTable } from "@/components/dictionary/DictionaryTable";
@@ -44,31 +44,72 @@ export default function DictionaryPage() {
         <EmptyState title="No saved items" detail="Save concepts, terms, expressions, or sentence patterns from an analysis result to build your review queue." />
       ) : (
         <div className="space-y-6">
-          <section className="grid gap-3 md:grid-cols-5">
-            {(["all", "concept", "term", "phrase", "sentence"] as const).map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setFilter(value)}
-                className={`rounded-lg border p-4 text-left shadow-material ${
-                  filter === value ? "border-accent bg-blue-50 text-accent" : "border-line bg-panel text-ink hover:bg-surface"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold">{filterLabel(value)}</span>
-                  <span className="text-2xl font-semibold">{value === "all" ? items.length : counts[value]}</span>
-                </div>
-              </button>
-            ))}
+          <section className="rounded-lg border border-line bg-panel shadow-material">
+            <div className="border-b border-line px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Library layers</p>
+              <p className="mt-1 text-sm leading-6 text-neutral-600">
+                Concepts explain the paper. Terms, expressions, and sentence patterns support English reading.
+              </p>
+            </div>
+            <div className="divide-y divide-line">
+              <FilterRow
+                icon={<Sparkles size={16} />}
+                title="All saved items"
+                detail="Everything saved from papers, docs, and videos."
+                active={filter === "all"}
+                count={items.length}
+                onClick={() => setFilter("all")}
+              />
+              <FilterRow
+                icon={<GitBranch size={16} />}
+                title="Concept layer"
+                detail="Ideas and domain knowledge to connect across sources."
+                active={filter === "concept"}
+                count={counts.concept}
+                onClick={() => setFilter("concept")}
+              />
+              <div className="grid gap-0 md:grid-cols-3 md:divide-x md:divide-line">
+                <FilterRow
+                  icon={<Layers size={16} />}
+                  title="Terms"
+                  detail="Technical vocabulary and native-language glosses."
+                  active={filter === "term"}
+                  count={counts.term}
+                  compact
+                  onClick={() => setFilter("term")}
+                />
+                <FilterRow
+                  icon={<Quote size={16} />}
+                  title="Expressions"
+                  detail="Academic phrases and reusable discourse moves."
+                  active={filter === "phrase"}
+                  count={counts.phrase}
+                  compact
+                  onClick={() => setFilter("phrase")}
+                />
+                <FilterRow
+                  icon={<ScanText size={16} />}
+                  title="Sentences"
+                  detail="Hard sentence patterns worth reviewing."
+                  active={filter === "sentence"}
+                  count={counts.sentence}
+                  compact
+                  onClick={() => setFilter("sentence")}
+                />
+              </div>
+            </div>
           </section>
-          <section className="grid gap-3 md:grid-cols-3">
-            <SummaryCard icon={<Sparkles size={18} />} label="New" count={review.new} tone="blue" />
-            <SummaryCard icon={<RotateCcw size={18} />} label="Review next" count={review["review-soon"]} tone="amber" />
-            <SummaryCard icon={<BookOpenCheck size={18} />} label="Stable" count={review.familiar} tone="emerald" />
+          <section className="rounded-lg border border-line bg-surface px-4 py-3">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+              <span className="font-semibold text-ink">Review queue</span>
+              <span className="text-neutral-600">New: <strong className="text-ink">{review.new}</strong></span>
+              <span className="text-neutral-600">Review next: <strong className="text-ink">{review["review-soon"]}</strong></span>
+              <span className="text-neutral-600">Stable: <strong className="text-ink">{review.familiar}</strong></span>
+            </div>
           </section>
-          <section className="rounded-lg border border-line bg-panel p-4 shadow-material">
+          <section className="rounded-lg border-l-4 border-accent bg-panel p-4 shadow-material">
             <div className="flex items-start gap-3">
-              <div className="rounded-md bg-blue-50 p-2 text-accent">
+              <div className="rounded-md bg-surface p-2 text-accent">
                 <GitBranch size={18} />
               </div>
               <div>
@@ -102,25 +143,39 @@ function countByType(items: DictionaryItem[]) {
   );
 }
 
-function filterLabel(value: DictionaryFilter) {
-  if (value === "all") return "All";
-  if (value === "phrase") return "Expressions";
-  return `${value.charAt(0).toUpperCase()}${value.slice(1)}s`;
-}
-
-function SummaryCard({ icon, label, count, tone = "blue" }: { icon: ReactNode; label: string; count: number; tone?: "blue" | "amber" | "emerald" }) {
-  const toneClass = {
-    blue: "bg-blue-50 text-accent",
-    amber: "bg-amber-50 text-amber-800",
-    emerald: "bg-emerald-50 text-emerald-700"
-  }[tone];
+function FilterRow({
+  icon,
+  title,
+  detail,
+  count,
+  active,
+  compact = false,
+  onClick
+}: {
+  icon: ReactNode;
+  title: string;
+  detail: string;
+  count: number;
+  active: boolean;
+  compact?: boolean;
+  onClick: () => void;
+}) {
   return (
-    <div className="rounded-lg border border-line bg-panel p-4 shadow-material">
-      <div className="flex items-center justify-between gap-3">
-        <div className={`rounded-md p-2 ${toneClass}`}>{icon}</div>
-        <span className="text-2xl font-semibold text-ink">{count}</span>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition ${
+        active ? "bg-blue-50 text-accent" : "text-ink hover:bg-surface"
+      } ${compact ? "md:min-h-28" : ""}`}
+    >
+      <div className="flex min-w-0 items-start gap-3">
+        <div className={`mt-0.5 rounded-md p-2 ${active ? "bg-white text-accent" : "bg-surface text-neutral-600"}`}>{icon}</div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">{title}</p>
+          <p className="mt-1 text-xs leading-5 text-neutral-600">{detail}</p>
+        </div>
       </div>
-      <p className="mt-3 text-sm font-semibold text-neutral-700">{label}</p>
-    </div>
+      <span className={`shrink-0 text-xl font-semibold ${active ? "text-accent" : "text-ink"}`}>{count}</span>
+    </button>
   );
 }

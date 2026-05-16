@@ -159,22 +159,6 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
     };
   }, [analysis, config.saveMode]);
 
-  async function runBaseAnalysis() {
-    setRerunning(true);
-    setError(null);
-    setStep(2);
-    try {
-      const created = await api.analyzeDocument(documentId);
-      setAnalysis(created);
-      setAnalysisMissing(false);
-      setStep(4);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not analyze this document.");
-    } finally {
-      setRerunning(false);
-    }
-  }
-
   if (error) return <ErrorState message={error} />;
   if (!analysis && analysisMissing && document) {
     const isVideoSource = document.source_type === "transcript" || document.source_type === "video_segment";
@@ -182,6 +166,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
     const hasPdfViewer = Boolean(document.source_type === "pdf" && document.has_original_file);
     const workspaceContent = (
       <div className="min-w-0 space-y-6">
+        {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
         {isDocumentSource ? (
           <DocumentPageReader
             documentId={documentId}
@@ -194,46 +179,17 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           />
         ) : null}
         {sectionLesson ? (
-          <>
-            <button
-              type="button"
-              onClick={() => setSectionLesson(null)}
-              className="rounded-md border border-line bg-panel px-3 py-2 text-xs font-semibold text-ink shadow-material hover:bg-surface"
-            >
-              Back to paper overview
-            </button>
-            <SectionLessonCard
-              analysis={sectionLesson.analysis}
-              sectionNumber={sectionLesson.sectionNumber}
-              sectionLabel={sectionLesson.sectionLabel}
-              isAnalyzingNext={false}
-            />
-          </>
-        ) : isDocumentSource ? (
-          <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} />
+          <SectionLessonCard
+            analysis={sectionLesson.analysis}
+            sectionNumber={sectionLesson.sectionNumber}
+            sectionLabel={sectionLesson.sectionLabel}
+            isAnalyzingNext={false}
+          />
         ) : null}
       </div>
     );
     return (
       <div className="space-y-6">
-        <section className="rounded-lg border border-line bg-panel px-4 py-3 text-sm leading-6 text-neutral-700 shadow-material">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="font-semibold text-ink">Section workspace ready</p>
-              <p className="mt-1">
-                This long document has no base analysis yet. Start with a section lesson; run full-document base analysis only when you need it.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={runBaseAnalysis}
-              disabled={rerunning}
-              className="rounded-md border border-line bg-panel px-4 py-2 text-sm font-semibold text-ink shadow-material hover:bg-surface disabled:text-neutral-500"
-            >
-              {rerunning ? "Analyzing..." : "Run base analysis"}
-            </button>
-          </div>
-        </section>
         {hasPdfViewer ? (
           <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
             <div className="min-w-0 xl:sticky xl:top-4">
@@ -280,6 +236,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   ) : null;
   const guideContent = (
     <div className="min-w-0 space-y-6">
+      {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
       {isDocumentSource ? (
         <DocumentPageReader
           documentId={documentId}
@@ -292,23 +249,12 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
         />
       ) : null}
       {sectionLesson ? (
-        <>
-          <button
-            type="button"
-            onClick={() => setSectionLesson(null)}
-            className="rounded-md border border-line bg-panel px-3 py-2 text-xs font-semibold text-ink shadow-material hover:bg-surface"
-          >
-            Back to paper overview
-          </button>
-          <SectionLessonCard
-            analysis={sectionLesson.analysis}
-            sectionNumber={sectionLesson.sectionNumber}
-            sectionLabel={sectionLesson.sectionLabel}
-            isAnalyzingNext={false}
-          />
-        </>
-      ) : isDocumentSource ? (
-        <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} />
+        <SectionLessonCard
+          analysis={sectionLesson.analysis}
+          sectionNumber={sectionLesson.sectionNumber}
+          sectionLabel={sectionLesson.sectionLabel}
+          isAnalyzingNext={false}
+        />
       ) : null}
       {isVideoSource ? (
         <>
@@ -341,7 +287,15 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
             <div className="flex justify-end">
               <button
                 type="button"
-                onClick={runBaseAnalysis}
+                onClick={async () => {
+                  setRerunning(true);
+                  try {
+                    const created = await api.analyzeDocument(documentId);
+                    setAnalysis(created);
+                  } finally {
+                    setRerunning(false);
+                  }
+                }}
                 disabled={rerunning}
                 className="rounded-md border border-line bg-panel px-3 py-2 text-xs font-semibold text-ink shadow-material hover:bg-surface disabled:text-neutral-500"
               >

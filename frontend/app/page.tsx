@@ -98,7 +98,7 @@ function DocumentProgressLabel({ document }: { document: DocumentListItem }) {
   const analyzed = document.analyzed_sections ?? 0;
   const total = document.total_sections ?? 0;
   const tone = label === "Complete" || label === "Ready" ? "text-emerald-700" : analyzed > 0 && total > 1 ? "text-amber-700" : "text-neutral-500";
-  return <span className={`shrink-0 text-xs font-semibold ${tone}`}>{label === "Not studied" ? "New" : label}</span>;
+  return <span className={`shrink-0 text-xs font-semibold ${tone}`}>{label === "Not ready" ? "New" : label}</span>;
 }
 
 function Signal({ icon, label }: { icon: React.ReactNode; label: string }) {

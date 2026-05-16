@@ -98,7 +98,7 @@ export default function GuidePage() {
             <div>
               <h2 className="text-xl font-semibold">Paper reading workflow</h2>
               <p className="mt-1 text-sm leading-6 text-neutral-600">
-                Start from the document page. For long PDFs, work section by section; the paper map becomes useful after several sections and complete after the whole document is studied.
+                Start from the document page. For long PDFs, work section by section; the paper map becomes useful after several sections and complete after every section is ready.
               </p>
             </div>
           </div>

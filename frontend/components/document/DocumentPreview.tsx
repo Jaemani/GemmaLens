@@ -77,5 +77,5 @@ function AnalysisProgressBadge({ document }: { document: DocumentListItem }) {
       </span>
     );
   }
-  return <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-600">Not studied</span>;
+  return <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-600">Not ready</span>;
 }

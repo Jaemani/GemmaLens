@@ -41,7 +41,6 @@ export function DocumentPageReader({
   const page = currentSection?.text ?? "";
   const analyzedCount = sections.filter((section) => section.analyzed).length;
   const allSectionsAnalyzed = Boolean(sections.length && analyzedCount >= sections.length);
-  const remainingBatchIndices = nextUnanalyzedSectionIndices(sections, pageIndex, sections.length);
   const progressStorageKey = `gemmalens:auto-study:${documentId}`;
   const sectionGroups = groupSectionsByPdfPage(sections);
   const currentPdfPage = pdfPageFromLabel(currentSection?.source_label ?? null);
@@ -209,6 +208,9 @@ export function DocumentPageReader({
         updatedAt: Date.now()
       });
       for (const index of plannedIndices) {
+        const sectionNumber = sections[index].section_number;
+        const statusBefore = `Preparing section ${sectionNumber} / ${sections.length} one by one...`;
+        setBatchStatus(statusBefore);
         const result = await api.analyzeDocumentSection(documentId, sections[index].index);
         completed += 1;
         setSections((current) =>
@@ -219,7 +221,7 @@ export function DocumentPageReader({
           setSectionAnalysisIndex(sections[index].index);
           onSectionLesson?.(buildSectionLessonSelection(result, sections, index));
         }
-        const status = `Preparing paper in the background: ${completed} / ${plannedCount} sections ready.`;
+        const status = `Prepared ${completed} / ${plannedCount} remaining sections.`;
         setBatchStatus(status);
         writeAutoStudyProgress(progressStorageKey, {
           status,
@@ -231,7 +233,7 @@ export function DocumentPageReader({
       const updatedSections = await api.listDocumentSections(documentId);
       setSections(updatedSections);
       onSectionAnalyzed?.();
-      const status = `Paper prepared: ${completed} section${completed === 1 ? "" : "s"} ready.`;
+      const status = `Background preparation complete: ${completed} section${completed === 1 ? "" : "s"} ready.`;
       setBatchStatus(status);
       writeAutoStudyProgress(progressStorageKey, {
         status,
@@ -267,11 +269,9 @@ export function DocumentPageReader({
           <p className="mt-2 text-xs font-semibold text-neutral-600">
             {analyzedCount} / {sections.length || 1} sections analyzed
           </p>
-          {allSectionsAnalyzed ? (
-            <p className="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
-              Complete section guide
-            </p>
-          ) : null}
+          <p className="mt-2 text-xs leading-5 text-neutral-600">
+            Automatic preparation runs section by section in the background. Ready sections turn green.
+          </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
           {document.source_type === "pdf" && !document.has_original_file ? (
@@ -305,13 +305,14 @@ export function DocumentPageReader({
             className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
           >
             <ScanText size={16} />
-            {isAnalyzing ? "Analyzing..." : currentSection?.analyzed ? "Refresh lesson" : "Analyze section"}
+            {isAnalyzing ? "Analyzing..." : currentSection?.analyzed ? "Re-analyze section" : "Analyze section"}
           </button>
         </div>
       </div>
-      {batchStatus ? (
-        <div className="border-b border-line bg-blue-50 px-5 py-2 text-xs font-semibold text-accent">
-          {allSectionsAnalyzed ? "All section lessons are ready." : batchStatus}
+      {batchStatus || autoAnalyzeAll ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-blue-50 px-5 py-2 text-xs font-semibold text-accent">
+          <span>{allSectionsAnalyzed ? "All section lessons are ready." : batchStatus || "Automatic section-by-section preparation is on."}</span>
+          <span className="text-neutral-600">{isBatchAnalyzing ? "Mode: one-by-one, currently running" : "Mode: one-by-one"}</span>
         </div>
       ) : null}
       {sections.length ? (
@@ -340,7 +341,6 @@ export function DocumentPageReader({
                     }`}
                   >
                     <span>S{localNumber}</span>
-                    {section.analyzed && index !== pageIndex ? <CheckCircle2 size={12} className="ml-1" /> : null}
                   </button>
                 ))}
               </div>
@@ -368,7 +368,7 @@ export function DocumentPageReader({
           </p>
           <p className="text-xs text-neutral-500">{(currentSection?.char_count ?? page.length).toLocaleString()} chars from backend-cleaned text</p>
           <p className={`text-xs font-semibold ${currentSection?.analyzed ? "text-green-700" : "text-neutral-500"}`}>
-            {currentSection?.analyzed ? "Lesson ready" : "No lesson yet"}
+            {currentSection?.analyzed ? "Ready" : "Not ready"}
           </p>
         </div>
         <button
