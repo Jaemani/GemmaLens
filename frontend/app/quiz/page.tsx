@@ -5,15 +5,17 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
 import { cleanDocumentPreview, displayableDocuments } from "@/lib/documentDisplay";
-import type { AnalysisResult, DocumentListItem, PaperMap } from "@/lib/types";
+import type { AnalysisResult, DictionaryItem, DocumentListItem, PaperMap } from "@/lib/types";
 
 type Source = { document: DocumentListItem; analysis: AnalysisResult | null; paperMap: PaperMap | null };
 type QuizItem = { prompt: string; answer: string; source: string; type: "concept" | "term" | "phrase" | "sentence" };
 
 const CACHE_PREFIX = "gemmalens.quiz.";
+const DICTIONARY_SOURCE_ID = "__dictionary__";
 
 export default function QuizPage() {
   const [sources, setSources] = useState<Source[]>([]);
+  const [dictionaryItems, setDictionaryItems] = useState<DictionaryItem[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [items, setItems] = useState<QuizItem[]>([]);
   const [status, setStatus] = useState("Loading analyzed sources...");
@@ -22,7 +24,8 @@ export default function QuizPage() {
     let cancelled = false;
     async function loadSources() {
       try {
-        const documents = displayableDocuments((await api.listDocuments()).filter((document) => document.has_analysis || (document.analyzed_sections ?? 0) > 0));
+        const [documentsRaw, dictionary] = await Promise.all([api.listDocuments(), api.listDictionary().catch(() => [])]);
+        const documents = displayableDocuments(documentsRaw.filter((document) => document.has_analysis || (document.analyzed_sections ?? 0) > 0));
         const settled = await Promise.allSettled(
           documents.map(async (document) => {
             const [analysis, paperMap] = await Promise.all([
@@ -35,8 +38,9 @@ export default function QuizPage() {
         const ready = settled.flatMap((entry) => (entry.status === "fulfilled" ? [entry.value] : []));
         if (cancelled) return;
         setSources(ready);
-        setSelectedId(ready[0]?.document.id ?? "");
-        setStatus(ready.length ? "Choose an analyzed document or transcript." : "No analyzed sources yet.");
+        setDictionaryItems(dictionary);
+        setSelectedId(dictionary.length ? DICTIONARY_SOURCE_ID : (ready[0]?.document.id ?? ""));
+        setStatus(ready.length || dictionary.length ? "Choose saved items, an analyzed document, or a transcript." : "No analyzed sources yet.");
       } catch (err) {
         if (!cancelled) setStatus(err instanceof Error ? err.message : "Could not load analyzed sources.");
       }
@@ -48,27 +52,37 @@ export default function QuizPage() {
   }, []);
 
   const selected = useMemo(() => sources.find((source) => source.document.id === selectedId), [selectedId, sources]);
+  const selectedDictionary = selectedId === DICTIONARY_SOURCE_ID;
 
   useEffect(() => {
+    if (selectedDictionary) {
+      const cached = window.localStorage.getItem(CACHE_PREFIX + DICTIONARY_SOURCE_ID);
+      setItems(cached ? JSON.parse(cached) : buildDictionaryQuiz(dictionaryItems));
+      return;
+    }
     if (!selected) {
       setItems([]);
       return;
     }
     const cached = window.localStorage.getItem(CACHE_PREFIX + selected.document.id);
     setItems(cached ? JSON.parse(cached) : buildQuiz(selected));
-  }, [selected]);
+  }, [dictionaryItems, selected, selectedDictionary]);
 
   function regenerate() {
-    if (!selected) return;
-    const next = buildQuiz(selected).sort(() => Math.random() - 0.5);
+    if (!selected && !selectedDictionary) return;
+    const next = (selectedDictionary ? buildDictionaryQuiz(dictionaryItems) : buildQuiz(selected!)).sort(() => Math.random() - 0.5);
     setItems(next);
   }
 
   function cacheQuiz() {
-    if (!selected) return;
-    window.localStorage.setItem(CACHE_PREFIX + selected.document.id, JSON.stringify(items));
-    setStatus(`Cached ${items.length} quiz items for ${selected.document.title}.`);
+    if (!selected && !selectedDictionary) return;
+    const key = selectedDictionary ? DICTIONARY_SOURCE_ID : selected!.document.id;
+    const title = selectedDictionary ? "Saved dictionary" : selected!.document.title;
+    window.localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(items));
+    setStatus(`Cached ${items.length} quiz items for ${title}.`);
   }
+
+  const selectedTitle = selectedDictionary ? "Saved dictionary" : (selected?.document.title ?? "No source selected");
 
   return (
     <AppShell>
@@ -84,6 +98,21 @@ export default function QuizPage() {
           <h2 className="font-semibold">Analyzed sources</h2>
           <p className="mt-2 text-sm leading-6 text-neutral-600">{status}</p>
           <div className="mt-4 space-y-2">
+            {dictionaryItems.length ? (
+              <button
+                type="button"
+                onClick={() => setSelectedId(DICTIONARY_SOURCE_ID)}
+                className={`w-full rounded-md border p-3 text-left text-sm ${
+                  selectedDictionary ? "border-accent bg-blue-50 text-ink" : "border-line hover:bg-surface"
+                }`}
+              >
+                <span className="block font-semibold">Saved dictionary</span>
+                <span className="mt-1 block text-xs uppercase text-neutral-500">{dictionaryItems.length} saved study items</span>
+                <span className="mt-2 line-clamp-2 block text-xs leading-5 text-neutral-600">
+                  Review concepts, terms, expressions, and sentence patterns you saved while reading.
+                </span>
+              </button>
+            ) : null}
             {sources.map(({ document }) => (
               <button
                 key={document.id}
@@ -103,15 +132,15 @@ export default function QuizPage() {
           <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold">{selected?.document.title ?? "No source selected"}</h2>
+              <h2 className="font-semibold">{selectedTitle}</h2>
               <p className="mt-1 text-sm text-neutral-600">{items.length} review prompts from this source</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={regenerate} disabled={!selected} className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold hover:bg-surface disabled:opacity-50">
+              <button type="button" onClick={regenerate} disabled={!selected && !selectedDictionary} className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold hover:bg-surface disabled:opacity-50">
                 <RefreshCw size={16} />
                 Regenerate
               </button>
-              <button type="button" onClick={cacheQuiz} disabled={!selected || !items.length} className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600">
+              <button type="button" onClick={cacheQuiz} disabled={(!selected && !selectedDictionary) || !items.length} className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600">
                 <Save size={16} />
                 Save draft
               </button>
@@ -135,6 +164,41 @@ export default function QuizPage() {
       </div>
     </AppShell>
   );
+}
+
+function buildDictionaryQuiz(items: DictionaryItem[]): QuizItem[] {
+  return items.slice(0, 24).map((item): QuizItem => {
+    if (item.item_type === "concept") {
+      return {
+        type: "concept",
+        prompt: `Why does "${item.text}" matter?`,
+        answer: item.meaning || "Review the source evidence where you saved this concept.",
+        source: item.source_sentence || "Saved dictionary item"
+      };
+    }
+    if (item.item_type === "phrase") {
+      return {
+        type: "phrase",
+        prompt: `What academic move does "${item.text}" make?`,
+        answer: item.meaning || "Explain how this expression works in the source sentence.",
+        source: item.source_sentence || "Saved dictionary item"
+      };
+    }
+    if (item.item_type === "sentence") {
+      return {
+        type: "sentence",
+        prompt: "Simplify this saved sentence pattern.",
+        answer: item.meaning || item.text,
+        source: item.source_sentence || item.text
+      };
+    }
+    return {
+      type: "term",
+      prompt: `What does "${item.text}" mean in context?`,
+      answer: item.meaning || "Review the source sentence and define this term in your own words.",
+      source: item.source_sentence || "Saved dictionary item"
+    };
+  });
 }
 
 function buildQuiz(source: Source): QuizItem[] {

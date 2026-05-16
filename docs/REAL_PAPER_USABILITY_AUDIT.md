@@ -68,6 +68,7 @@ Local demo records currently include:
 - The section strip keeps section numbers visible even after analysis, so users can identify `S2`, `S3`, etc. instead of seeing anonymous green check boxes.
 - Paper-map section summaries are collapsed by default. The paper map now opens as a study guide first, with the section-by-section audit trail available on demand.
 - The current section lesson now has direct dictionary save buttons for concepts, terms, and reusable expressions. A user no longer has to open the legacy detailed output just to save an item while reading.
+- Quiz now includes `Saved dictionary` as a review source, so saved concepts, terms, expressions, and sentence patterns can become prompts instead of sitting in a passive list.
 - Generic discourse fragments such as `the best performing models` are filtered out of the section lesson expression list. They may explain the argument, but they are not useful as primary save targets.
 - A ResNet smoke test exposed the same weak-output pattern on a different domain: the model returned `to ease the training` and `of networks` as learning objects and copied the first sentence as summary. ResNet-specific guardrails now promote residual learning concepts and reject those fragments.
 - Paper-map ranking now promotes core methods over generic descriptors. In the ResNet smoke test, `residual learning framework` and `residual functions` are prioritized above `deeper neural networks`.
