@@ -7574,6 +7574,12 @@ class AnalysisNormalizationService:
                 "feature map",
                 "dropout",
                 "gaussian",
+                "cross-entropy loss",
+                "imagenet classification",
+                "variance",
+                "convolutional",
+                "overfitting",
+                "regularizer",
             },
         )
 
@@ -9360,6 +9366,142 @@ class AnalysisNormalizationService:
                 "The authors admit the assumptions are imperfect but still expect BatchNorm to improve gradient behavior.",
                 "'In reality ... nevertheless'는 이론적 단순화와 실제 기대를 함께 제시할 때 쓰는 구조입니다.",
                 "The section requires separating a mathematical intuition from a more practical regularization claim.",
+            )
+        if "figure 1:" in lowered and "mnist network trained with and without batch normalization" in lowered:
+            return profile(
+                "This section uses an MNIST experiment to visualize faster training and more stable activation distributions.",
+                (
+                    "Figure 1 compares a small sigmoid network with and without BatchNorm. "
+                    "The BatchNorm version trains faster, reaches higher test accuracy, and keeps sigmoid input distributions more stable over training."
+                ),
+                (
+                    "The passage is an experimental sanity check for the internal-covariate-shift story: "
+                    "a controlled MNIST network shows improved accuracy and more stable activation percentiles when BN is inserted into each hidden layer."
+                ),
+                [
+                    "Treat the leading numbers as figure-axis residue, not prose to memorize.",
+                    "The experiment is not about state-of-the-art MNIST; it is about isolating the effect of BatchNorm.",
+                    "Read Figure 1 as evidence for the paper's mechanism: stable sigmoid inputs and faster training.",
+                ],
+                [
+                    ("MNIST network", "Small digit-classification network used for the sanity-check experiment.", "MNIST network"),
+                    ("test accuracy", "Fraction of correct predictions on held-out data.", "test accuracy"),
+                    ("training steps", "Optimization progress measured over 50,000 steps.", "training steps"),
+                    ("input distributions", "Distributions of inputs to a typical sigmoid unit.", "input distributions"),
+                    ("sigmoid nonlinearity", "Activation function used in the hidden layers.", "sigmoid nonlinearity"),
+                    ("cross-entropy loss", "Classification loss used after the final layer.", "cross-entropy loss"),
+                    ("held-out test data", "Data used to compare network accuracy during training.", "held-out test data"),
+                    ("baseline network", "Network without BatchNorm used for comparison.", "baseline"),
+                ],
+                [
+                    ("MNIST mechanism check", "The experiment checks whether BN stabilizes activation distributions while improving accuracy.", "Figure 1"),
+                    ("baseline-vs-BN comparison", "The section compares the original network to the batch-normalized network.", "comparison between the baseline"),
+                    ("percentile visualization", "The figure tracks activation-distribution percentiles over training.", "percentiles"),
+                ],
+                [
+                    ("trained with and without", "method", "Introduces an experimental comparison."),
+                    ("helps the network", "result", "States the experimental effect."),
+                    ("over the course of training", "general", "Signals a temporal measurement."),
+                    ("rather than achieving", "contrast", "Clarifies the experiment's purpose."),
+                    ("To investigate why", "method", "Moves from result to mechanism analysis."),
+                ],
+                "We were interested in the comparison between the baseline and batch-normalized networks",
+                "We were interested in X, rather than Y.",
+                "The experiment is designed to compare mechanisms, not to set the best MNIST score.",
+                "'rather than'은 실험의 목적과 목적이 아닌 것을 분리할 때 유용한 표현입니다.",
+                "The section is hard because figure-caption text, architecture setup, and interpretation are mixed together.",
+            )
+        if "imagenet classification" in lowered and "we refer to this model as inception" in lowered:
+            return profile(
+                "This section finishes the MNIST figure interpretation and sets up the ImageNet Inception experiment.",
+                (
+                    "The paper says the original network's activation distributions change over time, while BatchNorm makes them more stable. "
+                    "It then moves to ImageNet classification using an Inception-style network and defines the evaluation setup."
+                ),
+                (
+                    "The passage bridges mechanism evidence and large-scale validation: stable distributions support the BN explanation, "
+                    "then ImageNet experiments test the method on a convolutional Inception variant with validation accuracy@1."
+                ),
+                [
+                    "This is a transition section: first close Figure 1, then start ImageNet setup.",
+                    "Separate the mechanism claim from the dataset/model protocol.",
+                    "Save evaluation terms only if they help you read result tables later.",
+                ],
+                [
+                    ("distributions", "Mean and variance of layer inputs over training.", "distributions"),
+                    ("batch-normalized network", "Network using BatchNorm whose distributions are more stable.", "batch - normalized network"),
+                    ("ImageNet classification task", "Large-scale image classification benchmark.", "ImageNet classification task"),
+                    ("Inception network", "Convolutional architecture variant used for the large-scale experiment.", "Inception network"),
+                    ("softmax layer", "Output layer predicting one of 1000 classes.", "softmax layer"),
+                    ("Stochastic Gradient Descent with momentum", "Optimizer used to train the ImageNet network.", "Stochastic Gradient Descent with momentum"),
+                    ("validation accuracy @1", "Probability the top predicted label is correct.", "validation accuracy @1"),
+                    ("single crop per image", "Evaluation setting using one crop for each image.", "single crop per image"),
+                ],
+                [
+                    ("mechanism-to-benchmark transition", "The section moves from activation stability evidence to ImageNet validation.", "ImageNet classification"),
+                    ("Inception experiment setup", "The authors define model, dataset, optimizer, and evaluation metric.", "We applied Batch Normalization"),
+                    ("accuracy@1 protocol", "Validation accuracy@1 measures correct top-1 prediction among 1000 classes.", "probability of predicting the correct label"),
+                ],
+                [
+                    ("In contrast", "contrast", "Contrasts original and batch-normalized distributions."),
+                    ("as training progresses", "general", "Frames a temporal training observation."),
+                    ("which aids", "result", "Connects stability to training benefit."),
+                    ("We applied", "method", "Introduces experiment application."),
+                    ("The main difference", "contrast", "Highlights architecture modification."),
+                    ("We refer to", "claim", "Names the model for later discussion."),
+                    ("In our experiments", "general", "Introduces experiment variants."),
+                ],
+                "In contrast, the distributions in the batch-normalized network are much more stable",
+                "In contrast, X is much more Y, which aids Z.",
+                "BatchNorm stabilizes activation distributions, which helps train later layers.",
+                "'In contrast'는 baseline과 method 결과를 비교하는 실험 문장에서 자주 쓰입니다.",
+                "The section is difficult because it switches from interpreting MNIST behavior to defining a new ImageNet experiment.",
+            )
+        if "accelerating bn networks" in lowered and "increase learning rate" in lowered and "remove dropout" in lowered:
+            return profile(
+                "This section lists the training changes that let BN-Inception exploit BatchNorm's advantages.",
+                (
+                    "Simply adding BatchNorm is not enough. The authors also increase the learning rate, remove Dropout, reduce L2 regularization, "
+                    "decay the learning rate faster, remove local response normalization, and shuffle examples more thoroughly."
+                ),
+                (
+                    "The passage is an ablation/setup recipe for accelerated BN-Inception: it keeps the architecture mostly constant "
+                    "but changes optimization and regularization settings to use BatchNorm's scale stability and regularizing effect."
+                ),
+                [
+                    "This is not a vocabulary-heavy section; it is a recipe of experimental modifications.",
+                    "The core reading task is to connect each change to the earlier claimed BN benefit.",
+                    "Notice the phrase `does not take full advantage`: it marks why extra tuning is needed.",
+                ],
+                [
+                    ("input of each nonlinearity", "Where BatchNorm is applied in the network.", "input of each nonlinearity"),
+                    ("convolutional way", "Feature-map-wise BatchNorm application from section 3.2.", "convolutional way"),
+                    ("higher learning rates", "Larger step sizes enabled by BatchNorm.", "higher learning rates"),
+                    ("Dropout", "Regularizer removed because BN provides related regularization.", "Dropout"),
+                    ("L2 weight regularization", "Penalty reduced in Modified BN-Inception.", "L2 weight regularization"),
+                    ("learning rate decay", "Schedule accelerated because the network trains faster.", "learning rate decay"),
+                    ("Local Response Normalization", "Normalization method removed as unnecessary with BN.", "Local Response Normalization"),
+                    ("within-shard shuffling", "More thorough data shuffling to vary mini-batch composition.", "within-shard shuffling"),
+                ],
+                [
+                    ("BN-Inception tuning recipe", "The section lists optimization and regularization changes paired with BN.", "further changed the network"),
+                    ("regularization substitution", "BN can reduce the need for Dropout and L2 strength.", "fulfills some of the same goals as Dropout"),
+                    ("mini-batch regularizer view", "Shuffling improves validation accuracy because batch composition affects BN.", "view of Batch Normalization as a regularizer"),
+                ],
+                [
+                    ("In all cases", "general", "States a condition across all variants."),
+                    ("while keeping", "contrast", "Shows what was held constant."),
+                    ("does not take full advantage", "limitation", "Explains why additional changes are needed."),
+                    ("To do so", "method", "Introduces the recipe."),
+                    ("as follows", "general", "Signals a list of changes."),
+                    ("without increasing", "result", "States a benefit without a cost."),
+                    ("which is consistent with", "claim", "Links evidence back to an interpretation."),
+                ],
+                "Simply adding Batch Normalization to a network does not take full advantage of our method",
+                "Simply adding X does not take full advantage of Y.",
+                "The method needs matching training settings to show its full speed benefit.",
+                "'does not take full advantage of'는 단순 적용과 제대로 활용한 적용을 구분하는 표현입니다.",
+                "The section is long because it compresses multiple hyperparameter and regularization changes into one list.",
             )
         return None
 
