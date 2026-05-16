@@ -380,10 +380,19 @@ export function DocumentPageReader({
             <p className="text-xs font-semibold text-neutral-600">Green sections are ready</p>
           </div>
           <div className="flex gap-2 overflow-x-auto">
-          {sectionGroups.map((group) => (
-            <div key={group.key} className="shrink-0 rounded-md border border-line bg-surface px-2 py-1.5">
+          {sectionGroups.map((group) => {
+            const isCurrentPageGroup = group.pdfPage === currentPdfPage;
+            return (
+            <div
+              key={group.key}
+              className={`shrink-0 rounded-md border px-2 py-1.5 transition ${
+                isCurrentPageGroup ? "border-accent bg-blue-50 shadow-sm" : "border-line bg-surface"
+              }`}
+            >
               <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{group.label}</p>
+                <p className={`text-[11px] font-semibold uppercase tracking-wide ${isCurrentPageGroup ? "text-accent" : "text-neutral-500"}`}>
+                  {group.label}
+                </p>
               </div>
               <div className="flex gap-1">
                 {group.items.map(({ section, index, localNumber }) => (
@@ -407,7 +416,8 @@ export function DocumentPageReader({
                 ))}
               </div>
             </div>
-          ))}
+            );
+          })}
           </div>
         </div>
       ) : null}
