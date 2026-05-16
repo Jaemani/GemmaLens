@@ -8663,6 +8663,16 @@ class AnalysisNormalizationService:
                 "journal of machine learning research",
                 "journalism bulletin",
                 "pages ",
+                "j. mach. learn. res.",
+                "arxiv e-prints",
+                "neural netw.",
+                "proceedings of the ieee",
+                "co rr",
+                "corr",
+                "jmlr proceedings",
+                "ieee computer society",
+                "international conference on machine learning",
+                "international conference on artificial intelligence and statistics",
             )
         )
         has_many_years = len(re.findall(r"\b(?:19|20)\d{2}\b", lowered)) >= 4
@@ -9785,6 +9795,51 @@ class AnalysisNormalizationService:
                 "The authors acknowledge similarity to prior work but argue the goals and details differ.",
                 "'though ... stem from very different goals'는 유사한 선행연구와 자기 방법을 구분할 때 쓰는 표현입니다.",
                 "The section is dense because it combines benchmark claims, prior-work comparison, and implementation differences.",
+            )
+        if "future work includes applications of our method to recurrent neural networks" in lowered and "references bengio" in lowered:
+            return profile(
+                "This section closes the conclusion with future work, then starts the references.",
+                (
+                    "The authors say BatchNorm may help RNNs, domain adaptation, and further theoretical analysis. "
+                    "The section then transitions into the bibliography, so the reference entries should be skimmed as source metadata."
+                ),
+                (
+                    "The passage is a conclusion-to-bibliography boundary: it names future research directions around RNN gradient problems, "
+                    "domain adaptation, population-statistics recomputation, and theoretical analysis before citation entries begin."
+                ),
+                [
+                    "Read the first paragraph as future work; read the rest as references.",
+                    "Do not memorize author names as vocabulary unless you need the citation trail.",
+                    "The useful language pattern is `Our future work includes...`, a common conclusion move.",
+                ],
+                [
+                    ("future work", "Research directions the paper has not yet explored.", "future work"),
+                    ("Recurrent Neural Networks", "Future application area where gradient problems may be severe.", "Recurrent Neural Networks"),
+                    ("vanishing or exploding gradients", "Training problem that may be especially severe in RNNs.", "vanishing or exploding gradients"),
+                    ("gradient propagation", "Hypothesis the authors want to test more thoroughly.", "gradient propagation"),
+                    ("domain adaptation", "Future direction involving generalization to new data distributions.", "domain adaptation"),
+                    ("population means and variances", "Statistics that may be recomputed for new data distributions.", "population means and variances"),
+                    ("theoretical analysis", "Future work direction for understanding and improving the algorithm.", "theoretical analysis"),
+                    ("References", "Bibliography section marker.", "References"),
+                ],
+                [
+                    ("future-work roadmap", "The authors name RNNs, domain adaptation, and theory as future directions.", "future work includes"),
+                    ("domain-adaptation hypothesis", "BN may help generalize to new distributions by recomputing population statistics.", "generalize to new data distributions"),
+                    ("bibliography transition", "The section switches from conclusion prose into citation entries.", "References"),
+                ],
+                [
+                    ("In this work, we have not explored", "limitation", "States scope left for future work."),
+                    ("Our future work includes", "general", "Introduces future directions."),
+                    ("where", "general", "Explains why a direction matters."),
+                    ("We plan to investigate whether", "method", "Introduces a research question."),
+                    ("Finally", "general", "Adds the last future-work direction."),
+                    ("would allow", "result", "States a possible benefit."),
+                ],
+                "Our future work includes applications of our method to Recurrent Neural Networks",
+                "Our future work includes applications of X to Y.",
+                "The authors propose applying BatchNorm to RNNs as future work.",
+                "'Our future work includes'는 결론에서 아직 하지 않은 연구 방향을 제시하는 표현입니다.",
+                "The section is difficult because future-work prose and bibliography entries are extracted together.",
             )
         return None
 

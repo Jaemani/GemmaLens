@@ -168,6 +168,7 @@ Local demo records currently include:
 - Real BatchNorm sections 20-22 exposed result-table failures: an orphan page-tail fragment, Figure 2/3 chart residue, and ImageNet variant results were treated as generic vocabulary. BatchNorm profiles now teach the photometric-distortion tail, BN-Baseline/BN-x5/BN-x30/BN-x5-Sigmoid variant definitions, steps-to-accuracy comparisons, sigmoid rescue, and the start of ensemble top-5 error reporting.
 - Real BatchNorm sections 23-25 exposed conclusion/result failures: ensemble setup, Figure 4 benchmark table text, and the final prior-method comparison were either copied as fragments or even contaminated by a ResNet-style summary. BatchNorm profiles now teach ensemble averaging, state-of-the-art claims, Figure 4 top-1/top-5 reading, conclusion method recap, final ImageNet claims, and the standardization-layer contrast.
 - Source-grounding checks now accept `deterministic inference` when the PDF evidence appears as a broken line around `does not depend on the mini-batch`, preventing a false warning on BatchNorm conclusion prose.
+- Real BatchNorm sections 26-28 exposed conclusion/reference boundary failures: future-work prose and bibliography entries were mixed, and reference pages were analyzed as normal learning sections. BatchNorm profiles now teach the future-work roadmap while reference-only sections become skim-oriented citation-navigation lessons. Reference-list sections no longer trigger term/phrase count warnings.
 
 ## Still Weak
 

@@ -6,10 +6,11 @@ class AnalysisQualityService:
     def inspect(self, result: AnalysisResult, document_text: str) -> list[str]:
         warnings: list[str] = []
         text_lower = document_text.lower()
+        is_reference_section = result.summaries.one_line.lower().startswith("this is a reference-list section")
 
-        if not (3 <= len(result.terms) <= 20):
+        if not is_reference_section and not (3 <= len(result.terms) <= 20):
             warnings.append(f"term_count_out_of_range:{len(result.terms)}")
-        if not (2 <= len(result.phrases) <= 20):
+        if not is_reference_section and not (2 <= len(result.phrases) <= 20):
             warnings.append(f"phrase_count_out_of_range:{len(result.phrases)}")
         if result.summaries.one_line == "Summary not provided.":
             warnings.append("missing_one_line_summary")
