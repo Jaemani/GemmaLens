@@ -40,6 +40,7 @@ export function DocumentPageReader({
   const fallbackUnanalyzedIndex = sections.findIndex((section) => !section.analyzed);
   const targetUnanalyzedIndex = nextUnanalyzedIndex >= 0 ? nextUnanalyzedIndex : fallbackUnanalyzedIndex;
   const plannedBatchIndices = nextUnanalyzedSectionIndices(sections, pageIndex, 3);
+  const remainingBatchIndices = nextUnanalyzedSectionIndices(sections, pageIndex, sections.length);
   const progressStorageKey = `gemmalens:auto-study:${documentId}`;
   const sectionGroups = groupSectionsByPdfPage(sections);
   const currentPdfPage = pdfPageFromLabel(currentSection?.source_label ?? null);
@@ -163,12 +164,13 @@ export function DocumentPageReader({
     if (targetUnanalyzedIndex >= 0) setPageIndex(targetUnanalyzedIndex);
   }
 
-  async function autoStudyNextSections() {
-    if (!plannedBatchIndices.length || isBatchAnalyzing) return;
+  async function autoStudySections(sectionCount: number) {
+    const plannedIndices = nextUnanalyzedSectionIndices(sections, pageIndex, sectionCount);
+    if (!plannedIndices.length || isBatchAnalyzing) return;
     setIsBatchAnalyzing(true);
     setIsAnalyzing(true);
     setBatchStatus("");
-    const plannedCount = plannedBatchIndices.length;
+    const plannedCount = plannedIndices.length;
     writeAutoStudyProgress(progressStorageKey, {
       status: `Starting server-side auto-study for ${plannedCount} sections...`,
       completed: 0,
@@ -202,7 +204,7 @@ export function DocumentPageReader({
         updatedAt: Date.now()
       });
     } catch {
-      const status = "Auto-study stopped. The last section needs attention. Use Auto-study next 3 to continue.";
+      const status = "Auto-study stopped. The last section needs attention. Continue with a smaller batch.";
       setBatchStatus(status);
       writeAutoStudyProgress(progressStorageKey, {
         status,
@@ -214,6 +216,14 @@ export function DocumentPageReader({
       setIsBatchAnalyzing(false);
       setIsAnalyzing(false);
     }
+  }
+
+  async function autoStudyNextSections() {
+    await autoStudySections(3);
+  }
+
+  async function autoStudyRemainingSections() {
+    await autoStudySections(sections.length);
   }
 
   return (
@@ -257,6 +267,15 @@ export function DocumentPageReader({
               >
                 <ScanText size={16} />
                 {isBatchAnalyzing ? "Auto-studying..." : "Auto-study next 3"}
+              </button>
+              <button
+                type="button"
+                onClick={autoStudyRemainingSections}
+                disabled={!remainingBatchIndices.length || isBatchAnalyzing || isAnalyzing}
+                className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
+              >
+                <ScanText size={16} />
+                Study remaining {remainingBatchIndices.length}
               </button>
             </>
           ) : null}
