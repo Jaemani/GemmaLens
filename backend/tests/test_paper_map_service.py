@@ -209,6 +209,34 @@ def test_paper_map_skips_cached_attribution_sections():
     assert [summary.text for summary in paper_map.section_summaries] == ["Section 1"]
 
 
+def test_paper_map_skips_short_cached_formula_fragments():
+    text = "Scaled Dot-Product Attention uses queries, keys, and values to compute attention weights."
+    fragment = "The output is computed as a weighted sum 3"
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-6",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [{"term": "scaled dot-product attention", "meaning": "attention mechanism", "domain_relevance": "high", "difficulty": "hard", "source_sentence": text, "should_save": True}],
+            "phrases": [],
+            "concepts": [{"concept": "scaled dot-product attention", "explanation": "attention mechanism", "source_sentence": text}],
+            "sentences": [],
+            "summaries": {"one_line": text, "simple": text, "academic": text, "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+    bad_cached = base.model_copy(
+        update={"summaries": base.summaries.model_copy(update={"one_line": fragment, "simple": fragment, "academic": fragment})}
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows([(1, bad_cached)])).build(
+        "doc-6", [text, fragment]
+    )
+
+    assert paper_map.analyzed_sections == [1]
+    assert all("weighted sum 3" not in summary.meaning for summary in paper_map.section_summaries)
+
+
 def test_paper_map_argument_flow_groups_duplicates_and_trims_long_entries():
     repeated = "The paper introduces the Transformer, an attention-only architecture for sequence transduction."
     long_summary = (

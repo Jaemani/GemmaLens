@@ -53,6 +53,7 @@ Local demo records currently include:
 - Attention Is All You Need smoke test now produces useful first-section anchors: Transformer, self-attention, attention mechanism, sequence transduction, recurrent/convolutional baselines, and BLEU. Raw signal lists remain collapsed by default.
 - Attention staged analysis exposed a real extraction problem: author-contribution and conference-note text was treated as section 2. Section splitting and paper-map synthesis now filter those attribution sections.
 - Attention staged analysis also exposed duplicate argument-flow entries. The paper map now groups repeated summaries, e.g. `S1, 3, 4`, and trims long flow text so the draft reads like a sequence instead of a repeated report.
+- Attention staged analysis exposed another quality problem: figure captions and equation residue were being promoted into the paper argument flow, for example `Figure 1: The Transformer - model architecture` and `The output is computed as a weighted sum 3`. The normalizer now replaces those weak summaries with architecture, scaled dot-product attention, and multi-head attention explanations, and short artifact-like fragments are filtered from sectioning and paper-map synthesis.
 - Updated stale scope copy so the analysis page explains the current staged section-analysis and paper-map draft behavior instead of implying full-paper staged analysis is still absent.
 - Already analyzed sections now load their cached lesson when selected, so the green analyzed state leads back to usable learning content rather than only acting as a status marker.
 - Analysis-column learning cards now stay single-column in the PDF workspace. The previous multi-column layout made concept and term cards too narrow on normal desktop widths.
@@ -69,6 +70,7 @@ Local demo records currently include:
 - The lower analysis page still contains large report-style blocks. It is usable, but it is not yet a polished reading companion.
 - The paper-map guide and whole-paper learning draft are deterministic and source-grounded, but still light synthesis. They do not yet perform model-backed final argument reconstruction across all analyzed sections.
 - Some source extraction remains lossy for multi-column papers and equations.
+- PDF extraction still cannot preserve full mathematical layout. The current policy is to use equation text as supporting context, not as the main reading surface or argument-flow summary.
 - Concept quality is improved by guardrails, but still needs broader real model-output contract tests across more papers and sections.
 - Paper map is cumulative from analyzed sections only; it does not yet perform a final whole-paper merge after all major sections are complete.
 

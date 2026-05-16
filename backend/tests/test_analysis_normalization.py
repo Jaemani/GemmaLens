@@ -366,3 +366,74 @@ def test_attention_intro_summary_replaces_long_first_sentence_copy():
 
     assert result.summaries.one_line == "This section explains recurrent sequence-modeling baselines before the Transformer contrast."
     assert "background" in result.summaries.study_notes[0].lower()
+
+
+def test_attention_architecture_summary_replaces_figure_caption_copy():
+    document = (
+        "Figure 1: The Transformer - model architecture. The encoder is composed of a stack of 6 identical layers. "
+        "Each layer has two sub-layers. The first is a multi-head self-attention mechanism, and the second is a simple, "
+        "position-wise fully connected feed-forward network. We employ a residual connection around each of the two sub-layers, "
+        "followed by layer normalization. The decoder is also composed of a stack of 6 identical layers."
+    )
+    payload = {
+        "terms": [],
+        "phrases": [],
+        "sentences": [],
+        "summaries": {
+            "one_line": "Figure 1: The Transformer - model architecture.",
+            "simple": "Figure 1: The Transformer - model architecture.",
+            "academic": "Figure 1: The Transformer - model architecture.",
+        },
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "attention-architecture", document)
+
+    assert result.summaries.one_line == "This section explains the Transformer's encoder-decoder stack and sub-layer structure."
+    assert "architecture parts" in result.summaries.study_notes[0]
+
+
+def test_attention_formula_summary_replaces_equation_fragment_copy():
+    document = (
+        "Scaled Dot-Product Attention. The input consists of queries and keys of dimension dk, and values of dimension dv. "
+        "We compute the dot products of the query with all keys, divide each by sqrt(dk), and apply a softmax function to obtain "
+        "the weights on the values. In practice, we compute the attention function on a set of queries simultaneously."
+    )
+    payload = {
+        "terms": [],
+        "phrases": [],
+        "sentences": [],
+        "summaries": {
+            "one_line": "The output is computed as a weighted sum 3",
+            "simple": "The output is computed as a weighted sum 3",
+            "academic": "The output is computed as a weighted sum 3",
+        },
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "attention-formula", document)
+
+    assert result.summaries.one_line == "This section explains scaled dot-product attention using queries, keys, values, softmax, and scaling."
+    assert "Q, K, and V" in result.summaries.study_notes[0]
+
+
+def test_multi_head_attention_summary_replaces_formula_lead_sentence():
+    document = (
+        "To counteract this effect, we scale the dot products by 1/sqrt(dk). "
+        "Multi-Head Attention. Instead of performing a single attention function with dmodel-dimensional keys, values and queries, "
+        "we found it beneficial to linearly project the queries, keys and values h times with different, learned linear projections. "
+        "On each of these projected versions of queries, keys and values we then perform the attention function in parallel."
+    )
+    payload = {
+        "terms": [],
+        "phrases": [],
+        "sentences": [],
+        "summaries": {
+            "one_line": "To counteract this effect, we scale the dot products by 1/sqrt(dk).",
+            "simple": "To counteract this effect, we scale the dot products by 1/sqrt(dk).",
+            "academic": "To counteract this effect, we scale the dot products by 1/sqrt(dk).",
+        },
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "multi-head", document)
+
+    assert result.summaries.one_line == "This section explains multi-head attention as parallel learned projections of queries, keys, and values."
+    assert "architecture concept" in result.summaries.study_notes[2]

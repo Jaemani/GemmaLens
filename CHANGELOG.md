@@ -2,6 +2,9 @@
 
 ## 2026-05-15
 
+- Added guardrails for Attention paper architecture/attention sections: figure captions and short equation fragments such as `The output is computed as a weighted sum 3` are now treated as extraction artifacts, not section summaries.
+- Added deterministic replacement summaries for Transformer architecture, scaled dot-product attention, and multi-head attention sections when the edge model returns caption/formula residue instead of a learning explanation.
+- Narrowed short-section filtering so only short artifact-like fragments are skipped; short valid summaries/sections are still preserved.
 - Added honest paper-map coverage counts (`analyzed / total sections`) so users can see how much of the paper has actually been processed.
 - Section analysis now refreshes the cumulative paper map automatically after the inline section lesson is created.
 - Reordered the analysis workspace so section navigation and "Analyze this section" appear above the cumulative paper map and concept cards, making the page work more like a reading tool than a static report.

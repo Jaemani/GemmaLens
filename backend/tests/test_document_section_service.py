@@ -35,3 +35,18 @@ def test_document_section_service_skips_pdf_attribution_sections():
     assert "Conference on Neural Information Processing Systems" not in joined
     assert any("The Transformer is an attention-only architecture" in section.text for section in sections)
     assert any("Recurrent neural networks" in section.text for section in sections)
+
+
+def test_document_section_service_skips_short_equation_fragments():
+    text = (
+        "[[GEMMALENS_PDF_PAGE:1]]\n"
+        "The output is computed as a weighted sum 3. "
+        "Scaled Dot-Product Attention uses queries, keys, and values to compute attention weights. "
+        "The softmax function turns query-key scores into weights that combine the values."
+    )
+
+    sections = DocumentSectionService().split_with_labels(text)
+    joined = " ".join(section.text for section in sections)
+
+    assert "weighted sum 3" not in joined
+    assert "Scaled Dot-Product Attention" in joined

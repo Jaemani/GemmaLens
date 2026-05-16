@@ -122,6 +122,8 @@ Important current policy:
 - Concepts are first-class learning objects, separate from dictionary terms. They connect vocabulary to the paper's argument, method, and referenced ideas.
 - Concepts can be saved to the dictionary/review store, just like terms and phrases.
 - Added source-grounded guardrails after model analysis. If the edge model returns empty phrase lists, repeated source text as summaries, weak sentence decompositions, or generic noun fragments, the backend now repairs or discards those items before the UI sees them.
+- Added paper-specific weak-output guards for real PDFs. When extracted text or edge-model output turns figure captions and equation fragments into summaries, the backend now replaces them with deterministic source-grounded learning summaries for Transformer architecture, scaled dot-product attention, and multi-head attention sections.
+- Short section filtering is artifact-aware rather than length-only: tiny formula/caption fragments can be skipped, while short valid learning summaries remain visible.
 - The current Batch Normalization smoke result now separates concepts (`internal covariate shift`, `Batch Normalization`, `mini-batch`) from vocabulary (`stochastic gradient descent`, `learning rate`, `vanishing gradients`) and reusable academic expressions (`is complicated by the fact that`, `as opposed to`, `This motivates us to`).
 - The current BERT smoke result now separates core BERT concepts and vocabulary (`BERT`, `pre-training`, `fine-tuning`, `masked language model`, `next sentence prediction`) from incidental terms that appear elsewhere in the full paper but should not drive the first learning guide.
 - Added A/B controls for save behavior, labels, layout, item detail, review state, and user-fit mode.

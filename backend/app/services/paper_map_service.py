@@ -94,6 +94,8 @@ class PaperMapService:
         lowered = " ".join(text.lower().split())
         if not lowered:
             return False
+        if len(lowered) < 80 and self._is_short_artifact(lowered):
+            return False
         non_content_markers = [
             "work performed while",
             "conference on neural information processing systems",
@@ -103,6 +105,16 @@ class PaperMapService:
             "provided proper attribution",
         ]
         return not any(marker in lowered for marker in non_content_markers)
+
+    def _is_short_artifact(self, lowered: str) -> bool:
+        artifact_markers = [
+            "weighted sum",
+            "figure",
+            "table",
+            "equation",
+            "where",
+        ]
+        return any(marker in lowered for marker in artifact_markers)
 
     def _guide(
         self,
