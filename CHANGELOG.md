@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-05-17
+
+- Added native/support-language gloss fields to analysis results. Terms now support `support_language_meaning`, and academic expressions support `support_language_explanation`; section lessons show these beside English/context explanations.
+- Simplified the PDF paper-reading UI around one foreground action for the selected section. Ready sections open their cached lesson, unready sections show the source preview plus `Analyze section`, and previous ready lessons no longer stay pinned after selecting an unready section.
+- Changed long PDF loading so the source workspace opens before base analysis. The original PDF and first extracted section are visible first; full base analysis remains explicit.
+- Added profile setting `auto_analyze_documents`, default on. After the PDF source is ready, GemmaLens quietly prepares remaining section lessons in the background.
+- Removed noisy learner-facing controls such as `Analyze next`, `Auto next`, and `Prepare paper` from the main paper workspace. Background preparation is shown as a small progress line rather than a debug panel.
+- Moved blocking MLX generation into a worker thread so background analysis does not block FastAPI health checks, PDF file serving, section listing, or cached section-lesson reads.
+- Updated the learning-library/dictionary UI naming and review labels so saved concepts, terms, expressions, and sentence patterns read as a study library rather than a raw dictionary table.
+- Kept video analysis results inline on the video page so learners can study while watching instead of being sent to a separate document-style analysis page.
+- Updated guide and technical docs for the edge demo story: ThinkPad, Mac M1 Max, and future mobile runtimes share the same small page-section job structure.
+- Documented that upload failures saying `Backend is not reachable at http://127.0.0.1:8012` mean the frontend is running without the local FastAPI backend on the expected stack port.
+
 ## 2026-05-15
 
 - Added BERT feature-based related-work guardrails after testing section 4. The app now teaches the representation-learning progression from pre-trained word embeddings to sentence/paragraph embeddings and ELMo, instead of surfacing broad save targets such as `embeddings`, `feature-based`, or `language modeling objectives`.

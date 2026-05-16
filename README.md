@@ -14,13 +14,13 @@ Local-first learning harness for turning documents, transcripts, and short passa
 
 ```bash
 cd backend
-python3.11 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8012
 ```
 
-Backend API: `http://localhost:8000`
+Backend API: `http://127.0.0.1:8012`
 
 ## Run Frontend
 
@@ -32,7 +32,7 @@ npm run dev
 
 Frontend app: `http://localhost:3000`
 
-Set `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` if the backend runs elsewhere.
+Set `BACKEND_INTERNAL_URL=http://127.0.0.1:8012` or `NEXT_PUBLIC_API_BASE_URL` if the backend runs elsewhere.
 
 ## Run Local Demo Stack
 
@@ -51,11 +51,13 @@ The frontend uses a same-origin `/api/backend/*` proxy for private/local backend
 
 The local stack uses Next.js webpack dev mode for stability. Turbopack previously caused repeated dev-server panics and browser refresh loops in this project.
 
+If the frontend is running but upload shows `Backend is not reachable at http://127.0.0.1:8012`, the backend process is down while the Next.js app is still alive. Restart the stack with `./scripts/run_local_stack.sh`, or start the backend on port `8012` before uploading.
+
 ## Smoke Test
 
 ```bash
-curl http://127.0.0.1:8000/health
-curl -X POST http://127.0.0.1:8000/documents \
+curl http://127.0.0.1:8012/health
+curl -X POST http://127.0.0.1:8012/documents \
   -H "Content-Type: application/json" \
   -d '{"title":"Demo","content":"Although previous studies have suggested a correlation between sleep deprivation and reduced cognitive performance, the extent to which these findings generalize across real-world learning environments remains unclear. To address this gap, we analyze longitudinal study logs collected from undergraduate students over a six-week period.","source_type":"text"}'
 ```
@@ -75,7 +77,7 @@ For existing demo documents, attach the original source later with `POST /docume
 
 ## Prototype Scope
 
-This slice supports pasted text or uploaded text/markdown/PDF files, local structured document analysis, transcript learning, dictionary saving, short model-backed translation, and quiz draft generation. Mock/demo content is only shown when `NEXT_PUBLIC_DEMO_MODE=true`. Full-paper staged analysis, model-backed quiz generation, auth, sync, and multi-document RAG are roadmap items.
+This slice supports pasted text or uploaded text/markdown/DOCX/PDF files, local structured document analysis, transcript learning, learning-library saves, short model-backed translation, and quiz draft generation. Mock/demo content is only shown when `NEXT_PUBLIC_DEMO_MODE=true`. Long PDFs open directly into a source-aware section workspace; GemmaLens shows the first page/section first, then prepares remaining section lessons in the background when the setting is enabled.
 
 ## Optional Gemma 4 MLX Runtime
 

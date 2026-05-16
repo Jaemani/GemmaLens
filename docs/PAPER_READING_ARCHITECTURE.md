@@ -138,6 +138,10 @@ same PDF workspace
 -> keep PDF page navigation and section navigation available
 ```
 
+Current implementation rule: a long PDF must open the paper workspace before waiting for any base analysis. The original PDF/source pane renders first, the first extracted page section is selectable immediately, and cached ready sections load their section lesson directly. A missing or slow full-document base analysis must not block PDF loading, section navigation, or cached section lessons.
+
+Automatic preparation is enabled by default through the learner profile setting `auto_analyze_documents`. After the source pane has rendered, the frontend waits briefly and then prepares remaining unanalyzed sections sequentially in the background. This hides local-model latency while preserving the reading flow: the learner can read the visible page, select any ready section, or manually analyze the current section. The background preparation state should be a small progress line, not a debug console or a cluster of competing buttons.
+
 Normalization must use the text span that was actually analyzed. Re-normalizing a first-section result against the whole paper can pull in later terms that are source-grounded somewhere in the document but irrelevant to the current reading moment.
 
 The paper map should be honest about coverage. If only sections 2 and 3 are analyzed, it should say so and aggregate only those sections. It should not produce a whole-paper conclusion until all major sections have been analyzed or a separate whole-paper merge step has run.
@@ -150,7 +154,7 @@ It also returns a deterministic `synthesis` object: `argument_flow`, `priority_c
 
 The frontend should not duplicate section-splitting logic. The reader requests backend-cleaned sections from `GET /documents/{id}/sections`, and `Analyze this section` sends the same zero-based section index to `POST /documents/{id}/sections/{section_index}/analyze`. This keeps displayed text, cache keys, paper-map coverage, and model input aligned.
 
-`POST /documents/{id}/staged-analysis` analyzes the next unstudied sections in backend order. The current endpoint is synchronous, which is acceptable for local functional testing, but the release version should become a durable job with pause/resume, cancellation, and status polling. This matters for edge devices because a slow model should not make the browser responsible for remembering which sections succeeded.
+`POST /documents/{id}/staged-analysis` still exists as a backend utility, but the current learner-facing PDF flow uses the section-analysis endpoint directly from the client. This keeps the UI responsive and lets each section become ready as soon as its request finishes. A future durable backend job can replace the client orchestration, but it should preserve the same product behavior: source first, current section usable, background preparation quiet.
 
 For new PDF uploads, extraction stores internal page markers before text cleanup. Section responses can expose `source_label` values such as `PDF page 2`, which gives the learner a source location hint even before full PDF-page synchronization exists.
 
@@ -160,12 +164,17 @@ UI priority for paper reading:
 original PDF/source
 -> current extracted section controls
 -> analyze current section
+-> current section lesson if ready
 -> cumulative paper map
 -> concept anchors
 -> vocabulary, expressions, summaries, sentence structures
 ```
 
 The section controls should stay high in the workspace. If they are below all generated content, the product feels like a one-shot summarizer instead of a reading companion.
+
+Completed sections should be visually available in the section strip and should open their cached lesson. Unready sections should show the current section preview plus one clear `Analyze section` action; they must not keep displaying the previous ready section's lesson.
+
+The foreground action state and background preparation state must be separate. A background section request must not disable section navigation, PDF loading, or the current-section action. In the MLX backend this requires moving blocking model generation off the FastAPI event loop.
 
 ## MVP Decision
 

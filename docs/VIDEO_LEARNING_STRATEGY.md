@@ -82,6 +82,9 @@ Example object:
   - YouTube iframe player
   - timestamped transcript panel
   - click transcript line to seek
+  - inline video lesson result after analysis, without navigating away to a document analysis page
+
+Current product rule: video analysis should keep the learner on the video page. The transcript/player remains the source context, and the lesson appears beside it. A separate document-style analysis page makes video learning feel detached from watching.
 
 ## Risks
 

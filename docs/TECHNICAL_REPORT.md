@@ -100,6 +100,7 @@ Important current policy:
 - Real MLX failures must not silently return mock content.
 - MLX prompts use atomic JSON-only tasks with thinking disabled to reduce invalid structured output.
 - The loaded MLX model is cached in process and can be warmed up through `POST /models/warmup`.
+- MLX generation runs in a worker thread instead of the FastAPI event loop. This keeps health checks, PDF file serving, section listing, and cached lesson reads responsive while a background section analysis is running.
 - Remote Gemma runtime can be selected through model presets for cases where the Mac GPU is occupied by another project.
 
 ## 4. Implemented Changes
@@ -149,6 +150,9 @@ Important current policy:
 - Renamed the single-result concept panel to "Concept anchors" so it is not confused with the cumulative paper map.
 - Added backend section endpoints, `GET /documents/{id}/sections` and `GET /documents/{id}/sections/{section_index}`. The frontend section reader now uses these endpoints instead of duplicating split logic in the browser, so the text shown to the user is the same text submitted to section analysis.
 - Cached section lessons are re-normalized on read with the current guardrails. This lets older cached output improve when the validation layer improves, without forcing a slow model rerun.
+- Native/support-language glosses are now part of the analysis schema. Terms can include `support_language_meaning`; phrases can include `support_language_explanation`. The section lesson shows the support-language gloss beside the English/context explanation so language learners can read from the source without mentally translating every item.
+- Long PDF pages now open directly into the PDF/section workspace before base analysis is requested. The first source page and current extracted section are visible first; remaining section lessons can prepare in the background according to the profile setting `auto_analyze_documents`.
+- Background preparation is intentionally quiet. It should not expose debug-style controls such as multiple auto-study buttons. The current section has one foreground action: analyze or refresh the selected section lesson.
 
 ### Video Learning
 
@@ -192,6 +196,7 @@ Important current policy:
 
 - Added same-origin frontend proxy to avoid direct browser calls to `:8012`.
 - Added `scripts/run_local_stack.sh` to start backend and frontend together on stable ports.
+- If upload shows `Backend is not reachable at http://127.0.0.1:8012`, the frontend is alive but the FastAPI backend is not listening on the expected local-stack port. Restart `./scripts/run_local_stack.sh` or run the backend manually on `8012`.
 - Switched the local stack from Turbopack dev mode to webpack dev mode after repeated Turbopack panics caused browser refresh loops and aborted API requests.
 - Restricted demo data and demo result links to explicit `NEXT_PUBLIC_DEMO_MODE=true`.
 - Fixed the MLX warmup route to run async; the first implementation loaded MLX in a FastAPI worker thread and could fail later with a GPU stream/thread error.
@@ -248,7 +253,7 @@ Design rule:
 
 ### Full-Paper Analysis
 
-Current real-model analysis is section-limited to avoid Metal out-of-memory crashes on the shared GPU. This prevents truthful full-paper output.
+Current real-model analysis is section-based to avoid Metal out-of-memory crashes on the shared GPU and to fit edge-device latency. A truthful full-paper guide is built by merging cached section lessons rather than pretending one prompt has read the entire paper.
 
 Observed failure:
 
@@ -263,6 +268,7 @@ Current mitigation:
 - No silent mock fallback.
 - Result warns when analysis is section-level.
 - Long PDF analysis pages do not automatically trigger full-document base analysis when no cached analysis exists. They open into the section workspace first, and full base analysis is an explicit action. This prevents surprise multi-minute jobs and fits the edge-device principle that long papers should be processed in visible, restartable chunks.
+- Automatic section preparation can run after the PDF source is ready. This is default-on for the local demo because the current small-section path is fast enough to prepare the paper while the learner reads.
 
 Required next step:
 
@@ -321,24 +327,22 @@ Useful references:
 
 ## 7. Recommended Next Engineering Tasks
 
-1. Implement staged full-document analysis.
-2. Add section result storage schema.
-3. Add backend quiz generation endpoint.
-4. Add model output contract tests with real Gemma samples.
-5. Add streaming progress events for long jobs.
-6. Add model runtime health and memory status.
-7. Add exportable hackathon report and demo script.
-8. Add reproducible setup instructions for MLX and Ollama.
-9. Decide mobile edge target: LiteRT, llama.cpp, or companion-server mode.
+1. Add model output contract tests with real Gemma samples.
+2. Add a durable backend preparation job if client orchestration becomes brittle.
+3. Add model runtime health and memory status.
+4. Add exportable hackathon report and demo script.
+5. Add reproducible setup instructions for MLX, Ollama, and ThinkPad remote presets.
+6. Decide mobile edge target: LiteRT, llama.cpp, or companion-server mode.
+7. Extend the learning library into graph/wiki views across papers, docs, and videos.
 
 ## 8. Demo Script
 
 1. Open dashboard and show selected local model.
-2. Upload a short PDF/text excerpt.
-3. Show section-level language analysis.
-4. Save terms to dictionary.
-5. Fetch a YouTube transcript.
-6. Analyze current scene or full transcript.
+2. Upload a PDF and show the first page appears immediately.
+3. Show background section preparation and a cached section lesson.
+4. Point out native glosses, English meanings, source evidence, and concept anchors.
+5. Save terms/expressions to the learning library.
+6. Fetch a YouTube transcript and show inline video lesson output.
 7. Generate quiz from analyzed source.
 8. Show translation panel.
-9. Explain full-paper staged analysis roadmap.
+9. Explain the edge story: ThinkPad, Mac M1 Max, and future mobile all use the same small section-job product shape.
