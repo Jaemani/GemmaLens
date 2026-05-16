@@ -453,9 +453,7 @@ class AnalysisNormalizationService:
             }
             if key in known:
                 return known[key]
-            if kind == "term":
-                return "이 섹션을 읽을 때 확인해야 하는 핵심 용어입니다. 새로 분석하면 더 구체적인 한국어 gloss가 생성됩니다."
-            return "논문 문장에서 재사용할 수 있는 표현입니다. 새로 분석하면 더 구체적인 한국어 gloss가 생성됩니다."
+            return ""
         if not language or language in {"english", "en"}:
             return meaning
         return f"{support_language}: {meaning}"
