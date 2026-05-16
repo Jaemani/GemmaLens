@@ -192,7 +192,7 @@ export function DocumentPageReader({
         updatedAt: Date.now()
       });
     } else {
-      if (allSectionsAnalyzed) clearGlobalActivity();
+      clearGlobalActivity();
     }
   }, [allSectionsAnalyzed, analyzedCount, batchStatus, isBatchAnalyzing, onPreparationStatus, sections.length]);
 
@@ -343,7 +343,10 @@ export function DocumentPageReader({
       }
       const updatedSections = await api.listDocumentSections(documentId);
       setSections(updatedSections);
-      if (paused) return;
+      if (paused) {
+        clearGlobalActivity();
+        return;
+      }
       const status = `Background preparation complete: ${completed} section${completed === 1 ? "" : "s"} ready.`;
       setBatchStatus(status);
       writeAutoStudyProgress(progressStorageKey, {
