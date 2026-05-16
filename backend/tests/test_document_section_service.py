@@ -132,3 +132,24 @@ def test_document_section_service_skips_imagenet_architecture_table_artifacts():
 
     assert "layer nameoutput size" not in joined
     assert "Experiments on ImageNet" in joined
+
+
+def test_document_section_service_skips_imagenet_result_table_artifacts():
+    table = (
+        "model top-1 err. top-5 err. VGG-16 28.07 9.33 GoogLeNet 9.15 PReLU-net 24.27 7.38 "
+        "plain-34 28.54 10.02 ResNet-34 A 25.03 7.76 ResNet-34 B 24.52 7.46 ResNet-50 22.85 6.71 "
+        "Error rates (%, 10-crop testing) on ImageNet validation. method top-1 err. top-5 err. "
+        "VGG 24.4 7.1 ResNet-152 19.38 4.49 Error rates (%) of single-model results on the ImageNet validation set."
+    )
+    text = (
+        "[[GEMMALENS_PDF_PAGE:7]]\n"
+        f"{table} "
+        "[[GEMMALENS_PDF_PAGE:8]]\n"
+        "Next we investigate projection shortcuts and compare options A, B, and C."
+    )
+
+    sections = DocumentSectionService().split_with_labels(text)
+    joined = " ".join(section.text for section in sections)
+
+    assert "model top-1 err" not in joined
+    assert "Next we investigate projection shortcuts" in joined

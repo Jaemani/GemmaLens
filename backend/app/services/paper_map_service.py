@@ -141,6 +141,10 @@ class PaperMapService:
             "neither forward nor backward signals vanish",
             "may have exponentially low convergence rates",
             "next we evaluate",
+            "next we investigate",
+            "we compare three options",
+            "not essential for addressing",
+            "considerably better than",
         }
         demoted = {
             "deeper neural networks",

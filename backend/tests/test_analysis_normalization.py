@@ -930,6 +930,7 @@ def test_resnet_imagenet_plain_network_section_filters_heading_and_hyperparamete
     assert {"ImageNet 2012 classification dataset", "top-1 and top-5 error rates", "18-layer and 34-layer plain nets"}.issubset(terms)
     assert {"higher validation error", "training/validation errors", "degradation problem"}.issubset(concepts)
     assert {"We evaluate our method", "We first evaluate", "The results in Table 2 show that", "To reveal the reasons"}.issubset(phrases)
+    assert "we compare" not in phrases
     assert result.summaries.one_line == "This section starts the ImageNet experiments and shows degradation in deeper plain networks."
     assert result.sentences[0].core_structure == "We evaluate our method on dataset X that consists of Y."
 
@@ -980,3 +981,50 @@ def test_resnet_plain_network_diagnosis_section_rejects_training_fragments():
     assert {"unlikely to be caused by", "neither forward nor backward signals vanish", "may have exponentially low convergence rates", "Next we evaluate"}.issubset(phrases)
     assert result.summaries.one_line == "This section diagnoses plain-network degradation and then turns to residual-network experiments."
     assert result.sentences[0].core_structure == "We argue that X is unlikely to be caused by Y."
+
+
+def test_resnet_projection_shortcut_option_section_rejects_table_fragments():
+    document = (
+        "Figure 5. A deeper residual function F for ImageNet. Left: a building block. "
+        "We have shown that parameter-free, identity shortcuts help with training. "
+        "Next we investigate projection shortcuts. In Table 3 we compare three options: "
+        "(A) zero-padding shortcuts are used for increasing dimensions, and all shortcuts are parameter-free; "
+        "(B) projection shortcuts are used for increasing dimensions, and other shortcuts are identity; "
+        "and (C) all shortcuts are projections. Table 3 shows that all three options are considerably better than the plain counterpart. "
+        "B is slightly better than A. C is marginally better than B. "
+        "But the small differences among A/B/C indicate that projection shortcuts are not essential for addressing the degradation problem."
+    )
+    payload = {
+        "terms": [
+            {"term": "In Table", "meaning": "bad fragment"},
+            {"term": "shortcuts help with training", "meaning": "bad fragment"},
+            {"term": "residual function", "meaning": "figure-caption fragment"},
+        ],
+        "concepts": [
+            {"concept": "In Table", "explanation": "bad fragment"},
+            {"concept": "shortcuts help with training", "explanation": "bad fragment"},
+        ],
+        "phrases": [{"phrase": "we compare", "function": "method", "explanation": "too generic"}],
+        "summaries": {
+            "one_line": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+            "simple": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+            "academic": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+        },
+        "sentences": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-shortcut-ablation", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "In Table" not in terms
+    assert "shortcuts help with training" not in terms
+    assert "residual function" not in terms
+    assert "In Table" not in concepts
+    assert "we compare" not in phrases
+    assert {"projection shortcut", "zero-padding shortcuts", "all shortcuts are parameter-free", "other shortcuts are identity", "all shortcuts are projections"}.issubset(terms)
+    assert {"projection shortcuts", "zero-padding shortcuts", "all shortcuts are projections"}.issubset(concepts)
+    assert {"Next we investigate", "we compare three options", "considerably better than", "not essential for addressing"}.issubset(phrases)
+    assert result.summaries.one_line == "This section compares shortcut options and concludes projection shortcuts are useful but not essential."
+    assert result.sentences[0].core_structure == "Next we investigate X."

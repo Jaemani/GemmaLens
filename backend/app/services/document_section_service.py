@@ -139,6 +139,10 @@ class DocumentSectionService:
             return True
         if "architectures for imagenet" in lowered and "flops" in lowered and lowered.count("×") >= 10:
             return True
+        if lowered.startswith("model top-1 err") and "top-5 err" in lowered and "error rates" in lowered:
+            return True
+        if lowered.startswith("method top-1 err") and "top-5 err" in lowered and "error rates" in lowered:
+            return True
         if len(lowered) < 500:
             return False
         conv_count = lowered.count("conv")

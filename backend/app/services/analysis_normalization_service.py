@@ -141,6 +141,7 @@ class AnalysisNormalizationService:
                 "very deep models",
                 "shortcut connections",
                 "residual network",
+                "we compare",
             }:
                 continue
             if "weight decay" in phrase.lower() and "momentum" in phrase.lower():
@@ -721,6 +722,41 @@ class AnalysisNormalizationService:
                     "This is option B for dimension matching.",
                 ),
                 (
+                    "zero-padding shortcuts",
+                    "Parameter-free shortcuts that pad extra dimensions with zeros when dimensions increase.",
+                    "field_term",
+                    "medium",
+                    "This is option A in the projection-shortcut comparison.",
+                ),
+                (
+                    "parameter-free identity shortcuts",
+                    "Identity shortcuts without learned projection parameters.",
+                    "field_term",
+                    "hard",
+                    "This is the cheap shortcut design the paper prefers when possible.",
+                ),
+                (
+                    "all shortcuts are parameter-free",
+                    "The condition for option A: no learned shortcut projection parameters are used.",
+                    "useful",
+                    "medium",
+                    "This marks the cheapest shortcut option in the comparison.",
+                ),
+                (
+                    "other shortcuts are identity",
+                    "The condition for option B: projections are used only for dimension increases, while other shortcuts remain identity.",
+                    "useful",
+                    "medium",
+                    "This distinguishes the balanced projection option.",
+                ),
+                (
+                    "all shortcuts are projections",
+                    "The condition for option C: every shortcut uses a projection.",
+                    "useful",
+                    "medium",
+                    "It tests whether projections everywhere are worth extra parameters.",
+                ),
+                (
                     "linear projection",
                     "A learned shortcut transformation used when input and output dimensions do not match.",
                     "field_term",
@@ -1029,13 +1065,18 @@ class AnalysisNormalizationService:
                 ("The results in Table 2 show that", "result", "Turns table data into the section's main experimental claim."),
                 ("show that", "result", "Introduces the experimental finding."),
                 ("To reveal the reasons", "method", "Explains why the authors inspect training and validation curves."),
-                ("we compare", "method", "Introduces a direct empirical comparison."),
                 ("unlikely to be caused by", "contrast", "Rejects a tempting explanation for the observed optimization difficulty."),
                 ("ensures forward propagated signals", "claim", "Explains why Batch Normalization makes vanishing forward signals unlikely."),
                 ("exhibit healthy norms", "result", "Reports evidence that backward gradients are not vanishing."),
                 ("neither forward nor backward signals vanish", "contrast", "Summarizes the argument against vanishing-gradient explanations."),
                 ("may have exponentially low convergence rates", "claim", "States the authors' conjecture about why deep plain nets train slowly."),
                 ("Next we evaluate", "method", "Moves from plain-network diagnosis to residual-network experiments."),
+                ("Next we investigate", "method", "Moves from residual-net evaluation to shortcut-option analysis."),
+                ("we compare three options", "method", "Introduces an A/B/C design comparison."),
+                ("considerably better than", "result", "States that all residual shortcut options beat the plain counterpart."),
+                ("slightly better than", "result", "Compares two shortcut options with a small performance difference."),
+                ("marginally better than", "result", "Marks a very small advantage in the comparison."),
+                ("not essential for addressing", "claim", "States that projection shortcuts are not required to solve the degradation problem."),
                 ("trained end-to-end", "method", "Signals that the whole network remains trainable as one model."),
                 ("We show that", "result", "Introduces a list of empirical claims."),
                 ("easy to optimize", "result", "States the optimization benefit of residual networks."),
@@ -1398,6 +1439,36 @@ class AnalysisNormalizationService:
                     "This is option B in the shortcut-design discussion.",
                 ),
                 (
+                    "zero-padding shortcuts",
+                    "The parameter-free shortcut option that pads increased dimensions with zeros.",
+                    "This is option A in the projection-shortcut comparison.",
+                ),
+                (
+                    "parameter-free identity shortcuts",
+                    "Shortcuts that do not add learned projection parameters.",
+                    "This is the efficiency principle behind the preferred ResNet shortcut design.",
+                ),
+                (
+                    "projection shortcuts",
+                    "Shortcut paths that use learned projections to match dimensions.",
+                    "This is what the A/B/C comparison is testing.",
+                ),
+                (
+                    "all shortcuts are parameter-free",
+                    "Option A's defining constraint: no learned projection parameters on shortcuts.",
+                    "This represents the cheapest compared shortcut design.",
+                ),
+                (
+                    "other shortcuts are identity",
+                    "Option B's defining constraint: only dimension-changing shortcuts use projections.",
+                    "This is the balanced shortcut design used in deeper ResNets.",
+                ),
+                (
+                    "all shortcuts are projections",
+                    "Option C's defining constraint: every shortcut path uses projection.",
+                    "This tests whether extra projection parameters help enough to justify their cost.",
+                ),
+                (
                     "VGG nets",
                     "The prior architecture family that inspires the plain baseline design.",
                     "This is related architecture context for the ImageNet experiments.",
@@ -1716,6 +1787,27 @@ class AnalysisNormalizationService:
                     "This phrase helps the reader follow the experimental sequence rather than treating all results as one block.",
                 ),
                 (
+                    "Next we investigate projection shortcuts",
+                    "Next we investigate X.",
+                    "The authors move from residual-network results to a focused comparison of shortcut designs.",
+                    "'Next we investigate'는 다음 실험 질문으로 넘어가는 신호입니다.",
+                    "The phrase helps the reader see that this is not a new method, but an ablation-style comparison.",
+                ),
+                (
+                    "In Table 3 we compare three options",
+                    "In Table X we compare three options: A, B, and C.",
+                    "The authors organize shortcut designs into three comparable options.",
+                    "'we compare three options'는 실험 표의 읽는 기준을 먼저 제시하는 표현입니다.",
+                    "The sentence is dense because each option changes a different shortcut design choice.",
+                ),
+                (
+                    "projection shortcuts are not essential for addressing",
+                    "A indicate that B are not essential for addressing C.",
+                    "The authors conclude that projection shortcuts are helpful but not required to solve degradation.",
+                    "'not essential for addressing'은 어떤 구성요소가 문제 해결에 필수는 아니라는 제한된 결론입니다.",
+                    "This is important because it separates the core residual idea from an optional shortcut variant.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -1915,6 +2007,23 @@ class AnalysisNormalizationService:
                         "Track the diagnostic chain: higher training error -> not vanishing gradients -> possible low convergence rates.",
                         "Do not save isolated fragments like 'throughout the whole training'; save the claim it supports.",
                         "Use 'Next we evaluate' as the transition from diagnosing plain nets to testing residual nets.",
+                    ],
+                }
+            if "next we investigate projection shortcuts" in compact_lower and "we compare three options" in compact_lower:
+                return {
+                    "one_line": "This section compares shortcut options and concludes projection shortcuts are useful but not essential.",
+                    "simple": (
+                        "The authors compare three shortcut designs. All are much better than the plain network. Projection shortcuts help a little, "
+                        "but the small differences show they are not the main reason ResNet solves degradation."
+                    ),
+                    "academic": (
+                        "The section analyzes shortcut-design variants A/B/C, showing that residual shortcuts outperform the plain counterpart and that "
+                        "projection shortcuts provide minor gains without being essential to addressing degradation."
+                    ),
+                    "study_notes": [
+                        "Read this as an ablation comparison, not as a new architecture proposal.",
+                        "Separate the core claim from the option details: residual shortcuts matter more than projections everywhere.",
+                        "Use 'not essential for addressing' as the reusable expression for a limited negative conclusion.",
                     ],
                 }
             if "based on the above plain network" in compact_lower and "we insert shortcut connections" in compact_lower:
@@ -2267,6 +2376,8 @@ class AnalysisNormalizationService:
             return True
         if "34-layer plain net has higher training error" in compact_lower and "next we evaluate" in compact_lower:
             return True
+        if "next we investigate projection shortcuts" in compact_lower and "we compare three options" in compact_lower:
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -2404,6 +2515,8 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"net has higher training", "throughout the whole training", "gradients", "residual networks"}:
             return ""
+        if lowered in {"in table", "shortcuts help with training", "residual function"}:
+            return ""
         if lowered.startswith(("we describe ", "we also note ", "we can also use ")):
             return ""
         if lowered in {"reveals that network", "has higher training", "higher training", "deeper network"}:
@@ -2488,6 +2601,7 @@ class AnalysisNormalizationService:
             or self._is_resnet_shortcut_option_section(document_text)
             or ("imagenet classification" in lowered and "34-layer plain net has higher validation error" in lowered)
             or ("34-layer plain net has higher training error" in lowered and "next we evaluate" in lowered)
+            or ("next we investigate projection shortcuts" in lowered and "we compare three options" in lowered)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
