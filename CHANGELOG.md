@@ -12,6 +12,8 @@
 - Updated paper-map expression selection so the cumulative synthesis keeps global high-value expressions while also including useful expressions from the latest analyzed section.
 - Added ResNet experiment-claim guardrails after testing section 5. The app now rejects fragments such as `exhibit higher training`, `effects of our method`, and `present successfully trained models`, while recovering plain nets, accuracy gains, top-5 error, generalization performance, and result-list expressions such as `We show that` and `exhibit higher training error`.
 - Improved source matching around smart quotes so phrases such as `“plain” nets` can be grounded as `plain nets`.
+- Added ResNet related-work guardrails after testing section 6. The app now treats residual vectors, Multigrid, hierarchical basis preconditioning, highway networks, gating functions, and identity shortcuts as related-work/background signals instead of mixing them blindly into the main method.
+- Promoted related-work expressions such as `Concurrent with our work` and `in contrast to` in the cumulative paper-map expression synthesis.
 - Added ResNet/Deep Residual Learning guardrails after a real PDF smoke test. ResNet sections now recover residual learning, residual functions, degradation problem, identity mapping, shortcut connections, ImageNet, and CIFAR-10 instead of accepting fragments such as `to ease the training` or `of networks`.
 - Added ResNet-specific summaries and hard-sentence patterns so the first section reads as a paper-learning guide rather than a copied first sentence.
 - Adjusted paper-map ranking so core methods such as `residual learning framework` and `residual functions` outrank generic descriptors such as `deeper neural networks`.

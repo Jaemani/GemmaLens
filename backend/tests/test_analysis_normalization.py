@@ -692,3 +692,40 @@ def test_resnet_experiment_claim_section_rejects_fragments():
     assert {"We show that", "exhibit higher training error", "accuracy gains from", "This strong evidence shows that"}.issubset(phrases)
     assert result.summaries.one_line == "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth."
     assert result.sentences[0].core_structure == "We show that: 1) A, but B; 2) C."
+
+
+def test_resnet_related_work_section_separates_background_from_method():
+    document = (
+        "For vector quantization, encoding residual vectors is shown to be more effective than encoding original vectors. "
+        "For solving Partial Differential Equations, the widely used Multigrid method reformulates the system as subproblems at multiple scales, "
+        "where each subproblem is responsible for the residual solution between a coarser and a finer scale. "
+        "An alternative to Multigrid is hierarchical basis preconditioning, which relies on variables that represent residual vectors between two scales. "
+        "These methods suggest that a good reformulation or preconditioning can simplify the optimization. "
+        "Shortcut Connections. Practices and theories that lead to shortcut connections have been studied for a long time. "
+        "Concurrent with our work, highway networks present shortcut connections with gating functions. "
+        "These gates are data-dependent and have parameters, in contrast to our identity shortcuts that are parameter-free. "
+        "When a gated shortcut is closed, the layers in highway networks represent non-residual functions."
+    )
+    payload = {
+        "terms": [
+            {"term": "widely used multigrid method", "meaning": "bad adjective-heavy fragment"},
+            {"term": "early practice of training", "meaning": "bad local fragment"},
+        ],
+        "concepts": [{"concept": "widely used multigrid method", "explanation": "bad adjective-heavy fragment"}],
+        "phrases": [{"phrase": "encoding residual vectors", "function": "method", "explanation": "too narrow as only phrase"}],
+        "summaries": {"one_line": "For vector quantization, encoding residual vectors is shown to be more effective than encoding original vectors."},
+        "sentences": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-related", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "widely used multigrid method" not in terms
+    assert "early practice of training" not in terms
+    assert {"residual vectors", "Multigrid method", "hierarchical basis preconditioning", "highway networks", "gating functions"}.issubset(terms)
+    assert {"residual vectors", "shortcut connections", "highway networks", "identity shortcuts"}.issubset(concepts)
+    assert {"These methods suggest that", "Concurrent with our work", "in contrast to"}.issubset(phrases)
+    assert result.summaries.one_line == "This related-work section connects ResNet to residual representations and shortcut-connection methods."
+    assert result.sentences[0].core_structure == "These methods suggest that X can Y."

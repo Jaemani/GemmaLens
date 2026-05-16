@@ -525,3 +525,39 @@ def test_paper_map_promotes_resnet_result_expressions():
     assert "We show that" in expressions
     assert "exhibit higher training error" in expressions
     assert "accuracy gains from" in expressions
+
+
+def test_paper_map_promotes_related_work_expressions():
+    latest_text = "These methods suggest that reformulation helps, in contrast to gated shortcuts."
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-13",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [],
+            "phrases": [{"phrase": "as easy as stacking more layers", "function": "limitation", "explanation": "old", "source_sentence": "as easy as stacking more layers"}],
+            "concepts": [],
+            "sentences": [],
+            "summaries": {"one_line": "The early section frames the problem.", "simple": "The early section frames the problem.", "academic": "The early section frames the problem.", "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+    latest = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "phrases": [
+                {"phrase": "These methods suggest that", "function": "claim", "explanation": "related-work synthesis", "source_sentence": latest_text},
+                {"phrase": "in contrast to", "function": "contrast", "explanation": "method contrast", "source_sentence": latest_text},
+                {"phrase": "Concurrent with our work", "function": "general", "explanation": "contemporaneous related work", "source_sentence": "Concurrent with our work, highway networks appear."},
+            ],
+            "summaries": {**base.summaries.model_dump(), "one_line": "The latest section positions related work."},
+        }
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows([(5, latest)])).build(
+        "doc-13", ["one", "two", "three", "four", "five", latest_text]
+    )
+    expressions = [item.text for item in paper_map.synthesis.reusable_expressions]
+
+    assert "These methods suggest that" in expressions
+    assert "in contrast to" in expressions

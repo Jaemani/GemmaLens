@@ -120,6 +120,11 @@ class PaperMapService:
             "accuracy gains from",
             "this strong evidence shows that",
             "while still having lower complexity than",
+            "these methods suggest that",
+            "in contrast to",
+            "concurrent with our work",
+            "is shown to be more effective than",
+            "reformulates the system as",
         }
         demoted = {
             "deeper neural networks",

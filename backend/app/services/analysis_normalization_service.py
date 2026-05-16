@@ -623,6 +623,55 @@ class AnalysisNormalizationService:
                     "This supports the claim that residual learning is broadly useful.",
                 ),
                 (
+                    "residual vectors",
+                    "Differences or residual components represented relative to another quantity, used here as related-work background.",
+                    "useful",
+                    "medium",
+                    "This connects ResNet's residual idea to earlier residual representations.",
+                ),
+                (
+                    "Multigrid method",
+                    "A solver approach that reformulates a problem across multiple scales and handles residual solutions between scales.",
+                    "useful",
+                    "hard",
+                    "It is related-work evidence that residual reformulation can simplify optimization.",
+                ),
+                (
+                    "hierarchical basis preconditioning",
+                    "A preconditioning method using variables that represent residual vectors between scales.",
+                    "useful",
+                    "hard",
+                    "It supports the related-work pattern of residual reformulation.",
+                ),
+                (
+                    "highway networks",
+                    "Networks with gated shortcut connections proposed around the same time as ResNet.",
+                    "field_term",
+                    "hard",
+                    "They are the closest related shortcut-connection baseline in this passage.",
+                ),
+                (
+                    "gating functions",
+                    "Functions that control whether information passes through a shortcut path.",
+                    "field_term",
+                    "medium",
+                    "This distinguishes highway networks from ResNet's parameter-free identity shortcuts.",
+                ),
+                (
+                    "parameter-free identity shortcuts",
+                    "ResNet shortcuts that pass information without learned gate parameters.",
+                    "field_term",
+                    "hard",
+                    "This contrast explains what is distinctive about ResNet shortcuts.",
+                ),
+                (
+                    "identity shortcuts",
+                    "Shortcut connections that pass information without learned gates in ResNet.",
+                    "field_term",
+                    "hard",
+                    "This is the exact related-work contrast against highway-network gates.",
+                ),
+                (
                     "ImageNet",
                     "A large image recognition benchmark used to evaluate the paper's models.",
                     "useful",
@@ -816,6 +865,16 @@ class AnalysisNormalizationService:
                 ("while still having lower complexity than", "contrast", "Compares depth and complexity against a baseline."),
                 ("won the 1st place", "result", "Reports competition-level empirical validation."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
+                ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
+                ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
+                ("is responsible for", "general", "Explains the role of a subproblem or component."),
+                ("relies on variables that", "method", "Explains the mechanism of a related method."),
+                ("converge much faster than", "result", "Compares solver effectiveness."),
+                ("These methods suggest that", "claim", "Moves from related work examples to a general lesson."),
+                ("Practices and theories that lead to", "claim", "Introduces a related-work lineage."),
+                ("Concurrent with our work", "general", "Signals contemporaneous related work."),
+                ("in contrast to", "contrast", "Marks the difference between related work and the authors' method."),
+                ("represent non-residual functions", "contrast", "Explains a limitation or difference of gated shortcuts."),
                 ("to ease the training of", "method", "States the purpose of the proposed residual learning framework."),
                 ("substantially deeper than", "claim", "Signals the scale of the architecture compared with previous models."),
                 ("explicitly reformulate", "method", "Signals that the paper changes the learning target, not only the model size."),
@@ -1007,6 +1066,36 @@ class AnalysisNormalizationService:
                     "generalization performance",
                     "Evidence that residual representations transfer to other recognition tasks.",
                     "This supports the broader claim that the principle is generic.",
+                ),
+                (
+                    "residual representations",
+                    "A family of prior ideas where vectors, subproblems, or variables represent residual differences.",
+                    "This is related-work background, not the main ResNet block itself.",
+                ),
+                (
+                    "shortcut connections",
+                    "A long-studied connection pattern that passes information across layers.",
+                    "This related-work section explains ResNet's architectural ancestry.",
+                ),
+                (
+                    "highway networks",
+                    "A concurrent shortcut-connection method that uses learned gates.",
+                    "This is the key contrast to ResNet's identity shortcuts.",
+                ),
+                (
+                    "gating functions",
+                    "Mechanisms that can open or close shortcut paths.",
+                    "This explains why highway networks differ from parameter-free identity shortcuts.",
+                ),
+                (
+                    "parameter-free identity shortcuts",
+                    "ResNet's ungated shortcuts, contrasted with highway networks.",
+                    "This helps identify what is distinctive in the authors' formulation.",
+                ),
+                (
+                    "identity shortcuts",
+                    "ResNet's ungated shortcut paths in the related-work contrast.",
+                    "This is the source-grounded phrase behind the parameter-free shortcut idea.",
                 ),
                 (
                     "shallower architecture",
@@ -1232,6 +1321,20 @@ class AnalysisNormalizationService:
                     "The sentence is an evidence-to-principle move, not just a result sentence.",
                 ),
                 (
+                    "These methods suggest that",
+                    "These methods suggest that X can Y.",
+                    "The authors use related work to extract a general lesson about reformulation and optimization.",
+                    "'These methods suggest that'은 여러 관련 연구를 묶어서 일반적인 시사점을 말하는 표현입니다.",
+                    "The sentence is a bridge from related work examples to the ResNet motivation.",
+                ),
+                (
+                    "in contrast to",
+                    "A are B, in contrast to C that are D.",
+                    "The authors distinguish highway networks' learned gates from ResNet's parameter-free identity shortcuts.",
+                    "'in contrast to'는 관련 연구와 자기 방법의 차이를 선명하게 만드는 표현입니다.",
+                    "The sentence is important because it prevents the reader from treating all shortcut connections as the same.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -1399,6 +1502,23 @@ class AnalysisNormalizationService:
                 ],
             }
         if self._is_resnet_text(document_text):
+            if "encoding residual vectors" in compact_lower and "highway networks" in compact_lower:
+                return {
+                    "one_line": "This related-work section connects ResNet to residual representations and shortcut-connection methods.",
+                    "simple": (
+                        "The authors show that residual ideas appeared in vector quantization, multigrid methods, and preconditioning, then compare "
+                        "ResNet shortcuts with earlier shortcut and highway-network approaches."
+                    ),
+                    "academic": (
+                        "The section positions residual learning within prior reformulation/preconditioning methods and distinguishes ResNet's "
+                        "parameter-free identity shortcuts from gated highway networks."
+                    ),
+                    "study_notes": [
+                        "Read this as related-work positioning, not as the main method definition.",
+                        "Separate residual representations from shortcut-connection architecture.",
+                        "The key contrast is gated highway shortcuts versus parameter-free identity shortcuts.",
+                    ],
+                }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
                 return {
                     "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
@@ -1779,6 +1899,8 @@ class AnalysisNormalizationService:
             "better than previous networks",
             "effects of our method",
             "present successfully trained models",
+            "early practice of training",
+            "widely used multigrid method",
         }:
             return ""
         if lowered.startswith(("reveals that ", "shows that ", "has ", "have ", "is ", "are ")):
@@ -1838,6 +1960,8 @@ class AnalysisNormalizationService:
             or ("underlying mapping" in lowered and "residual mapping" in lowered)
             or ("plain" in lowered and "higher training error" in lowered and "accuracy gains" in lowered)
             or ("top-5 error" in lowered and "imagenet" in lowered)
+            or ("encoding residual vectors" in lowered and "shortcut connections" in lowered)
+            or ("highway networks" in lowered and "gating functions" in lowered)
         )
 
     def _score(self, value: Any, default: int) -> int:
