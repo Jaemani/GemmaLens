@@ -268,7 +268,7 @@ class PaperMapService:
 
         coverage_ratio = analyzed_count / total_sections if total_sections else 0
         status = "whole-paper draft" if total_sections and coverage_ratio >= 0.8 else "partial synthesis"
-        flow_limit = 16
+        flow_limit = 18
         flow = self._argument_flow(summaries, limit=flow_limit)
         unique_summary_count = len({str(item.get("meaning") or "").strip().lower() for item in summaries if item.get("meaning")})
         if unique_summary_count > flow_limit:
