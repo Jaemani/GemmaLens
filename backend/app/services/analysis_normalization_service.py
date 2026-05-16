@@ -56,6 +56,9 @@ class AnalysisNormalizationService:
         if self._is_bert_squad2_swag_transition_section(document_text):
             terms = self._prefer_bert_squad2_swag_transition_terms(terms, document_text)
             phrases = self._prefer_bert_squad2_swag_transition_phrases(phrases, document_text)
+        if self._is_bert_swag_ablation_transition_section(document_text):
+            terms = self._prefer_bert_swag_ablation_transition_terms(terms, document_text)
+            phrases = self._prefer_bert_swag_ablation_transition_phrases(phrases, document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -143,6 +146,9 @@ class AnalysisNormalizationService:
         if self._is_bert_squad2_swag_transition_section(document_text):
             normalized["concepts"] = self._prefer_bert_squad2_swag_transition_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._prefer_bert_squad2_swag_transition_phrases(normalized["phrases"], document_text)
+        if self._is_bert_swag_ablation_transition_section(document_text):
+            normalized["concepts"] = self._prefer_bert_swag_ablation_transition_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_bert_swag_ablation_transition_phrases(normalized["phrases"], document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -2961,6 +2967,17 @@ class AnalysisNormalizationService:
                         "difficulty_reason": "The sentence combines a decision rule, mathematical notation, and dev-set model selection.",
                     }
                 ]
+            if self._is_bert_swag_ablation_transition_section(document_text):
+                sentence = self._source_sentence(None, "The left-only constraint", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "X was also applied at Y, because removing it introduced Z.",
+                        "simplified_version": "The left-to-right model stays left-only during fine-tuning because changing that would create a mismatch with pre-training.",
+                        "korean_explanation": "'because' 뒤는 설계 선택의 이유입니다. 이 문장은 ablation이 공정하려면 제약을 유지해야 함을 설명합니다.",
+                        "difficulty_reason": "The sentence is dense because it links a model constraint, fine-tuning condition, and mismatch explanation.",
+                    }
+                ]
             specs = [
                 (
                     "There are two existing strategies",
@@ -4688,6 +4705,23 @@ class AnalysisNormalizationService:
                         "Separate the SQuAD v2.0 decision rule from the SWAG task transition.",
                         "The threshold τ is selected on the dev set, not learned as a new language concept.",
                         "SWAG changes the output type from answer span selection to four-choice continuation selection.",
+                    ],
+                }
+            if self._is_bert_swag_ablation_transition_section(document_text):
+                return {
+                    "one_line": "This section finishes the SWAG setup/results and starts ablations that test which BERT pre-training tasks matter.",
+                    "simple": (
+                        "For SWAG, BERT scores each answer choice from the [CLS] representation and beats ESIM+ELMo and OpenAI GPT. "
+                        "The paper then starts ablation studies comparing BERTBASE with No NSP, left-to-right No NSP, and a BiLSTM-added variant."
+                    ),
+                    "academic": (
+                        "The passage combines SWAG fine-tuning/result interpretation with the opening of Section 5 ablations: task-specific choice scoring via [CLS], "
+                        "softmax normalization, SWAG performance gains, and controlled pre-training-task ablations that isolate NSP, deep bidirectionality, and pre-train/fine-tune mismatch."
+                    ),
+                    "study_notes": [
+                        "Separate the SWAG task adaptation from the ablation-study setup.",
+                        "The ablation table is about why MLM + NSP + bidirectionality matter, not only about scores.",
+                        "Treat No NSP, LTR & No NSP, and +BiLSTM as experimental variants.",
                     ],
                 }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
@@ -6446,6 +6480,166 @@ class AnalysisNormalizationService:
         ]
         return [*promoted, *rest][:12]
 
+    def _prefer_bert_swag_ablation_transition_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"bert", "pre-training", "fine-tuning", "openai gpt", "next sentence prediction", "elmo", "dot product", "softmax layer"}
+        preferred = [
+            ("task-specific choice vector", "The vector added to score each SWAG answer choice from the [CLS] representation.", "field_term", "hard", "This is the SWAG-specific output parameter."),
+            ("[CLS] token representation C", "The BERT sequence representation used to score each SWAG choice.", "field_term", "hard", "This explains what the choice vector is compared against."),
+            ("softmax-normalized choice score", "The normalized score over SWAG answer choices.", "field_term", "medium", "This explains how the model chooses among alternatives."),
+            ("ESIM+ELMo baseline", "The authors' SWAG baseline system that BERTLARGE outperforms.", "field_term", "medium", "This grounds the result comparison."),
+            ("ablation experiments", "Controlled experiments that remove or change parts of BERT to measure their importance.", "field_term", "medium", "This is the purpose of Section 5."),
+            ("BERTBASE", "The base architecture used for the pre-training task ablation table.", "field_term", "medium", "This is the reference model in Table 5."),
+            ("No NSP", "A bidirectional model trained with masked LM but without next sentence prediction.", "field_term", "hard", "This tests the value of NSP."),
+            ("LTR & No NSP", "A left-to-right language model trained without next sentence prediction.", "field_term", "hard", "This tests the value of deep bidirectionality."),
+            ("+ BiLSTM", "A BiLSTM added on top of the left-to-right No NSP model during fine-tuning.", "field_term", "hard", "This tests whether a task-time BiLSTM can compensate for left-to-right pre-training."),
+            ("masked LM", "The pre-training objective used by the No NSP bidirectional ablation.", "field_term", "medium", "This distinguishes MLM from LTR LM."),
+            ("left-to-right LM", "A language model constrained to use only left context.", "field_term", "medium", "This is the OpenAI-GPT-like ablation direction."),
+            ("pre-train/fine-tune mismatch", "A mismatch caused by changing constraints between pre-training and fine-tuning.", "field_term", "hard", "This explains why the left-only constraint is kept."),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            target = {
+                "task-specific choice vector": "task-specific parameters",
+                "[CLS] token representation C": "[CLS] token representation C",
+                "softmax-normalized choice score": "softmax layer",
+                "ESIM+ELMo baseline": "ESIM+ELMo",
+                "left-to-right LM": "Left-to-Right",
+                "pre-train/fine-tune mismatch": "pre-train/fine-tune mismatch",
+            }.get(term, term)
+            row = keyed.get(term.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "term": term,
+                    "meaning": row.get("meaning") or meaning,
+                    "domain_relevance": row.get("domain_relevance") or ("high" if priority == "field_term" else "medium"),
+                    "difficulty": row.get("difficulty") or difficulty,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "should_save": bool(row.get("should_save", True)),
+                    "learning_priority": row.get("learning_priority") or priority,
+                    "reason": row.get("reason") or reason,
+                    "context_meaning": row.get("context_meaning") or meaning,
+                    "general_meaning": row.get("general_meaning") or meaning,
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}
+        ]
+        return [*promoted, *rest][:14]
+
+    def _prefer_bert_swag_ablation_transition_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"fine-tuning", "next sentence prediction", "bert", "pre-training", "openai gpt", "elmo"}
+        preferred = {
+            "SWAG choice scoring": (
+                "BERT scores each SWAG answer choice using a task-specific vector and the [CLS] representation.",
+                "This explains how BERT adapts from text-pair inputs to four-choice completion.",
+                "task-specific parameters",
+            ),
+            "SWAG result comparison": (
+                "BERTLARGE substantially outperforms ESIM+ELMo and OpenAI GPT on SWAG.",
+                "This is the result claim before the paper shifts to ablations.",
+                "outperforms",
+            ),
+            "ablation study purpose": (
+                "The ablations test which facets of BERT are responsible for downstream gains.",
+                "This frames Section 5 as causal analysis rather than another benchmark table.",
+                "relative importance",
+            ),
+            "No NSP ablation": (
+                "The No NSP variant keeps bidirectional MLM but removes next sentence prediction.",
+                "This isolates the effect of NSP.",
+                "without the next sentence prediction",
+            ),
+            "LTR & No NSP ablation": (
+                "The LTR & No NSP variant uses a standard left-to-right LM instead of masked LM.",
+                "This tests the value of deep bidirectionality.",
+                "Left-to-Right",
+            ),
+            "BiLSTM compensation test": (
+                "The +BiLSTM variant checks whether adding a BiLSTM during fine-tuning can compensate for left-to-right pre-training.",
+                "This distinguishes pre-training bidirectionality from task-time bidirectional layers.",
+                "randomly initialized BiLSTM",
+            ),
+            "pre-train/fine-tune mismatch control": (
+                "The left-only constraint remains during fine-tuning because removing it creates a mismatch.",
+                "This teaches why ablation controls must preserve comparable training conditions.",
+                "pre-train/fine-tune mismatch",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            row = keyed.get(concept.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "concept": concept,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "related_terms": row.get("related_terms") or [concept],
+                    "why_it_matters": row.get("why_it_matters") or why_it_matters,
+                    "references": row.get("references") or self._references_near("", document_text),
+                    "learning_priority": row.get("learning_priority") or "field_term",
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _prefer_bert_swag_ablation_transition_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"during fine-tuning", "we demonstrate"}
+        preferred = [
+            ("task-specific parameters introduced", "method", "Identifies what is newly added for the task."),
+            ("dot product with", "method", "Explains a scoring computation."),
+            ("denotes a score for each choice", "method", "Defines the choice scoring output."),
+            ("normalized with a softmax layer", "method", "Explains the normalization step."),
+            ("outperforms the authors’ baseline", "result", "States the SWAG result comparison."),
+            ("perform ablation experiments", "method", "Introduces controlled component-removal experiments."),
+            ("in order to better understand", "general", "States the purpose of an analysis section."),
+            ("relative importance", "general", "Names the comparison goal of the ablations."),
+            ("trained without", "method", "Defines an ablation by removing a component."),
+            ("is trained as", "method", "Defines a model variant."),
+            ("rather than an MLM", "contrast", "Contrasts LTR language modeling with masked LM."),
+            ("because removing it introduced", "claim", "Explains why a constraint is kept."),
+        ]
+        keyed = {str(row.get("phrase") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        lower_text = document_text.lower()
+        for phrase, function, explanation in preferred:
+            if phrase.lower() not in lower_text:
+                continue
+            row = keyed.get(phrase.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "phrase": phrase,
+                    "function": row.get("function") or function,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(row.get("source_sentence"), phrase, document_text),
+                    "learning_priority": row.get("learning_priority") or ("must_review" if function in {"method", "result", "contrast"} else "useful"),
+                    "reason": row.get("reason") or "Reusable ablation-study expression detected in the source.",
+                    "context_meaning": row.get("context_meaning") or explanation,
+                    "confidence": self._confidence(row.get("confidence"), 0.87),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("phrase") or "").strip().lower() not in blocked | {phrase.lower() for phrase, *_ in preferred}
+        ]
+        return [*promoted, *rest][:12]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -6485,6 +6679,7 @@ class AnalysisNormalizationService:
             or self._is_bert_squad_span_prediction_section(document_text)
             or self._is_bert_squad_results_transition_section(document_text)
             or self._is_bert_squad2_swag_transition_section(document_text)
+            or self._is_bert_swag_ablation_transition_section(document_text)
         )
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
@@ -6517,6 +6712,8 @@ class AnalysisNormalizationService:
         if self._is_bert_squad_results_transition_section(document_text):
             return True
         if self._is_bert_squad2_swag_transition_section(document_text):
+            return True
+        if self._is_bert_swag_ablation_transition_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -6796,6 +6993,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_squad2_swag_transition_section(document_text):
             return True
+        if self._is_bert_swag_ablation_transition_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -6883,6 +7082,16 @@ class AnalysisNormalizationService:
             and "threshold" in lowered
             and "grounded commonsense inference" in lowered
             and "four input sequences" in lowered
+        )
+
+    def _is_bert_swag_ablation_transition_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "score for each choice" in lowered
+            and "ablation experiments" in lowered
+            and "no nsp" in lowered
+            and "ltr" in lowered
+            and "pre-train/fine-tune mismatch" in lowered
         )
 
     def _is_attention_text(self, document_text: str) -> bool:

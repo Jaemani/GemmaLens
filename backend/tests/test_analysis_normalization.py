@@ -2777,3 +2777,95 @@ def test_bert_squad2_swag_section_recovers_no_answer_rule_and_swag_transition():
     assert result.sentences[0].core_structure == "We predict X when A > B + threshold, where threshold is selected to maximize Y."
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
     assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)
+
+
+def test_bert_swag_ablation_section_recovers_choice_scoring_and_ablation_setup():
+    document = (
+        "The only task-specific parameters introduced is a vector whose dot product with the [CLS] token representation C "
+        "denotes a score for each choice which is normalized with a softmax layer. "
+        "BERT LARGE outperforms the authors’ baseline ESIM+ELMo system by +27.1% and OpenAI GPT by 8.3%. "
+        "5 Ablation Studies In this section, we perform ablation experiments over a number of facets of BERT in order to better understand their relative importance. "
+        "Table 5: Ablation over the pre-training tasks using the BERTBASE architecture. "
+        "No NSP is trained without the next sentence prediction task. "
+        "LTR & No NSP is trained as a left-to-right LM without the next sentence prediction, like OpenAI GPT. "
+        "+ BiLSTM adds a randomly initialized BiLSTM on top of the LTR + No NSP model during fine-tuning. "
+        "We demonstrate the importance of the deep bidirectionality of BERT by evaluating two pretraining objectives using exactly the same pretraining data, fine-tuning scheme, and hyperparameters as BERTBASE. "
+        "No NSP is a bidirectional model which is trained using the masked LM but without the next sentence prediction task. "
+        "LTR & No NSP is a left-context-only model which is trained using a standard Left-to-Right LM, rather than an MLM. "
+        "The left-only constraint was also applied at fine-tuning, because removing it introduced a pre-train/fine-tune mismatch that degraded downstream performance."
+    )
+    payload = {
+        "terms": [
+            {"term": "BERT", "meaning": "generic"},
+            {"term": "pre-training", "meaning": "generic"},
+            {"term": "fine-tuning", "meaning": "generic"},
+            {"term": "dot product", "meaning": "generic"},
+            {"term": "softmax layer", "meaning": "generic"},
+        ],
+        "concepts": [
+            {"concept": "fine-tuning", "explanation": "generic"},
+            {"concept": "next sentence prediction", "explanation": "term duplicated as concept"},
+            {"concept": "BERT", "explanation": "generic"},
+        ],
+        "phrases": [{"phrase": "During fine-tuning", "function": "method", "explanation": "too generic"}],
+        "summaries": {"one_line": "The paper introduces BERT, a bidirectional Transformer representation model for language understanding."},
+        "sentences": [
+            {
+                "sentence": "“+ BiLSTM” adds a randomly initialized BiLSTM on top of the “LTR + No NSP” model during fine-tuning.",
+                "core_structure": "During fine-tuning, all parameters are fine-tuned.",
+            }
+        ],
+        "quality_warnings": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-swag-ablation", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "task-specific choice vector",
+        "[CLS] token representation C",
+        "softmax-normalized choice score",
+        "ESIM+ELMo baseline",
+        "ablation experiments",
+        "BERTBASE",
+        "No NSP",
+        "LTR & No NSP",
+        "+ BiLSTM",
+        "masked LM",
+        "left-to-right LM",
+        "pre-train/fine-tune mismatch",
+    }.issubset(terms)
+    assert "BERT" not in terms
+    assert "pre-training" not in terms
+    assert "fine-tuning" not in terms
+    assert {
+        "SWAG choice scoring",
+        "SWAG result comparison",
+        "ablation study purpose",
+        "No NSP ablation",
+        "LTR & No NSP ablation",
+        "BiLSTM compensation test",
+        "pre-train/fine-tune mismatch control",
+    }.issubset(concepts)
+    assert "fine-tuning" not in concepts
+    assert "BERT" not in concepts
+    assert {
+        "task-specific parameters introduced",
+        "dot product with",
+        "denotes a score for each choice",
+        "normalized with a softmax layer",
+        "outperforms the authors’ baseline",
+        "perform ablation experiments",
+        "in order to better understand",
+        "relative importance",
+        "trained without",
+        "is trained as",
+        "rather than an MLM",
+        "because removing it introduced",
+    }.issubset(phrases)
+    assert "During fine-tuning" not in phrases
+    assert result.summaries.one_line == "This section finishes the SWAG setup/results and starts ablations that test which BERT pre-training tasks matter."
+    assert result.sentences[0].core_structure == "X was also applied at Y, because removing it introduced Z."
+    assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)
