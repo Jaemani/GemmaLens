@@ -133,6 +133,7 @@ Local demo records currently include:
 - Real BERT section 7 exposed an architecture-section failure: the lesson copied the question-answering example sentence and returned only two terms. The normalizer now teaches unified architecture, Transformer encoder backbone, L/H/A notation, BERTBASE versus BERTLARGE, and single-or-pair input representation while filtering generic `BERT`, `OpenAI GPT`, and duplicate term-as-concept entries.
 - Real BERT section 8 exposed an input-representation failure: the lesson copied the first [CLS] sentence and returned only generic `hidden state` and `embedding`. The normalizer now teaches [CLS] aggregation, sentence-pair packing, [SEP], segment/token/position embeddings, the summed input representation, and the transition from input formatting into Masked LM.
 - Real BERT section 9 exposed a Masked LM procedure failure: the lesson copied the opening masking sentence, kept only one phrase, and missed the 15% selection plus 80/10/10 replacement rule. The normalizer now teaches the objective, denoising-autoencoder contrast, [MASK] mismatch, replacement strategy, original-token target, and transition to NSP.
+- Real BERT section 10 exposed an NSP procedure failure: the lesson fell back to generic BERT summaries and missed IsNext/NotNext sampling. The normalizer now teaches 50/50 sentence-pair generation, IsNext and NotNext labels, QA/NLI benefit, the vector C caveat, and BERT's full-parameter transfer contrast.
 
 ## Still Weak
 

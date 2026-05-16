@@ -35,6 +35,9 @@ class AnalysisNormalizationService:
         if self._is_bert_masked_lm_procedure_section(document_text):
             terms = self._prefer_bert_masked_lm_procedure_terms(terms, document_text)
             phrases = self._filter_bert_masked_lm_procedure_phrases(phrases)
+        if self._is_bert_nsp_procedure_section(document_text):
+            terms = self._prefer_bert_nsp_procedure_terms(terms, document_text)
+            phrases = self._filter_bert_nsp_procedure_phrases(phrases)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -102,6 +105,9 @@ class AnalysisNormalizationService:
         if self._is_bert_masked_lm_procedure_section(document_text):
             normalized["concepts"] = self._prefer_bert_masked_lm_procedure_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_bert_masked_lm_procedure_phrases(normalized["phrases"])
+        if self._is_bert_nsp_procedure_section(document_text):
+            normalized["concepts"] = self._prefer_bert_nsp_procedure_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_bert_nsp_procedure_phrases(normalized["phrases"])
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -1807,6 +1813,17 @@ class AnalysisNormalizationService:
                 ("To mitigate this", "method", "Introduces a workaround for a stated limitation."),
                 ("chooses 15% of the token positions", "method", "States the sampling rule for masked-token prediction."),
                 ("will be used to predict", "method", "Explains the prediction target and loss connection."),
+                ("binarized next sentence prediction task", "method", "Names the binary sentence-relationship pre-training task."),
+                ("can be trivially generated from", "method", "Explains why the task can be produced without manual labels."),
+                ("when choosing the sentences", "method", "Introduces how sentence pairs are sampled."),
+                ("50% of the time", "method", "States the balanced positive/negative sampling rule."),
+                ("labeled as IsNext", "general", "Defines the positive NSP label."),
+                ("labeled as NotNext", "general", "Defines the negative NSP label."),
+                ("Despite its simplicity", "result", "Contrasts a simple method with a strong result."),
+                ("is very beneficial to", "result", "States the downstream benefit of the pre-training task."),
+                ("is not a meaningful sentence representation without", "limitation", "Warns against overinterpreting the vector before fine-tuning."),
+                ("closely related to", "general", "Connects the task to prior representation-learning objectives."),
+                ("transfers all parameters", "method", "Contrasts full-parameter transfer with sentence-embedding transfer."),
             ]
         elif self._is_attention_text(document_text):
             phrase_specs = [
@@ -2780,6 +2797,17 @@ class AnalysisNormalizationService:
                         "difficulty_reason": "The sentence is dense because it compares objectives and uses a rather-than contrast.",
                     }
                 ]
+            if self._is_bert_nsp_procedure_section(document_text):
+                sentence = self._source_sentence(None, "50% of the time", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "When choosing A and B, 50% is X and 50% is Y.",
+                        "simplified_version": "For NSP, half the pairs are real next sentences and half are random non-next sentences.",
+                        "korean_explanation": "'Specifically' 이후의 50%/50% 구조는 NSP 학습 예시를 만드는 절차를 설명합니다.",
+                        "difficulty_reason": "The sentence defines two labels and two sampling cases in one long procedure.",
+                    }
+                ]
             specs = [
                 (
                     "There are two existing strategies",
@@ -2962,6 +2990,20 @@ class AnalysisNormalizationService:
                     "The authors introduce the 80/10/10 replacement rule as a workaround for [MASK] mismatch.",
                     "'To mitigate this'는 앞에서 말한 문제를 줄이기 위한 조치를 소개합니다.",
                     "This sentence starts the procedural details; the percentages explain the actual rule.",
+                ),
+                (
+                    "Specifically, when choosing",
+                    "Specifically, when choosing A and B, 50% is X and 50% is Y.",
+                    "The authors define the positive and negative examples for next sentence prediction.",
+                    "'Specifically'는 앞의 일반 설명을 실제 절차로 좁히는 신호입니다.",
+                    "This sentence is dense because it defines sampling, labels, and sentence relation at once.",
+                ),
+                (
+                    "Despite its simplicity",
+                    "Despite its simplicity, we demonstrate that X is beneficial to Y.",
+                    "The authors argue that a simple NSP task still helps QA and NLI.",
+                    "'Despite'는 예상과 반대되는 결과를 말할 때 쓰는 양보 표현입니다.",
+                    "The phrase links a simple method to a useful downstream effect.",
                 ),
             ]
         elif self._is_attention_text(document_text):
@@ -4340,6 +4382,23 @@ class AnalysisNormalizationService:
                         "Read 'In contrast to' and 'Although' as signals for method comparison and limitation.",
                     ],
                 }
+            if self._is_bert_nsp_procedure_section(document_text):
+                return {
+                    "one_line": "This section defines BERT's Next Sentence Prediction task and why it supports sentence-pair understanding.",
+                    "simple": (
+                        "NSP trains BERT to decide whether sentence B really follows sentence A. Half the examples are true next sentences labeled IsNext, "
+                        "and half are random sentences labeled NotNext. The paper says this simple task helps QA and NLI."
+                    ),
+                    "academic": (
+                        "The section presents NSP as a binary pre-training task generated from monolingual text, using balanced IsNext/NotNext examples to train sentence-relationship understanding, "
+                        "while noting that BERT transfers all parameters rather than only sentence embeddings."
+                    ),
+                    "study_notes": [
+                        "Do not save 'binarized' alone; the useful concept is the IsNext/NotNext sampling rule.",
+                        "Track the purpose: NSP is about sentence relationships for QA and NLI.",
+                        "The vector C caveat matters: it is not a general sentence embedding without fine-tuning.",
+                    ],
+                }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
                 return {
                     "one_line": "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning.",
@@ -5124,6 +5183,121 @@ class AnalysisNormalizationService:
         blocked = {"allows us to", "during fine-tuning"}
         return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
 
+    def _prefer_bert_nsp_procedure_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"bert", "pre-training", "fine-tuning", "sentence embeddings", "binarized", "monolingual corpus"}
+        preferred = [
+            ("next sentence prediction", "A binary pre-training task that predicts whether sentence B follows sentence A.", "field_term", "hard", "This is the section's central method."),
+            ("binarized next sentence prediction task", "A two-label version of NSP with IsNext and NotNext labels.", "field_term", "hard", "This explains what 'binarized' means in context."),
+            ("monolingual corpus", "A same-language text collection used to generate sentence-pair examples without manual labels.", "useful", "medium", "This explains why NSP data is easy to generate."),
+            ("IsNext", "The positive NSP label when sentence B actually follows sentence A.", "field_term", "medium", "This is the positive class in the 50/50 sampling rule."),
+            ("NotNext", "The negative NSP label when sentence B is randomly sampled from the corpus.", "field_term", "medium", "This is the negative class in the 50/50 sampling rule."),
+            ("QA", "Question answering, a downstream task that depends on sentence or passage relationships.", "useful", "medium", "The paper cites QA as a task helped by NSP."),
+            ("NLI", "Natural language inference, a task that judges relationships between sentences.", "useful", "medium", "The paper cites NLI as a task helped by NSP."),
+            ("vector C", "The [CLS] vector used by BERT, which is not a meaningful sentence representation without fine-tuning.", "field_term", "hard", "This prevents overreading C as a standalone sentence embedding."),
+            ("all parameters", "The full BERT parameter set transferred to initialize downstream models.", "field_term", "medium", "This contrasts BERT with prior work transferring only sentence embeddings."),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            lowered = term.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = {
+                    "binarized next sentence prediction task": "binarized next sentence prediction task",
+                    "IsNext": "labeled as IsNext",
+                    "NotNext": "labeled as NotNext",
+                    "vector C": "The vector C",
+                    "all parameters": "transfers all parameters",
+                }.get(term, term)
+                promoted.append(
+                    {
+                        "term": term,
+                        "meaning": meaning,
+                        "domain_relevance": "high" if priority == "field_term" else "medium",
+                        "difficulty": difficulty,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "should_save": True,
+                        "learning_priority": priority,
+                        "reason": reason,
+                        "context_meaning": meaning,
+                        "general_meaning": meaning,
+                        "confidence": 0.9,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}
+        ]
+        return [*promoted, *rest][:12]
+
+    def _prefer_bert_nsp_procedure_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"bert", "pre-training", "fine-tuning", "next sentence prediction", "sentence embeddings", "binarized", "monolingual corpus"}
+        preferred = {
+            "sentence-relationship pre-training": (
+                "NSP trains BERT to understand whether two sentences are connected.",
+                "This is the purpose of NSP, beyond memorizing the task name.",
+                "understands sentence relationships",
+            ),
+            "balanced IsNext/NotNext sampling": (
+                "Half of sentence B examples are true next sentences and half are random corpus sentences.",
+                "This is the actual data-generation rule for NSP.",
+                "50% of the time B is the actual next sentence",
+            ),
+            "self-supervised NSP data generation": (
+                "The NSP labels can be generated from a monolingual corpus without hand annotation.",
+                "This explains why the task scales as a pre-training objective.",
+                "trivially generated from any monolingual corpus",
+            ),
+            "QA/NLI sentence-pair benefit": (
+                "The paper claims NSP is beneficial for QA and NLI, tasks based on sentence relationships.",
+                "This links the pre-training task to downstream language understanding.",
+                "beneficial to both QA and NLI",
+            ),
+            "C-vector caveat": (
+                "The vector C is not a meaningful sentence representation without fine-tuning.",
+                "This prevents confusing BERT's [CLS] vector with a general sentence embedding.",
+                "not a meaningful sentence representation without fine-tuning",
+            ),
+            "full-parameter transfer": (
+                "BERT transfers all parameters to initialize end-task models, unlike prior work that transferred only sentence embeddings.",
+                "This is a key difference in how BERT uses pre-training.",
+                "transfers all parameters",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            lowered = concept.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                promoted.append(
+                    {
+                        "concept": concept,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [concept],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.88,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_bert_nsp_procedure_phrases(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        blocked = {"we demonstrate", "in order to train"}
+        return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -5153,7 +5327,11 @@ class AnalysisNormalizationService:
 
     def _needs_bert_section_sentence_override(self, document_text: str) -> bool:
         lowered = document_text.lower()
-        return (self._is_bert_text(document_text) and "contributions of our paper" in lowered) or self._is_bert_masked_lm_procedure_section(document_text)
+        return (
+            (self._is_bert_text(document_text) and "contributions of our paper" in lowered)
+            or self._is_bert_masked_lm_procedure_section(document_text)
+            or self._is_bert_nsp_procedure_section(document_text)
+        )
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
         lowered = document_text.lower()
@@ -5171,6 +5349,8 @@ class AnalysisNormalizationService:
         if self._is_bert_input_representation_masked_lm_transition_section(document_text):
             return True
         if self._is_bert_masked_lm_procedure_section(document_text):
+            return True
+        if self._is_bert_nsp_procedure_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -5436,6 +5616,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_masked_lm_procedure_section(document_text):
             return True
+        if self._is_bert_nsp_procedure_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -5468,6 +5650,10 @@ class AnalysisNormalizationService:
     def _is_bert_masked_lm_procedure_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "we refer to this procedure as a" in lowered and "80% of the time" in lowered and "cross entropy loss" in lowered
+
+    def _is_bert_nsp_procedure_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "binarized next sentence prediction task" in lowered and "labeled as isnext" in lowered and "labeled as notnext" in lowered
 
     def _is_attention_text(self, document_text: str) -> bool:
         lowered = document_text.lower()

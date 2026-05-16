@@ -2188,3 +2188,85 @@ def test_bert_masked_lm_section_recovers_replacement_strategy():
     assert result.sentences[0].core_structure == "In contrast to A, we do B rather than C."
     assert "phrase_count_out_of_range:1" not in result.quality_warnings
     assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)
+
+
+def test_bert_nsp_section_recovers_sentence_pair_sampling():
+    document = (
+        "In order to train a model that understands sentence relationships, we pre-train for a binarized next sentence prediction task "
+        "that can be trivially generated from any monolingual corpus. "
+        "Specifically, when choosing the sentences A and B for each pretraining example, 50% of the time B is the actual next sentence that follows A "
+        "(labeled as IsNext), and 50% of the time it is a random sentence from the corpus (labeled as NotNext). "
+        "Despite its simplicity, we demonstrate in Section 5.1 that pre-training towards this task is very beneficial to both QA and NLI. "
+        "The final model achieves 97%-98% accuracy on NSP. "
+        "The vector C is not a meaningful sentence representation without fine-tuning, since it was trained with NSP. "
+        "The NSP task is closely related to representation-learning objectives used in prior work. "
+        "However, in prior work, only sentence embeddings are transferred to downstream tasks, where BERT transfers all parameters to initialize end-task model parameters."
+    )
+    payload = {
+        "terms": [
+            {"term": "BERT", "meaning": "generic"},
+            {"term": "pre-training", "meaning": "generic"},
+            {"term": "binarized", "meaning": "too narrow alone"},
+            {"term": "monolingual corpus", "meaning": "corpus"},
+        ],
+        "concepts": [
+            {"concept": "fine-tuning", "explanation": "generic"},
+            {"concept": "next sentence prediction", "explanation": "term duplicated as concept"},
+            {"concept": "binarized", "explanation": "too narrow alone"},
+        ],
+        "phrases": [{"phrase": "we demonstrate", "function": "result", "explanation": "thin phrase"}],
+        "summaries": {"one_line": "The paper introduces BERT, a bidirectional Transformer representation model for language understanding."},
+        "sentences": [
+            {
+                "sentence": "In order to train a model that understands sentence relationships, we pre-train for a binarized next sentence prediction task.",
+                "core_structure": "Main claim + explanation.",
+            }
+        ],
+        "quality_warnings": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-nsp", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "next sentence prediction",
+        "binarized next sentence prediction task",
+        "monolingual corpus",
+        "IsNext",
+        "NotNext",
+        "QA",
+        "NLI",
+        "vector C",
+        "all parameters",
+    }.issubset(terms)
+    assert "BERT" not in terms
+    assert "pre-training" not in terms
+    assert "binarized" not in terms
+    assert {
+        "sentence-relationship pre-training",
+        "balanced IsNext/NotNext sampling",
+        "self-supervised NSP data generation",
+        "QA/NLI sentence-pair benefit",
+        "C-vector caveat",
+        "full-parameter transfer",
+    }.issubset(concepts)
+    assert "fine-tuning" not in concepts
+    assert "binarized" not in concepts
+    assert {
+        "binarized next sentence prediction task",
+        "can be trivially generated from",
+        "when choosing the sentences",
+        "50% of the time",
+        "labeled as IsNext",
+        "labeled as NotNext",
+        "Despite its simplicity",
+        "is very beneficial to",
+        "is not a meaningful sentence representation without",
+        "closely related to",
+    }.issubset(phrases)
+    assert "we demonstrate" not in phrases
+    assert "In order to train" not in phrases
+    assert result.summaries.one_line == "This section defines BERT's Next Sentence Prediction task and why it supports sentence-pair understanding."
+    assert result.sentences[0].core_structure == "When choosing A and B, 50% is X and 50% is Y."
