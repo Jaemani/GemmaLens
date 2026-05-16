@@ -28,6 +28,8 @@ class AnalysisNormalizationService:
         if self._is_bert_pretraining_finetuning_procedure_section(document_text):
             terms = self._prefer_bert_pretraining_finetuning_procedure_terms(terms, document_text)
             phrases = self._filter_bert_pretraining_finetuning_procedure_phrases(phrases)
+        if self._is_bert_architecture_model_size_section(document_text):
+            terms = self._prefer_bert_architecture_model_size_terms(terms, document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -88,6 +90,8 @@ class AnalysisNormalizationService:
         if self._is_bert_pretraining_finetuning_procedure_section(document_text):
             normalized["concepts"] = self._prefer_bert_pretraining_finetuning_procedure_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_bert_pretraining_finetuning_procedure_phrases(normalized["phrases"])
+        if self._is_bert_architecture_model_size_section(document_text):
+            normalized["concepts"] = self._prefer_bert_architecture_model_size_concepts(normalized["concepts"], document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -1766,6 +1770,14 @@ class AnalysisNormalizationService:
                 ("is a special separator token", "general", "Defines the token that separates text segments."),
                 ("There has also been work showing", "claim", "Introduces another related-work branch."),
                 ("effective transfer from", "result", "States the source of transfer learning evidence."),
+                ("A distinctive feature of BERT is", "claim", "Introduces the architectural property the section wants the reader to notice."),
+                ("There is minimal difference between", "contrast", "Contrasts pre-trained and downstream architectures by emphasizing their similarity."),
+                ("is a multi-layer bidirectional Transformer encoder", "method", "Defines the model architecture in one compressed noun phrase."),
+                ("we denote the number of", "general", "Defines notation for model-size parameters."),
+                ("we primarily report results on", "result", "Introduces the model-size variants used in experiments."),
+                ("was chosen to have the same model size as", "method", "Explains why BERTBASE is comparable with GPT."),
+                ("is able to unambiguously represent", "method", "Explains the design goal of BERT input representation."),
+                ("refers to the input token sequence", "general", "Defines what sequence means in the paper."),
             ]
         elif self._is_attention_text(document_text):
             phrase_specs = [
@@ -2847,6 +2859,27 @@ class AnalysisNormalizationService:
                     "The authors clarify that fine-tuning updates the full model, not only the output layer.",
                     "'During fine-tuning'은 적용 단계에서 실제로 일어나는 일을 설명하는 시간/단계 신호입니다.",
                     "The repeated word 'fine-tuning/fine-tuned' is normal technical wording, not a typo.",
+                ),
+                (
+                    "A distinctive feature of BERT is",
+                    "A distinctive feature of X is Y.",
+                    "The authors mark unified architecture across tasks as a key design property of BERT.",
+                    "'A distinctive feature of'는 다른 방법과 구분되는 특징을 바로 소개하는 표현입니다.",
+                    "The sentence is important because it tells you what to focus on before technical details begin.",
+                ),
+                (
+                    "we denote the number of",
+                    "We denote the number of A as X, B as Y, and C as Z.",
+                    "The authors define L, H, and A before comparing BERTBASE and BERTLARGE.",
+                    "'denote ... as'는 기호 정의를 나타내는 논문 표현입니다.",
+                    "The notation sentence is dense because it defines three variables at once.",
+                ),
+                (
+                    "is able to unambiguously represent",
+                    "X is able to represent both A and B in one C.",
+                    "The authors explain why BERT's input format works for both single-sentence and sentence-pair tasks.",
+                    "'is able to'는 기능이나 capability를 설명하는 표현입니다.",
+                    "This sentence shifts from model architecture to input representation.",
                 ),
             ]
         elif self._is_attention_text(document_text):
@@ -4174,6 +4207,23 @@ class AnalysisNormalizationService:
                         "Treat [CLS] and [SEP] as input-format terms, not paper concepts.",
                     ],
                 }
+            if self._is_bert_architecture_model_size_section(document_text):
+                return {
+                    "one_line": "This section defines BERT's unified Transformer-encoder architecture, model sizes, and input representation.",
+                    "simple": (
+                        "BERT uses nearly the same architecture for pre-training and downstream tasks: a multi-layer bidirectional Transformer encoder. "
+                        "The section defines L, H, and A, compares BERTBASE with BERTLARGE, and introduces the input representation for single or paired text."
+                    ),
+                    "academic": (
+                        "The section specifies BERT's architecture and experimental variants: unified task architecture, Transformer encoder backbone, "
+                        "layer/hidden-size/attention-head notation, BERTBASE/BERTLARGE configurations, and WordPiece-based input sequences."
+                    ),
+                    "study_notes": [
+                        "Do not stop at the question-answering example; the main point is unified architecture.",
+                        "Read L/H/A as notation: layers, hidden size, and attention heads.",
+                        "Separate model-size terms from input-format terms such as sentence, sequence, and WordPiece embeddings.",
+                    ],
+                }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
                 return {
                     "one_line": "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning.",
@@ -4592,6 +4642,141 @@ class AnalysisNormalizationService:
         blocked = {"we introduce"}
         return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
 
+    def _prefer_bert_architecture_model_size_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"bert", "openai gpt", "bidirectional transformer encoder"}
+        preferred = [
+            (
+                "unified architecture",
+                "A shared BERT architecture used across different downstream tasks.",
+                "field_term",
+                "medium",
+                "This is the section's main architecture claim.",
+            ),
+            (
+                "multi-layer bidirectional Transformer encoder",
+                "BERT's backbone architecture: stacked Transformer encoder layers with bidirectional context.",
+                "field_term",
+                "hard",
+                "This is the technical definition of BERT's model architecture.",
+            ),
+            ("L", "The number of Transformer blocks or layers.", "useful", "medium", "This notation is needed to read BERTBASE and BERTLARGE."),
+            ("H", "The hidden size of the model.", "useful", "medium", "This notation is needed to compare model capacity."),
+            ("A", "The number of self-attention heads.", "useful", "medium", "This notation is needed to read the model-size configurations."),
+            (
+                "BERTBASE",
+                "The 12-layer, 110M-parameter BERT model sized for comparison with OpenAI GPT.",
+                "field_term",
+                "medium",
+                "This is the smaller reported BERT variant.",
+            ),
+            (
+                "BERTLARGE",
+                "The 24-layer, 340M-parameter BERT model used for higher-capacity results.",
+                "field_term",
+                "medium",
+                "This is the larger reported BERT variant.",
+            ),
+            (
+                "input representation",
+                "The format that lets BERT represent either one text span or a pair of text spans in one token sequence.",
+                "field_term",
+                "hard",
+                "This explains how one architecture can handle many task types.",
+            ),
+            (
+                "WordPiece embeddings",
+                "Subword token embeddings using a fixed vocabulary.",
+                "field_term",
+                "medium",
+                "This is BERT's tokenization/embedding choice.",
+            ),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            lowered = term.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                promoted.append(
+                    {
+                        "term": term,
+                        "meaning": meaning,
+                        "domain_relevance": "high" if priority == "field_term" else "medium",
+                        "difficulty": difficulty,
+                        "source_sentence": self._source_sentence(None, term, document_text),
+                        "should_save": True,
+                        "learning_priority": priority,
+                        "reason": reason,
+                        "context_meaning": meaning,
+                        "general_meaning": meaning,
+                        "confidence": 0.88,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}
+        ]
+        return [*promoted, *rest][:12]
+
+    def _prefer_bert_architecture_model_size_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"bidirectional transformer encoder", "wordpiece embeddings", "bert", "openai gpt"}
+        preferred = {
+            "unified task architecture": (
+                "BERT keeps minimal difference between the pre-trained architecture and final downstream architectures.",
+                "This is the productively reusable design idea, larger than any single term.",
+                "minimal difference",
+            ),
+            "Transformer encoder backbone": (
+                "BERT is implemented as a multi-layer bidirectional Transformer encoder.",
+                "This anchors the architecture in the Transformer family without repeating the whole Transformer paper.",
+                "multi-layer bidirectional Transformer encoder",
+            ),
+            "model-size notation": (
+                "The paper uses L for layers, H for hidden size, and A for self-attention heads.",
+                "This lets the learner read BERTBASE and BERTLARGE configurations accurately.",
+                "we denote the number of",
+            ),
+            "BERTBASE versus BERTLARGE": (
+                "The paper reports a 12-layer 110M-parameter base model and a 24-layer 340M-parameter large model.",
+                "This separates model variant names from general BERT terminology.",
+                "BERTBASE",
+            ),
+            "single-or-pair input sequence": (
+                "BERT's input representation can encode either one span or two spans in a single token sequence.",
+                "This explains how BERT handles question answering and sentence-pair tasks with one architecture.",
+                "unambiguously represent both a single sentence and a pair of sentences",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            lowered = concept.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                promoted.append(
+                    {
+                        "concept": concept,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [concept],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.86,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -4633,6 +4818,8 @@ class AnalysisNormalizationService:
         if self._is_bert_elmo_finetuning_transition_section(document_text):
             return True
         if self._is_bert_pretraining_finetuning_procedure_section(document_text):
+            return True
+        if self._is_bert_architecture_model_size_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -4892,6 +5079,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_pretraining_finetuning_procedure_section(document_text):
             return True
+        if self._is_bert_architecture_model_size_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -4912,6 +5101,10 @@ class AnalysisNormalizationService:
     def _is_bert_pretraining_finetuning_procedure_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "overall pre-training and fine-tuning procedures for bert" in lowered and "[cls]" in lowered and "[sep]" in lowered
+
+    def _is_bert_architecture_model_size_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "distinctive feature of bert is its unified architecture" in lowered and "bertbase" in lowered and "bertlarge" in lowered
 
     def _is_attention_text(self, document_text: str) -> bool:
         lowered = document_text.lower()

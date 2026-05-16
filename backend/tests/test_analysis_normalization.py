@@ -1953,3 +1953,77 @@ def test_bert_pretraining_finetuning_figure_becomes_workflow_lesson():
     assert result.summaries.one_line == "This section explains BERT's pre-training to fine-tuning workflow and input-format tokens."
     assert result.sentences[0].core_structure == "Apart from A, the same B are used in C and D."
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
+
+
+def test_bert_architecture_section_recovers_model_sizes_and_input_representation():
+    document = (
+        "The question-answering example in Figure 1 will serve as a running example for this section. "
+        "A distinctive feature of BERT is its unified architecture across different tasks. "
+        "There is minimal difference between the pre-trained architecture and the final downstream architecture. "
+        "Model Architecture BERT's model architecture is a multi-layer bidirectional Transformer encoder. "
+        "In this work, we denote the number of layers as L, the hidden size as H, and the number of self-attention heads as A. "
+        "We primarily report results on two model sizes: BERTBASE (L=12, H=768, A=12, Total Parameters=110M) "
+        "and BERTLARGE (L=24, H=1024, A=16, Total Parameters=340M). "
+        "BERTBASE was chosen to have the same model size as OpenAI GPT for comparison purposes. "
+        "Input/Output Representations To make BERT handle a variety of downstream tasks, our input representation is able to "
+        "unambiguously represent both a single sentence and a pair of sentences in one token sequence. "
+        "A sequence refers to the input token sequence to BERT. We use WordPiece embeddings with a 30,000 token vocabulary."
+    )
+    payload = {
+        "terms": [
+            {"term": "bidirectional Transformer encoder", "meaning": "architecture"},
+            {"term": "WordPiece embeddings", "meaning": "subword embeddings"},
+        ],
+        "concepts": [
+            {"concept": "bidirectional Transformer encoder", "explanation": "term duplicated as concept"},
+            {"concept": "WordPiece embeddings", "explanation": "term duplicated as concept"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "The question-answering example in Figure 1 will serve as a running example for this section."},
+        "sentences": [{"sentence": "The question-answering example in Figure 1 will serve as a running example for this section.", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:0", "term_count_out_of_range:2"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-architecture", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "unified architecture",
+        "multi-layer bidirectional Transformer encoder",
+        "L",
+        "H",
+        "A",
+        "BERTBASE",
+        "BERTLARGE",
+        "input representation",
+        "WordPiece embeddings",
+    }.issubset(terms)
+    assert "BERT" not in terms
+    assert "OpenAI GPT" not in terms
+    assert "bidirectional Transformer encoder" not in terms
+    assert {
+        "unified task architecture",
+        "Transformer encoder backbone",
+        "model-size notation",
+        "BERTBASE versus BERTLARGE",
+        "single-or-pair input sequence",
+    }.issubset(concepts)
+    assert "bidirectional Transformer encoder" not in concepts
+    assert "WordPiece embeddings" not in concepts
+    assert "BERT" not in concepts
+    assert {
+        "A distinctive feature of BERT is",
+        "There is minimal difference between",
+        "is a multi-layer bidirectional Transformer encoder",
+        "we denote the number of",
+        "we primarily report results on",
+        "was chosen to have the same model size as",
+        "is able to unambiguously represent",
+        "refers to the input token sequence",
+    }.issubset(phrases)
+    assert result.summaries.one_line == "This section defines BERT's unified Transformer-encoder architecture, model sizes, and input representation."
+    assert result.sentences[0].core_structure == "A distinctive feature of X is Y."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings
+    assert "term_count_out_of_range:2" not in result.quality_warnings
