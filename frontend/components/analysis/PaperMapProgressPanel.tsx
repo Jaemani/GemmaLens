@@ -57,8 +57,9 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
 
   return (
     <section className="rounded-lg border border-line bg-panel shadow-material">
-      <div className="flex flex-wrap items-start justify-between gap-3 p-4">
-        <div>
+      <div className="p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{complete ? "Paper study map" : "Progressive paper map"}</p>
           <h2 className="mt-1 text-base font-semibold">{complete ? "Whole-paper guide ready" : "Map from ready sections"}</h2>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-neutral-600">
@@ -66,37 +67,39 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
               ? "Complete section-level map for the paper: reading guide, argument flow, priority concepts, and review material."
               : "Auto-refreshes as section lessons finish. Expand when you want the argument flow and priority concepts."}
           </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="inline-flex items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-surface"
+          aria-expanded={expanded}
+        >
+          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          {expanded ? "Collapse" : "Open map"}
+        </button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {complete ? (
-            <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Complete map</span>
+            <span className="inline-flex rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Complete map</span>
           ) : (
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs font-semibold text-neutral-600">
+            <>
               <span className="h-2 w-36 overflow-hidden rounded-full bg-surface">
                 <span className="block h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
               </span>
-              <span>{progress}% mapped</span>
-            </div>
+              <span className="text-xs font-semibold text-neutral-600">{progress}% mapped</span>
+            </>
           )}
-        </div>
-        <div className="flex items-center gap-2">
           {!complete ? (
             <button
               type="button"
               onClick={load}
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-surface disabled:opacity-50"
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               Refresh
             </button>
           ) : null}
-          <button
-            type="button"
-            onClick={() => setExpanded((value) => !value)}
-            className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-xs font-semibold text-white"
-          >
-            {expanded ? "Collapse" : "Expand"}
-            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
         </div>
       </div>
       {expanded ? (
