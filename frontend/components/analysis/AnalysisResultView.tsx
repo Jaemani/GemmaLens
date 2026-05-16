@@ -20,7 +20,7 @@ import { SentenceDecompositionCard } from "./SentenceDecompositionCard";
 import { buildRows, TermTable } from "./TermTable";
 import { AnalysisProgress } from "./AnalysisProgress";
 import { ConceptMapPanel } from "./ConceptMapPanel";
-import { DocumentPageReader, SectionLessonCard, type SectionLessonSelection } from "./DocumentPageReader";
+import { DocumentPageReader, SectionLessonCard, type SectionLessonSelection, type SectionPreparationStatus } from "./DocumentPageReader";
 import { ExperimentSwitchPanel } from "./ExperimentSwitchPanel";
 import { PaperMapProgressPanel } from "./PaperMapProgressPanel";
 import { PdfSourcePane } from "./PdfSourcePane";
@@ -39,6 +39,9 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const [requestedPdfPage, setRequestedPdfPage] = useState<number | null>(null);
   const [sourceReady, setSourceReady] = useState(false);
   const [sectionLesson, setSectionLesson] = useState<SectionLessonSelection | null>(null);
+  const [sectionPreparation, setSectionPreparation] = useState<SectionPreparationStatus | null>(null);
+  const [stopSectionPreparation, setStopSectionPreparation] = useState(false);
+  const [continueSectionPreparationKey, setContinueSectionPreparationKey] = useState(0);
   const [showDetailedOutput, setShowDetailedOutput] = useState(false);
   const [analysisMissing, setAnalysisMissing] = useState(false);
 
@@ -166,12 +169,25 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
     const hasPdfViewer = Boolean(document.source_type === "pdf" && document.has_original_file);
     const workspaceContent = (
       <div className="min-w-0 space-y-6">
+        {isDocumentSource ? (
+          <SectionPreparationPanel
+            status={sectionPreparation}
+            onStop={() => setStopSectionPreparation(true)}
+            onContinue={() => {
+              setStopSectionPreparation(false);
+              setContinueSectionPreparationKey((value) => value + 1);
+            }}
+          />
+        ) : null}
         {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
         {isDocumentSource ? (
           <DocumentPageReader
             documentId={documentId}
             onSectionAnalyzed={() => setPaperMapRefreshKey((value) => value + 1)}
             onSectionLesson={setSectionLesson}
+            onPreparationStatus={setSectionPreparation}
+            stopPreparation={stopSectionPreparation}
+            continuePreparationKey={continueSectionPreparationKey}
             onSourcePageChange={setRequestedPdfPage}
             requestedSourcePage={requestedPdfPage}
             sourceReady={!hasPdfViewer || sourceReady}
@@ -195,7 +211,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
             <div className="min-w-0 xl:sticky xl:top-4">
               <PdfSourcePane document={document} requestedPage={requestedPdfPage} onPageChange={setRequestedPdfPage} onReady={() => setSourceReady(true)} />
             </div>
-            {workspaceContent}
+            <div className="min-w-0 xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto xl:pr-1">{workspaceContent}</div>
           </div>
         ) : (
           workspaceContent
@@ -236,12 +252,25 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   ) : null;
   const guideContent = (
     <div className="min-w-0 space-y-6">
+      {isDocumentSource ? (
+        <SectionPreparationPanel
+          status={sectionPreparation}
+          onStop={() => setStopSectionPreparation(true)}
+          onContinue={() => {
+            setStopSectionPreparation(false);
+            setContinueSectionPreparationKey((value) => value + 1);
+          }}
+        />
+      ) : null}
       {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
       {isDocumentSource ? (
         <DocumentPageReader
           documentId={documentId}
           onSectionAnalyzed={() => setPaperMapRefreshKey((value) => value + 1)}
           onSectionLesson={setSectionLesson}
+          onPreparationStatus={setSectionPreparation}
+          stopPreparation={stopSectionPreparation}
+          continuePreparationKey={continueSectionPreparationKey}
           onSourcePageChange={setRequestedPdfPage}
           requestedSourcePage={requestedPdfPage}
           sourceReady={!hasPdfViewer || sourceReady}
@@ -344,4 +373,58 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
 function shouldOpenSectionWorkspaceWithoutBaseAnalysis(document: DocumentRead) {
   if (document.source_type === "pdf") return true;
   return document.content.length > 5000;
+}
+
+function SectionPreparationPanel({
+  status,
+  onStop,
+  onContinue
+}: {
+  status: SectionPreparationStatus | null;
+  onStop: () => void;
+  onContinue: () => void;
+}) {
+  if (!status) return null;
+  const progress = status.total ? Math.min(100, Math.round((status.ready / status.total) * 100)) : 0;
+  const canContinue = !status.running && status.ready < status.total;
+  return (
+    <section className="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-material">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent">Section preparation</p>
+          <h2 className="mt-1 text-lg font-semibold text-ink">{status.message}</h2>
+          <p className="mt-1 text-sm font-medium text-neutral-700">
+            {status.ready} / {status.total} ready · Mode: {status.mode}
+            {status.running ? ", currently running" : ""}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 text-sm font-semibold text-accent">
+            {status.running ? <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent" /> : null}
+            {status.running ? "Analyzing" : status.ready >= status.total ? "Complete" : "Paused"}
+          </div>
+          {status.running ? (
+            <button
+              type="button"
+              onClick={onStop}
+              className="rounded-md border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-ink hover:bg-blue-100"
+            >
+              Stop after current section
+            </button>
+          ) : canContinue ? (
+            <button
+              type="button"
+              onClick={onContinue}
+              className="rounded-md bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+            >
+              Continue preparation
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white">
+        <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${progress}%` }} />
+      </div>
+    </section>
+  );
 }

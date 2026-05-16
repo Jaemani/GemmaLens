@@ -58,15 +58,16 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
     <section className="rounded-lg border border-line bg-panel shadow-material">
       <div className="flex flex-wrap items-start justify-between gap-3 p-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Paper map</p>
-          <h2 className="mt-1 text-base font-semibold">{complete ? "Whole-paper guide ready" : guide.thesis_so_far || "Building from ready sections"}</h2>
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Progressive paper map</p>
+          <h2 className="mt-1 text-base font-semibold">{complete ? "Whole-paper guide ready" : "Map from ready sections"}</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-neutral-600">
+            Auto-refreshes as section lessons finish. Expand when you want the argument flow and priority concepts.
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-xs font-semibold text-neutral-600">
-            <span>
-              {analyzedCount} / {totalSections} sections analyzed
-            </span>
             <span className="h-2 w-36 overflow-hidden rounded-full bg-surface">
               <span className="block h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
             </span>
+            <span>{progress}% mapped</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -91,16 +92,18 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
       </div>
       {expanded ? (
         <div className="grid gap-4 border-t border-line p-5">
-          <div className="rounded-md border border-line bg-surface p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{guide.title}</p>
-          <p className="mt-2 text-sm leading-6 text-ink">{guide.thesis_so_far}</p>
-          <p className="mt-2 text-xs leading-5 text-neutral-600">{guide.coverage_note}</p>
-          <div className="mt-4 grid gap-4">
-            <GuideList title="Reading focus" rows={guide.reading_focus} />
-            <GuideList title="Next steps" rows={guide.next_steps} />
+          <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="rounded-md border border-line bg-surface p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{guide.title}</p>
+              <p className="mt-2 text-sm leading-6 text-ink">{guide.thesis_so_far}</p>
+              <p className="mt-2 text-xs leading-5 text-neutral-600">{guide.coverage_note}</p>
+              <div className="mt-4 grid gap-4">
+                <GuideList title="Reading focus" rows={guide.reading_focus.slice(0, 3)} />
+                <GuideList title="Next steps" rows={guide.next_steps.slice(0, 3)} />
+              </div>
+            </div>
+            <SynthesisPanel synthesis={synthesis} complete={complete} />
           </div>
-          </div>
-          <SynthesisPanel synthesis={synthesis} complete={complete} />
           <div className="rounded-md border border-line bg-panel p-4">
             <button
               type="button"
@@ -163,9 +166,9 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
 function SynthesisPanel({ synthesis, complete }: { synthesis: NonNullable<PaperMap["synthesis"]>; complete: boolean }) {
   const [showFullFlow, setShowFullFlow] = useState(false);
   const [showStudyLists, setShowStudyLists] = useState(false);
-  const visibleFlow = showFullFlow ? synthesis.argument_flow : synthesis.argument_flow.slice(0, 6);
+  const visibleFlow = showFullFlow ? synthesis.argument_flow : synthesis.argument_flow.slice(0, 5);
   const hiddenFlowCount = Math.max(0, synthesis.argument_flow.length - visibleFlow.length);
-  const title = complete ? "Complete paper learning guide" : "Whole-paper learning draft";
+  const title = complete ? "Complete map" : "Draft map";
 
   return (
     <div className="rounded-md border border-line bg-surface p-4">
@@ -173,7 +176,9 @@ function SynthesisPanel({ synthesis, complete }: { synthesis: NonNullable<PaperM
         <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
         <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-neutral-500">{synthesis.status}</span>
       </div>
-      <GuideList title="Argument flow" rows={visibleFlow} />
+      <div className="mt-3 max-h-56 overflow-y-auto rounded-md border border-line bg-panel p-3">
+        <GuideList title="Argument flow" rows={visibleFlow} />
+      </div>
       {hiddenFlowCount ? (
         <button
           type="button"
@@ -191,7 +196,7 @@ function SynthesisPanel({ synthesis, complete }: { synthesis: NonNullable<PaperM
           Collapse argument flow
         </button>
       ) : null}
-      <div className="mt-4">
+      <div className="mt-4 rounded-md border border-line bg-panel p-3">
         <SynthesisList title="Priority concepts" rows={synthesis.priority_concepts} limit={6} />
       </div>
       <div className="mt-4 rounded-md border border-line bg-panel p-3">

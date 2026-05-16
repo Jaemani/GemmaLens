@@ -9,6 +9,9 @@ export function DocumentPageReader({
   documentId,
   onSectionAnalyzed,
   onSectionLesson,
+  onPreparationStatus,
+  stopPreparation = false,
+  continuePreparationKey = 0,
   onSourcePageChange,
   requestedSourcePage,
   sourceReady = true,
@@ -17,6 +20,9 @@ export function DocumentPageReader({
   documentId: string;
   onSectionAnalyzed?: () => void;
   onSectionLesson?: (lesson: SectionLessonSelection | null) => void;
+  onPreparationStatus?: (status: SectionPreparationStatus | null) => void;
+  stopPreparation?: boolean;
+  continuePreparationKey?: number;
   onSourcePageChange?: (page: number | null) => void;
   requestedSourcePage?: number | null;
   sourceReady?: boolean;
@@ -37,6 +43,7 @@ export function DocumentPageReader({
   const attachInputRef = useRef<HTMLInputElement>(null);
   const sectionDrivenPdfPageRef = useRef<number | null>(null);
   const autoAnalyzeStartedRef = useRef(false);
+  const stopPreparationRef = useRef(false);
   const currentSection = sections[pageIndex];
   const page = currentSection?.text ?? "";
   const analyzedCount = sections.filter((section) => section.analyzed).length;
@@ -74,6 +81,15 @@ export function DocumentPageReader({
     }, 1200);
     return () => window.clearTimeout(timer);
   }, [autoAnalyzeAll, document, isBatchAnalyzing, sections, sourceReady]);
+
+  useEffect(() => {
+    stopPreparationRef.current = stopPreparation;
+  }, [stopPreparation]);
+
+  useEffect(() => {
+    if (!continuePreparationKey || !document || !sections.length || isBatchAnalyzing) return;
+    autoStudySections(sections.length);
+  }, [continuePreparationKey]);
 
   useEffect(() => {
     setSectionAnalysis(null);
@@ -123,6 +139,29 @@ export function DocumentPageReader({
       setBatchStatus(saved.status);
     }
   }, [batchStatus, progressStorageKey]);
+
+  useEffect(() => {
+    if (!sections.length) {
+      onPreparationStatus?.(null);
+      return;
+    }
+    onPreparationStatus?.({
+      message: allSectionsAnalyzed ? "All section lessons are ready." : batchStatus || "Automatic section-by-section preparation is on.",
+      mode: "one-by-one",
+      running: isBatchAnalyzing,
+      ready: analyzedCount,
+      total: sections.length
+    });
+    if (isBatchAnalyzing) {
+      writeGlobalActivity({
+        label: "Analyzing document sections",
+        detail: `${batchStatus || "Preparing sections one by one"} · ${analyzedCount}/${sections.length} ready`,
+        updatedAt: Date.now()
+      });
+    } else {
+      clearGlobalActivity();
+    }
+  }, [allSectionsAnalyzed, analyzedCount, batchStatus, isBatchAnalyzing, onPreparationStatus, sections.length]);
 
   async function analyzeSectionAt(index: number, options: { keepBusy?: boolean; stayOnCurrent?: boolean; showLesson?: boolean } = {}) {
     const section = sections[index];
@@ -198,6 +237,7 @@ export function DocumentPageReader({
       updatedAt: Date.now()
     });
     let completed = 0;
+    let paused = false;
     try {
       const runningStatus = `Preparing paper in the background: 0 / ${plannedCount} sections ready.`;
       setBatchStatus(runningStatus);
@@ -208,6 +248,18 @@ export function DocumentPageReader({
         updatedAt: Date.now()
       });
       for (const index of plannedIndices) {
+        if (stopPreparationRef.current) {
+          const status = `Preparation paused: ${completed} section${completed === 1 ? "" : "s"} finished in this run.`;
+          paused = true;
+          setBatchStatus(status);
+          writeAutoStudyProgress(progressStorageKey, {
+            status,
+            completed,
+            planned: plannedCount,
+            updatedAt: Date.now()
+          });
+          break;
+        }
         const sectionNumber = sections[index].section_number;
         const statusBefore = `Preparing section ${sectionNumber} / ${sections.length} one by one...`;
         setBatchStatus(statusBefore);
@@ -216,6 +268,7 @@ export function DocumentPageReader({
         setSections((current) =>
           current.map((section) => (section.index === sections[index].index ? { ...section, analyzed: true } : section))
         );
+        onSectionAnalyzed?.();
         if (index === pageIndex) {
           setSectionAnalysis(result);
           setSectionAnalysisIndex(sections[index].index);
@@ -229,10 +282,22 @@ export function DocumentPageReader({
           planned: plannedCount,
           updatedAt: Date.now()
         });
+        if (stopPreparationRef.current) {
+          const pausedStatus = `Preparation paused after section ${sectionNumber}. Continue when ready.`;
+          paused = true;
+          setBatchStatus(pausedStatus);
+          writeAutoStudyProgress(progressStorageKey, {
+            status: pausedStatus,
+            completed,
+            planned: plannedCount,
+            updatedAt: Date.now()
+          });
+          break;
+        }
       }
       const updatedSections = await api.listDocumentSections(documentId);
       setSections(updatedSections);
-      onSectionAnalyzed?.();
+      if (paused) return;
       const status = `Background preparation complete: ${completed} section${completed === 1 ? "" : "s"} ready.`;
       setBatchStatus(status);
       writeAutoStudyProgress(progressStorageKey, {
@@ -261,16 +326,15 @@ export function DocumentPageReader({
     <section className="rounded-lg border border-line bg-panel shadow-material">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line p-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section study</p>
-          <h2 className="mt-1 text-lg font-semibold">Page {currentPdfPage ?? "?"} · Section {currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1}</h2>
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Current section</p>
+          <h2 className="mt-1 text-lg font-semibold">
+            PDF page {currentPdfPage ?? "?"} · S{currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1}
+          </h2>
+          <p className="mt-1 text-xs font-semibold text-neutral-600">
+            Document section {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
+          </p>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-700">
             {currentSection?.preview || "Choose a section from the strip below."}
-          </p>
-          <p className="mt-2 text-xs font-semibold text-neutral-600">
-            {analyzedCount} / {sections.length || 1} sections analyzed
-          </p>
-          <p className="mt-2 text-xs leading-5 text-neutral-600">
-            Automatic preparation runs section by section in the background. Ready sections turn green.
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
@@ -309,19 +373,17 @@ export function DocumentPageReader({
           </button>
         </div>
       </div>
-      {batchStatus || autoAnalyzeAll ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-blue-50 px-5 py-2 text-xs font-semibold text-accent">
-          <span>{allSectionsAnalyzed ? "All section lessons are ready." : batchStatus || "Automatic section-by-section preparation is on."}</span>
-          <span className="text-neutral-600">{isBatchAnalyzing ? "Mode: one-by-one, currently running" : "Mode: one-by-one"}</span>
-        </div>
-      ) : null}
       {sections.length ? (
-        <div className="flex gap-3 overflow-x-auto border-b border-line px-5 py-3">
+        <div className="border-b border-line px-5 py-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section navigator</p>
+            <p className="text-xs font-semibold text-neutral-600">Green sections are ready</p>
+          </div>
+          <div className="flex gap-2 overflow-x-auto">
           {sectionGroups.map((group) => (
-            <div key={group.key} className="shrink-0 rounded-md border border-line bg-surface p-2">
+            <div key={group.key} className="shrink-0 rounded-md border border-line bg-surface px-2 py-1.5">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{group.label}</p>
-                <p className="text-[11px] font-semibold text-neutral-500">{group.items.length} section{group.items.length === 1 ? "" : "s"}</p>
               </div>
               <div className="flex gap-1">
                 {group.items.map(({ section, index, localNumber }) => (
@@ -346,6 +408,7 @@ export function DocumentPageReader({
               </div>
             </div>
           ))}
+          </div>
         </div>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
@@ -359,15 +422,7 @@ export function DocumentPageReader({
           Previous section
         </button>
         <div className="text-center">
-          <p className="text-sm font-semibold text-ink">
-            Document section {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
-          </p>
-          <p className="text-xs font-semibold text-neutral-600">
-            {currentPdfPage ? `PDF page ${currentPdfPage}` : "PDF page unknown"}
-            {currentPageSectionNumber ? ` · S${currentPageSectionNumber} on this page` : ""}
-          </p>
-          <p className="text-xs text-neutral-500">{(currentSection?.char_count ?? page.length).toLocaleString()} chars from backend-cleaned text</p>
-          <p className={`text-xs font-semibold ${currentSection?.analyzed ? "text-green-700" : "text-neutral-500"}`}>
+          <p className={`rounded-full px-3 py-1 text-xs font-semibold ${currentSection?.analyzed ? "bg-green-50 text-green-700" : "bg-neutral-100 text-neutral-500"}`}>
             {currentSection?.analyzed ? "Ready" : "Not ready"}
           </p>
         </div>
@@ -584,6 +639,14 @@ export type SectionLessonSelection = {
   sectionLabel?: string;
 };
 
+export type SectionPreparationStatus = {
+  message: string;
+  mode: "one-by-one";
+  running: boolean;
+  ready: number;
+  total: number;
+};
+
 function MiniList({
   title,
   supportLabel,
@@ -768,5 +831,21 @@ function writeAutoStudyProgress(key: string, progress: AutoStudyProgress) {
     window.localStorage.setItem(key, JSON.stringify(progress));
   } catch {
     // Ignore storage failures; auto-study still works for the current session.
+  }
+}
+
+function writeGlobalActivity(activity: { label: string; detail: string; updatedAt: number }) {
+  try {
+    window.localStorage.setItem("gemmalens:active-task", JSON.stringify(activity));
+  } catch {
+    // Global status is best-effort UI state.
+  }
+}
+
+function clearGlobalActivity() {
+  try {
+    window.localStorage.removeItem("gemmalens:active-task");
+  } catch {
+    // Global status is best-effort UI state.
   }
 }
