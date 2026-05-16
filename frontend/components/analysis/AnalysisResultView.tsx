@@ -236,22 +236,14 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const isVideoSource = document?.source_type === "transcript" || document?.source_type === "video_segment";
   const isDocumentSource = documentId !== DEMO_DOCUMENT_ID && !isVideoSource;
   const hasPdfViewer = Boolean(document?.source_type === "pdf" && document.has_original_file);
-  const experimentControls = (
+  const experimentControls = documentId === DEMO_DOCUMENT_ID ? (
     <>
       <ExperimentSwitchPanel config={config} onChange={setConfig} />
-      <section className="rounded-lg border border-line bg-panel p-4 shadow-material">
-        <p className="text-sm font-semibold">User-fit mode</p>
-        <p className="mt-1 text-sm text-neutral-600">
-          {config.userFit === "onboarding"
-            ? "A Ask mode: analysis assumes level, support language, learning language, and field are selected before reading."
-            : "B Learn mode: analysis should adapt from saved, ignored, viewed, and familiar items over time."}
-        </p>
-      </section>
       {autoSaveStatus ? (
         <div className="rounded-lg border border-line bg-blue-50 px-4 py-3 text-sm font-medium text-accent">{autoSaveStatus}</div>
       ) : null}
     </>
-  );
+  ) : null;
   const scopeNotice = isSectionLevel && isVideoSource ? (
     <section className="rounded-lg border border-line bg-panel p-4 text-sm leading-6 text-neutral-700 shadow-material">
       <p className="font-semibold text-ink">Transcript scope</p>
@@ -331,10 +323,12 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       ) : (
         guideContent
       )}
-      <div className="space-y-4">
-        {scopeNotice}
-        {experimentControls}
-      </div>
+      {scopeNotice || experimentControls ? (
+        <div className="space-y-4">
+          {scopeNotice}
+          {experimentControls}
+        </div>
+      ) : null}
     </div>
   );
 }

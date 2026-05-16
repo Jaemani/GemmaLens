@@ -183,6 +183,7 @@ Local demo records currently include:
 - Cross-page Playwright audit exposed that PDF extraction markers could still leak into visible analysis excerpts. Section lesson source snippets now strip `GEMMALENS_PDF_PAGE` markers before rendering.
 - Guide page audit exposed outdated generic copy: it described a vague input/chunk/analyze/save pipeline instead of the current PDF source pane, page-local section study, paper map, and concept/term/expression separation. The guide now documents the actual paper-reading workflow, translation's support role, and current product limits.
 - Dictionary audit exposed that saved items looked like a small raw word list, not a review queue. The dictionary now summarizes saved concepts, terms, expressions, and sentence patterns separately and adds a review-focus filter by item type.
+- Analysis page audit exposed that internal A/B experiment controls and user-fit mode copy still appeared on real paper results. Those controls now stay out of real analysis pages and remain limited to the demo result path.
 
 ## Still Weak
 
