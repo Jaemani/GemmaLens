@@ -8,13 +8,17 @@ import type { AnalysisResult, DocumentRead, DocumentSection } from "@/lib/types"
 export function DocumentPageReader({
   documentId,
   onSectionAnalyzed,
+  onSectionLesson,
   onSourcePageChange,
-  requestedSourcePage
+  requestedSourcePage,
+  hideInlineLesson = false
 }: {
   documentId: string;
   onSectionAnalyzed?: () => void;
+  onSectionLesson?: (lesson: { analysis: AnalysisResult; sectionNumber: number }) => void;
   onSourcePageChange?: (page: number | null) => void;
   requestedSourcePage?: number | null;
+  hideInlineLesson?: boolean;
 }) {
   const [document, setDocument] = useState<DocumentRead | null>(null);
   const [sections, setSections] = useState<DocumentSection[]>([]);
@@ -86,6 +90,7 @@ export function DocumentPageReader({
     try {
       const created = await api.analyzeDocumentSection(document.id, section.index);
       setSectionAnalysis(created);
+      onSectionLesson?.({ analysis: created, sectionNumber: index + 1 });
       setSections((current) =>
         current.map((currentSection) => (currentSection.index === section.index ? { ...currentSection, analyzed: true } : currentSection))
       );
@@ -326,8 +331,8 @@ export function DocumentPageReader({
       ) : error ? (
         <p className="mx-5 my-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       ) : null}
-      {sectionAnalysis ? (
-        <InlineSectionLesson
+      {sectionAnalysis && !hideInlineLesson ? (
+        <SectionLessonCard
           analysis={sectionAnalysis}
           sectionNumber={pageIndex + 1}
           onAnalyzeNext={targetUnanalyzedIndex >= 0 ? () => analyzeSectionAt(targetUnanalyzedIndex) : undefined}
@@ -338,7 +343,7 @@ export function DocumentPageReader({
   );
 }
 
-function InlineSectionLesson({
+export function SectionLessonCard({
   analysis,
   sectionNumber,
   onAnalyzeNext,

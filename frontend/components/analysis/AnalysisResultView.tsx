@@ -19,7 +19,7 @@ import { SentenceDecompositionCard } from "./SentenceDecompositionCard";
 import { buildRows, TermTable } from "./TermTable";
 import { AnalysisProgress } from "./AnalysisProgress";
 import { ConceptMapPanel } from "./ConceptMapPanel";
-import { DocumentPageReader } from "./DocumentPageReader";
+import { DocumentPageReader, SectionLessonCard } from "./DocumentPageReader";
 import { ExperimentSwitchPanel } from "./ExperimentSwitchPanel";
 import { PaperMapProgressPanel } from "./PaperMapProgressPanel";
 import { PdfSourcePane } from "./PdfSourcePane";
@@ -36,6 +36,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const [rerunning, setRerunning] = useState(false);
   const [paperMapRefreshKey, setPaperMapRefreshKey] = useState(0);
   const [requestedPdfPage, setRequestedPdfPage] = useState<number | null>(null);
+  const [sectionLesson, setSectionLesson] = useState<{ analysis: AnalysisResult; sectionNumber: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -200,11 +201,14 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
         <DocumentPageReader
           documentId={documentId}
           onSectionAnalyzed={() => setPaperMapRefreshKey((value) => value + 1)}
+          onSectionLesson={setSectionLesson}
           onSourcePageChange={setRequestedPdfPage}
           requestedSourcePage={requestedPdfPage}
+          hideInlineLesson
         />
       ) : null}
       {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
+      {sectionLesson ? <SectionLessonCard analysis={sectionLesson.analysis} sectionNumber={sectionLesson.sectionNumber} isAnalyzingNext={false} /> : null}
       <ConceptMapPanel analysis={analysis} sourceKind={isVideoSource ? "video" : "document"} />
       {config.resultLayout === "readingContextFirst" ? reader : null}
       {learningObjects}
