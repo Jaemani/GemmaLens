@@ -1160,3 +1160,52 @@ def test_resnet_cifar_architecture_section_filters_table_noise():
     assert "subsampling is performed by convolutions with a stride of 2" not in phrases
     assert result.summaries.one_line == "This section defines the CIFAR-10 architecture used for controlled ResNet depth experiments."
     assert result.sentences[0].core_structure == "The subsampling is performed by A with B."
+
+
+def test_resnet_cifar_depth_behavior_section_recovers_plain_vs_residual_contrast():
+    document = (
+        "We compare n = {3, 5, 7, 9}, leading to 20, 32, 44, and 56-layer networks. "
+        "Fig. 6 shows the behaviors of the plain nets. The deep plain nets suffer from increased depth, and exhibit higher training error when going deeper. "
+        "This phenomenon is similar to that on ImageNet and on MNIST, suggesting that such an optimization difficulty is a fundamental problem. "
+        "Fig. 6 shows the behaviors of ResNets. Our ResNets manage to overcome the optimization difficulty and demonstrate accuracy gains when the depth increases. "
+        "We further explore n = 18 that leads to a 110-layer ResNet. "
+        "The initial learning rate of 0.1 is slightly too large to start converging. "
+        "So we use 0.01 to warm up the training until the training error is below 80%, and then go back to 0.1 and continue training."
+    )
+    payload = {
+        "terms": [
+            {"term": "ResNets", "meaning": "too broad"},
+            {"term": "layer networks", "meaning": "fragment"},
+            {"term": "warm up the training", "meaning": "clause fragment"},
+            {"term": "until the training", "meaning": "clause fragment"},
+        ],
+        "concepts": [
+            {"concept": "ResNets", "explanation": "too broad"},
+            {"concept": "layer networks", "explanation": "fragment"},
+            {"concept": "warm up the training", "explanation": "clause fragment"},
+        ],
+        "phrases": [{"phrase": "suffer from increased depth", "function": "result", "explanation": "useful"}],
+        "summaries": {"one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth."},
+        "sentences": [{"sentence": "The deep plain nets suffer from increased depth.", "core_structure": "Main claim + explanation."}],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-cifar-depth", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert not {"ResNets", "layer networks", "warm up the training", "until the training"} & terms
+    assert not {"ResNets", "layer networks", "warm up the training"} & concepts
+    assert {"higher training error", "plain nets", "accuracy gains", "optimization difficulty", "110-layer ResNet"}.issubset(terms)
+    assert {
+        "plain-net depth degradation on CIFAR-10",
+        "ResNet depth scaling on CIFAR-10",
+        "optimization difficulty as a fundamental problem",
+        "110-layer ResNet",
+        "learning-rate warmup",
+    }.issubset(concepts)
+    assert {"suffer from increased depth", "manage to overcome", "demonstrate accuracy gains", "slightly too large to start converging"}.issubset(phrases)
+    assert result.summaries.one_line == (
+        "This section shows CIFAR-10 plain nets degrade with depth while ResNets overcome the optimization difficulty."
+    )
+    assert result.sentences[0].core_structure == "A suffer from B and exhibit C when D."

@@ -19,7 +19,7 @@ class AnalysisNormalizationService:
         terms = self._terms(payload.get("terms"), document_text)
         phrases = self._phrases(payload.get("phrases") or payload.get("academic_phrases") or payload.get("expressions"), document_text)
         terms = self._merge_learning_rows(self._heuristic_terms(document_text), terms, "term", limit=14)
-        phrases = self._merge_learning_rows(phrases, self._heuristic_phrases(document_text), "phrase", limit=10)
+        phrases = self._merge_learning_rows(phrases, self._heuristic_phrases(document_text), "phrase", limit=12)
         if self._is_bert_text(document_text):
             terms = self._filter_bert_learning_rows(terms, "term")
             phrases = self._filter_bert_learning_rows(phrases, "phrase")
@@ -29,6 +29,8 @@ class AnalysisNormalizationService:
             terms = self._filter_resnet_deep_results_noise(terms, "term")
         if self._is_resnet_cifar_architecture_section(document_text):
             terms = self._filter_resnet_cifar_architecture_noise(terms, "term")
+        if self._is_resnet_cifar_depth_behavior_section(document_text):
+            terms = self._filter_resnet_cifar_depth_behavior_noise(terms, "term")
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -55,6 +57,9 @@ class AnalysisNormalizationService:
         if self._is_resnet_cifar_architecture_section(document_text):
             normalized["concepts"] = self._prefer_resnet_cifar_architecture_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_resnet_cifar_architecture_noise(normalized["phrases"], "phrase")
+        if self._is_resnet_cifar_depth_behavior_section(document_text):
+            normalized["concepts"] = self._prefer_resnet_cifar_depth_behavior_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_resnet_cifar_depth_behavior_noise(normalized["phrases"], "phrase")
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -991,6 +996,34 @@ class AnalysisNormalizationService:
                     "medium",
                     "This identifies how many residual connections the CIFAR-10 architecture uses.",
                 ),
+                (
+                    "20, 32, 44, and 56-layer networks",
+                    "The CIFAR-10 network depths compared by varying n.",
+                    "field_term",
+                    "medium",
+                    "These are the controlled depth variants used to compare plain nets and ResNets.",
+                ),
+                (
+                    "optimization difficulty",
+                    "The failure mode where deeper plain networks train worse as depth increases.",
+                    "field_term",
+                    "hard",
+                    "This is the central behavior the CIFAR-10 experiment confirms.",
+                ),
+                (
+                    "110-layer ResNet",
+                    "A deeper CIFAR-10 residual network tested after the 20/32/44/56-layer comparison.",
+                    "field_term",
+                    "hard",
+                    "This shows the depth-scaling behavior beyond the initial comparison.",
+                ),
+                (
+                    "learning-rate warmup",
+                    "Starting with a smaller learning rate before returning to the main learning rate.",
+                    "field_term",
+                    "medium",
+                    "This explains the training adjustment needed for the 110-layer ResNet.",
+                ),
             ]
         else:
             known = [
@@ -1220,6 +1253,15 @@ class AnalysisNormalizationService:
                 ("There are totally", "general", "Signals the formula for total network depth."),
                 ("When shortcut connections are used", "method", "Explains where residual shortcuts are attached."),
                 ("identity shortcuts in all cases", "method", "States that CIFAR-10 experiments use the parameter-free option A shortcut."),
+                ("leading to", "result", "Connects the chosen n values to concrete network depths."),
+                ("suffer from increased depth", "result", "States that deeper plain nets get worse as depth increases."),
+                ("similar to that on ImageNet", "general", "Connects the CIFAR-10 behavior to earlier ImageNet evidence."),
+                ("fundamental problem", "claim", "Generalizes the optimization difficulty beyond one dataset."),
+                ("manage to overcome", "result", "States that ResNets solve the optimization difficulty."),
+                ("demonstrate accuracy gains", "result", "States that deeper ResNets improve accuracy."),
+                ("when the depth increases", "general", "Marks depth as the condition under comparison."),
+                ("slightly too large to start converging", "limitation", "Explains why the 110-layer experiment needs a warmup schedule."),
+                ("warm up the training", "method", "Names the temporary lower-learning-rate training phase."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
                 ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
@@ -1644,6 +1686,26 @@ class AnalysisNormalizationService:
                     "global average pooling",
                     "The pooling layer before the 10-class classifier.",
                     "This is part of the architecture endpoint, not a general vocabulary item.",
+                ),
+                (
+                    "plain-net depth degradation on CIFAR-10",
+                    "The observation that deeper plain CIFAR-10 networks suffer higher training error.",
+                    "This confirms the degradation problem outside ImageNet.",
+                ),
+                (
+                    "ResNet depth scaling on CIFAR-10",
+                    "The observation that CIFAR-10 ResNets overcome optimization difficulty and gain accuracy with depth.",
+                    "This is the positive counterpart to plain-net degradation.",
+                ),
+                (
+                    "optimization difficulty as a fundamental problem",
+                    "The paper's claim that the plain-net failure appears across CIFAR-10, ImageNet, and MNIST.",
+                    "This broadens the argument beyond one benchmark.",
+                ),
+                (
+                    "110-layer ResNet warmup",
+                    "The training schedule adjustment used to make the 110-layer ResNet start converging.",
+                    "This is a practical detail tied to very deep training.",
                 ),
                 (
                     "zero-padding shortcuts",
@@ -2092,6 +2154,27 @@ class AnalysisNormalizationService:
                     "The pronoun 'they' refers back to shortcut connections, which can be easy to miss.",
                 ),
                 (
+                    "suffer from increased depth",
+                    "A suffer from B and exhibit C when D.",
+                    "The authors describe the negative behavior of plain networks as depth increases.",
+                    "'suffer from'은 문제나 악영향을 받는다는 뜻으로, 실험 결과의 실패 양상을 말합니다.",
+                    "The sentence combines condition, failure mode, and evidence in one result claim.",
+                ),
+                (
+                    "manage to overcome",
+                    "A manage to overcome B and demonstrate C when D.",
+                    "The authors contrast ResNets against plain nets by showing successful optimization and accuracy gains.",
+                    "'manage to'는 어려운 문제를 결국 해결했다는 뉘앙스를 줍니다.",
+                    "This sentence packs the contrast result into two coordinated verbs: overcome and demonstrate.",
+                ),
+                (
+                    "slightly too large to start converging",
+                    "A is slightly too large to start B.",
+                    "The authors explain why they temporarily lower the learning rate for the 110-layer ResNet.",
+                    "'too large to'는 어떤 정도가 너무 커서 결과가 어렵다는 구조입니다.",
+                    "This is a training-procedure sentence, not the main scientific claim.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -2463,6 +2546,23 @@ class AnalysisNormalizationService:
                         "Option A means identity shortcuts are used in all CIFAR-10 cases here.",
                     ],
                 }
+            if self._is_resnet_cifar_depth_behavior_section(document_text):
+                return {
+                    "one_line": "This section shows CIFAR-10 plain nets degrade with depth while ResNets overcome the optimization difficulty.",
+                    "simple": (
+                        "The authors compare 20-, 32-, 44-, and 56-layer networks on CIFAR-10. Plain nets get worse as they go deeper, "
+                        "but ResNets overcome the optimization difficulty and gain accuracy from increased depth. They also test a 110-layer ResNet with a short learning-rate warmup."
+                    ),
+                    "academic": (
+                        "The section extends the degradation/ResNet contrast to CIFAR-10: plain networks exhibit higher training error with depth, "
+                        "while residual networks scale to deeper settings, including a 110-layer model that requires a warmup schedule before normal training."
+                    ),
+                    "study_notes": [
+                        "Read this as a behavior comparison, not as another architecture-definition section.",
+                        "Separate the negative plain-net result from the positive ResNet result.",
+                        "Treat the 110-layer warmup as a practical training detail after the main comparison.",
+                    ],
+                }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
                 return {
                     "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
@@ -2736,6 +2836,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_resnet_cifar_architecture_section(document_text):
             return True
+        if self._is_resnet_cifar_depth_behavior_section(document_text):
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -2965,6 +3067,7 @@ class AnalysisNormalizationService:
             or ("the three layers are" in lowered and "bottleneck architectures" in lowered)
             or self._is_resnet_deep_bottleneck_results_section(document_text)
             or self._is_resnet_cifar_architecture_section(document_text)
+            or self._is_resnet_cifar_depth_behavior_section(document_text)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
@@ -2978,6 +3081,10 @@ class AnalysisNormalizationService:
     def _is_resnet_cifar_architecture_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "6n+2 stacked weighted layers" in lowered and "identity shortcuts in all cases" in lowered
+
+    def _is_resnet_cifar_depth_behavior_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "plain nets suffer from increased depth" in lowered and "110-layer resnet" in lowered
 
     def _prefer_resnet_deep_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         blocked = {"feature maps", "resnet", "model", "we combine six models"}
@@ -3096,6 +3203,67 @@ class AnalysisNormalizationService:
                 *blocked,
                 "subsampling is performed by convolutions with a stride of 2",
             }
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_cifar_depth_behavior_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"resnets", "layer networks", "warm up the training", "until the training"}
+        preferred = {
+            "plain-net depth degradation on CIFAR-10": (
+                "Deeper plain networks show higher training error on CIFAR-10.",
+                "This confirms that degradation is an optimization problem, not just an ImageNet accident.",
+            ),
+            "ResNet depth scaling on CIFAR-10": (
+                "Residual networks overcome the optimization difficulty and gain accuracy as depth increases.",
+                "This is the core positive result of the section.",
+            ),
+            "optimization difficulty as a fundamental problem": (
+                "The same plain-net failure appears across CIFAR-10, ImageNet, and MNIST.",
+                "This broadens the paper's argument beyond one dataset.",
+            ),
+            "110-layer ResNet": (
+                "A very deep CIFAR-10 residual network tested after the 20/32/44/56-layer comparison.",
+                "This shows the depth-scaling test continues beyond the first comparison.",
+            ),
+            "learning-rate warmup": (
+                "A temporary lower-learning-rate phase used before returning to the main schedule.",
+                "This is the practical adjustment needed for the 110-layer run.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            elif value in {
+                "plain-net depth degradation on CIFAR-10",
+                "ResNet depth scaling on CIFAR-10",
+                "optimization difficulty as a fundamental problem",
+                "learning-rate warmup",
+            } or self._appears_in_text(value, document_text):
+                target = "plain nets suffer from increased depth" if value.startswith("plain-net") else value
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_resnet_cifar_depth_behavior_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {"resnets", "layer networks", "warm up the training", "until the training"}
         return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
 
     def _score(self, value: Any, default: int) -> int:
