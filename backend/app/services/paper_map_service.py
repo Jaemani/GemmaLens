@@ -88,7 +88,7 @@ class PaperMapService:
             rows[key]["meaning"] = meaning
 
     def _rank(self, rows: OrderedDict[str, dict[str, Any]], limit: int) -> list[dict[str, Any]]:
-        return sorted(rows.values(), key=lambda row: (-row["count"], self._rank_priority(str(row["text"])), row["sections"][0], row["text"].lower()))[:limit]
+        return sorted(rows.values(), key=lambda row: (self._rank_priority(str(row["text"])), -row["count"], row["sections"][0], row["text"].lower()))[:limit]
 
     def _rank_priority(self, text: str) -> int:
         lowered = text.lower()
@@ -104,12 +104,20 @@ class PaperMapService:
             "self-attention",
             "shortcut connections",
             "transformer",
+            "as easy as stacking more layers",
+            "there exists a solution by construction",
+            "not caused by overfitting",
+            "no higher training error than",
+            "experiments show that",
+            "has been exposed",
         }
         demoted = {
             "deeper neural networks",
             "training deep neural networks",
             "dominant sequence transduction models",
             "language representation models",
+            "cifar-10",
+            "imagenet",
         }
         if lowered in promoted:
             return 0
@@ -226,8 +234,7 @@ class PaperMapService:
         if unique_summary_count > 6:
             flow.append(f"...{unique_summary_count - 6} more analyzed section summaries are folded into the lists below.")
 
-        repeated_concepts = [item for item in top_concepts if int(item.get("count") or 0) > 1]
-        priority_concepts = repeated_concepts[:5] or top_concepts[:5]
+        priority_concepts = top_concepts[:5]
         priority_terms = top_terms[:8]
         reusable_expressions = top_phrases[:6]
 

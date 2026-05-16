@@ -301,3 +301,105 @@ def test_paper_map_ranks_core_methods_before_generic_descriptors():
 
     assert [item.text for item in paper_map.synthesis.priority_concepts[:2]] == ["residual functions", "residual learning framework"]
     assert paper_map.synthesis.priority_concepts[2].text == "deeper neural networks"
+
+
+def test_paper_map_priority_concepts_do_not_collapse_to_only_repeated_items():
+    text_one = "We present a residual learning framework and residual functions."
+    text_two = "A degradation problem leads to higher training error."
+    text_three = "A constructed solution uses identity mapping to explain higher training error."
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-8",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [],
+            "phrases": [],
+            "concepts": [
+                {"concept": "residual learning framework", "explanation": "main method", "source_sentence": text_one},
+                {"concept": "residual functions", "explanation": "learning target", "source_sentence": text_one},
+            ],
+            "sentences": [],
+            "summaries": {"one_line": "The paper introduces residual learning.", "simple": "The paper introduces residual learning.", "academic": "The paper introduces residual learning.", "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+    section_two = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "concepts": [{"concept": "higher training error", "explanation": "optimization evidence", "source_sentence": text_two}],
+            "summaries": {**base.summaries.model_dump(), "one_line": "The section motivates degradation through higher training error."},
+        }
+    )
+    section_three = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "concepts": [
+                {"concept": "higher training error", "explanation": "optimization evidence", "source_sentence": text_three},
+                {"concept": "constructed solution", "explanation": "theoretical copy argument", "source_sentence": text_three},
+            ],
+            "summaries": {**base.summaries.model_dump(), "one_line": "The section explains the constructed solution argument."},
+        }
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows([(1, section_two), (2, section_three)])).build(
+        "doc-8", [text_one, text_two, text_three]
+    )
+    priority = [item.text for item in paper_map.synthesis.priority_concepts]
+
+    assert priority[:2] == ["residual functions", "residual learning framework"]
+    assert "higher training error" in priority
+    assert len(priority) > 1
+
+
+def test_paper_map_promotes_argument_expressions_over_early_generic_phrases():
+    text_one = "We provide comprehensive empirical evidence showing that residual networks are easier to optimize."
+    text_two = "Unexpectedly, such degradation is not caused by overfitting."
+    text_three = "There exists a solution by construction to the deeper model."
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-9",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [],
+            "phrases": [
+                {
+                    "phrase": "provide comprehensive empirical evidence",
+                    "function": "result",
+                    "explanation": "generic evidence signal",
+                    "source_sentence": text_one,
+                }
+            ],
+            "concepts": [],
+            "sentences": [],
+            "summaries": {"one_line": "The first section introduces evidence.", "simple": "The first section introduces evidence.", "academic": "The first section introduces evidence.", "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+    section_two = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "phrases": [{"phrase": "not caused by overfitting", "function": "contrast", "explanation": "rejects a common explanation", "source_sentence": text_two}],
+            "summaries": {**base.summaries.model_dump(), "one_line": "The section rejects overfitting as the cause."},
+        }
+    )
+    section_three = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "phrases": [
+                {
+                    "phrase": "There exists a solution by construction",
+                    "function": "claim",
+                    "explanation": "theoretical existence argument",
+                    "source_sentence": text_three,
+                }
+            ],
+            "summaries": {**base.summaries.model_dump(), "one_line": "The section explains the constructed solution."},
+        }
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows([(1, section_two), (2, section_three)])).build(
+        "doc-9", [text_one, text_two, text_three]
+    )
+    expressions = [item.text for item in paper_map.synthesis.reusable_expressions]
+
+    assert expressions[:2] == ["not caused by overfitting", "There exists a solution by construction"]
