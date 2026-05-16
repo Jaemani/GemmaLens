@@ -23,7 +23,12 @@ async def analyze_document(document_id: str, db: Session = Depends(get_db)):
     service = AnalysisPipelineService(DocumentRepository(db), AnalysisRepository(db))
     profile = UserProfileRepository(db).get_or_create()
     try:
-        result = await service.analyze(document_id, target_level=profile.target_level)
+        result = await service.analyze(
+            document_id,
+            target_level=profile.target_level,
+            support_language=profile.support_language,
+            learning_language=profile.learning_language,
+        )
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     if not result:
@@ -36,7 +41,13 @@ async def analyze_document_section(document_id: str, section_index: int, db: Ses
     service = AnalysisPipelineService(DocumentRepository(db), AnalysisRepository(db), SectionAnalysisRepository(db))
     profile = UserProfileRepository(db).get_or_create()
     try:
-        result = await service.analyze_section(document_id, section_index, target_level=profile.target_level)
+        result = await service.analyze_section(
+            document_id,
+            section_index,
+            target_level=profile.target_level,
+            support_language=profile.support_language,
+            learning_language=profile.learning_language,
+        )
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     if not result:
@@ -59,7 +70,8 @@ def get_document_section_analysis(document_id: str, section_index: int, db: Sess
         result = AnalysisRepository(db).get_result(document_id)
     if not result:
         raise not_found("Section analysis not found")
-    normalized = AnalysisNormalizationService().normalize_result(result, section_text)
+    profile = UserProfileRepository(db).get_or_create()
+    normalized = AnalysisNormalizationService().normalize_result(result, section_text, support_language=profile.support_language)
     normalized.quality_warnings = [
         warning
         for warning in normalized.quality_warnings
@@ -101,7 +113,13 @@ async def analyze_next_document_sections(
     completed: list[int] = []
     for index in candidate_indices:
         try:
-            result = await service.analyze_section(document_id, index, target_level=profile.target_level)
+            result = await service.analyze_section(
+                document_id,
+                index,
+                target_level=profile.target_level,
+                support_language=profile.support_language,
+                learning_language=profile.learning_language,
+            )
         except RuntimeError as exc:
             if not completed:
                 raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
@@ -142,7 +160,8 @@ def get_analysis(document_id: str, db: Session = Depends(get_db)):
     analysis_text = " ".join(readable_text.split())
     if len(analysis_text) > settings.analysis_model_input_chars:
         analysis_text = analysis_text[: settings.analysis_model_input_chars].rsplit(" ", 1)[0]
-    normalized = AnalysisNormalizationService().normalize_result(result, analysis_text)
+    profile = UserProfileRepository(db).get_or_create()
+    normalized = AnalysisNormalizationService().normalize_result(result, analysis_text, support_language=profile.support_language)
     return normalized
 
 

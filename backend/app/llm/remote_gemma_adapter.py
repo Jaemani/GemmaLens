@@ -22,15 +22,22 @@ class RemoteGemmaAdapter(ModelAdapter):
         self.runtime_config = ModelRuntimeService().provider_config()
         self.normalizer = AnalysisNormalizationService()
 
-    async def analyze_document(self, document_id: str, text: str, chunks: list[str]) -> AnalysisResult:
+    async def analyze_document(
+        self,
+        document_id: str,
+        text: str,
+        chunks: list[str],
+        support_language: str = "Korean",
+        learning_language: str = "English",
+    ) -> AnalysisResult:
         try:
-            payload = await self._analyze_atomic(document_id, text, chunks)
-            return self.normalizer.normalize_payload(payload, document_id, text)
+            payload = await self._analyze_atomic(document_id, text, chunks, support_language, learning_language)
+            return self.normalizer.normalize_payload(payload, document_id, text, support_language=support_language)
         except (httpx.HTTPError, ValidationError, Exception) as exc:
             logger.exception("Remote Gemma analysis failed")
             raise RuntimeError(f"Remote Gemma analysis failed: {exc}") from exc
 
-    async def _analyze_atomic(self, document_id: str, text: str, chunks: list[str]) -> dict[str, Any]:
+    async def _analyze_atomic(self, document_id: str, text: str, chunks: list[str], support_language: str, learning_language: str) -> dict[str, Any]:
         task_text = self._task_text(text, chunks)
         meta = self._fast_meta(task_text) if self._is_q4_remote() else await self._json_task(
             "meta",
@@ -38,8 +45,8 @@ class RemoteGemmaAdapter(ModelAdapter):
             max_tokens=self._task_budget("meta"),
             fallback=self._fast_meta(task_text),
         )
-        terms = await self._json_task("terms", self._terms_prompt(task_text), max_tokens=self._task_budget("terms"), fallback={"terms": self._fallback_terms(task_text)})
-        phrases = await self._json_task("phrases", self._phrases_prompt(task_text), max_tokens=self._task_budget("phrases"), fallback={"phrases": self._fallback_phrases(task_text)})
+        terms = await self._json_task("terms", self._terms_prompt(task_text, support_language, learning_language), max_tokens=self._task_budget("terms"), fallback={"terms": self._fallback_terms(task_text)})
+        phrases = await self._json_task("phrases", self._phrases_prompt(task_text, support_language, learning_language), max_tokens=self._task_budget("phrases"), fallback={"phrases": self._fallback_phrases(task_text)})
         concepts = (
             {"concepts": self._fallback_concepts(task_text, terms.get("terms", []))}
             if self._is_q4_remote()
@@ -394,21 +401,23 @@ class RemoteGemmaAdapter(ModelAdapter):
             f"SOURCE:\n{text}"
         )
 
-    def _terms_prompt(self, text: str) -> str:
+    def _terms_prompt(self, text: str, support_language: str = "Korean", learning_language: str = "English") -> str:
         return (
             "Atomic task: extract 2 to 4 important learning terms from SOURCE. "
             "Return only JSON with key terms. terms must be an array. "
-            "Each term object must include: term, meaning, domain_relevance, difficulty, source_sentence, should_save, learning_priority, reason, confidence. "
+            "Each term object must include: term, meaning, support_language_meaning, domain_relevance, difficulty, source_sentence, should_save, learning_priority, reason, confidence. "
+            f"meaning must be a concise {learning_language} context meaning. support_language_meaning must be a concise {support_language} learner gloss. "
             "The term text must literally appear in SOURCE. The source_sentence must be copied from SOURCE. "
             "Prefer field terms and high-value unknown words. Do not invent terms. Do not use placeholder values.\n\n"
             f"SOURCE:\n{text}"
         )
 
-    def _phrases_prompt(self, text: str) -> str:
+    def _phrases_prompt(self, text: str, support_language: str = "Korean", learning_language: str = "English") -> str:
         return (
             "Atomic task: extract 1 to 3 reusable academic or technical phrases from SOURCE. "
             "Return only JSON with key phrases. phrases must be an array. "
-            "Each phrase object must include: phrase, function, explanation, source_sentence, learning_priority, reason, confidence. "
+            "Each phrase object must include: phrase, function, explanation, support_language_explanation, source_sentence, learning_priority, reason, confidence. "
+            f"explanation must be a concise {learning_language} explanation. support_language_explanation must be a concise {support_language} learner gloss for how the phrase works. "
             "The phrase must literally appear in SOURCE. The source_sentence must be copied from SOURCE. "
             "Use function values like claim, contrast, limitation, method, result, or general. Do not invent phrases.\n\n"
             f"SOURCE:\n{text}"

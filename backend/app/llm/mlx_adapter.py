@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from pathlib import Path
 from typing import Any, ClassVar
@@ -30,52 +31,36 @@ class MLXAdapter(ModelAdapter):
     def warmup(self) -> None:
         self._load()
 
-    async def analyze_document(self, document_id: str, text: str, chunks: list[str]) -> AnalysisResult:
+    async def analyze_document(
+        self,
+        document_id: str,
+        text: str,
+        chunks: list[str],
+        support_language: str = "Korean",
+        learning_language: str = "English",
+    ) -> AnalysisResult:
         try:
-            model, tokenizer = self._load()
-            prompt = self._build_prompt(document_id, text, chunks)
-            messages = [
-                {"role": "system", "content": "Return only valid JSON. Do not use markdown. Do not output thoughts, analysis, or commentary."},
-                {"role": "user", "content": prompt},
-            ]
-            formatted_prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False)
-            from mlx_lm import generate
-
-            output = generate(
-                model,
-                tokenizer,
-                prompt=formatted_prompt,
-                max_tokens=self.settings.mlx_max_tokens,
-                verbose=False,
+            output = await asyncio.to_thread(
+                self._generate_analysis_output,
+                document_id,
+                text,
+                chunks,
+                support_language,
+                learning_language,
             )
             if self.settings.raw_model_output_path:
                 raw_path = Path(self.settings.raw_model_output_path).expanduser()
                 raw_path.parent.mkdir(parents=True, exist_ok=True)
                 raw_path.write_text(output, encoding="utf-8")
             payload = extract_json_object(output)
-            return self.normalizer.normalize_payload(payload, document_id, text)
+            return self.normalizer.normalize_payload(payload, document_id, text, support_language=support_language)
         except (ImportError, FileNotFoundError, ValidationError, Exception) as exc:
             logger.exception("MLX analysis failed")
             raise RuntimeError(f"MLX analysis failed: {exc}") from exc
 
     async def translate_text(self, source_language: str, target_language: str, text: str) -> TranslationResponse:
         try:
-            model, tokenizer = self._load()
-            prompt = self._build_translation_prompt(source_language, target_language, text)
-            messages = [
-                {"role": "system", "content": "Return only valid JSON. Do not use markdown. Do not output thoughts, analysis, or commentary."},
-                {"role": "user", "content": prompt},
-            ]
-            formatted_prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False)
-            from mlx_lm import generate
-
-            output = generate(
-                model,
-                tokenizer,
-                prompt=formatted_prompt,
-                max_tokens=min(self.settings.mlx_max_tokens, 768),
-                verbose=False,
-            )
+            output = await asyncio.to_thread(self._generate_translation_output, source_language, target_language, text)
             payload = extract_json_object(output)
             translated_text = str(payload.get("translated_text", "")).strip()
             if not translated_text:
@@ -94,6 +79,49 @@ class MLXAdapter(ModelAdapter):
         except (ImportError, FileNotFoundError, ValueError, Exception) as exc:
             logger.exception("MLX translation failed")
             raise RuntimeError(f"MLX translation failed: {exc}") from exc
+
+    def _generate_analysis_output(
+        self,
+        document_id: str,
+        text: str,
+        chunks: list[str],
+        support_language: str,
+        learning_language: str,
+    ) -> str:
+        model, tokenizer = self._load()
+        prompt = self._build_prompt(document_id, text, chunks, support_language, learning_language)
+        messages = [
+            {"role": "system", "content": "Return only valid JSON. Do not use markdown. Do not output thoughts, analysis, or commentary."},
+            {"role": "user", "content": prompt},
+        ]
+        formatted_prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False)
+        from mlx_lm import generate
+
+        return generate(
+            model,
+            tokenizer,
+            prompt=formatted_prompt,
+            max_tokens=self.settings.mlx_max_tokens,
+            verbose=False,
+        )
+
+    def _generate_translation_output(self, source_language: str, target_language: str, text: str) -> str:
+        model, tokenizer = self._load()
+        prompt = self._build_translation_prompt(source_language, target_language, text)
+        messages = [
+            {"role": "system", "content": "Return only valid JSON. Do not use markdown. Do not output thoughts, analysis, or commentary."},
+            {"role": "user", "content": prompt},
+        ]
+        formatted_prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False)
+        from mlx_lm import generate
+
+        return generate(
+            model,
+            tokenizer,
+            prompt=formatted_prompt,
+            max_tokens=min(self.settings.mlx_max_tokens, 768),
+            verbose=False,
+        )
 
     def _load(self):
         model_path = str(Path(self.runtime_config["mlx_model_path"]).expanduser())
@@ -115,7 +143,7 @@ class MLXAdapter(ModelAdapter):
         self.__class__._model_path = model_path
         return self.__class__._model, self.__class__._tokenizer
 
-    def _build_prompt(self, document_id: str, text: str, chunks: list[str]) -> str:
+    def _build_prompt(self, document_id: str, text: str, chunks: list[str], support_language: str, learning_language: str) -> str:
         schema_hint = """
 {
   "document_id": "string",
@@ -124,6 +152,7 @@ class MLXAdapter(ModelAdapter):
   "terms": [{
     "term": "string",
     "meaning": "string",
+    "support_language_meaning": "string",
     "domain_relevance": "low|medium|high",
     "difficulty": "easy|medium|hard",
     "source_sentence": "string",
@@ -137,6 +166,7 @@ class MLXAdapter(ModelAdapter):
     "phrase": "string",
     "function": "claim|contrast|limitation|method|result|general",
     "explanation": "string",
+    "support_language_explanation": "string",
     "source_sentence": "string",
     "learning_priority": "must_review|useful|field_term|low_priority",
     "reason": "string",
@@ -153,6 +183,8 @@ class MLXAdapter(ModelAdapter):
             "Select 3-5 terms, 2-3 academic phrases, 1-2 difficult sentence structures, and short summaries. "
             "Every term and phrase must appear in its source_sentence. "
             "Use context-specific meanings, not generic dictionary-only meanings. "
+            f"Add a short {support_language} learner gloss for every term and phrase. "
+            f"The source language being studied is {learning_language}; do not translate the source_sentence. "
             "If unsure, set confidence below 0.5 instead of omitting the item. "
             "Prefer fewer high-confidence items over a long exhaustive list. "
             f"Use this exact JSON shape and key names:\n{schema_hint}\n"

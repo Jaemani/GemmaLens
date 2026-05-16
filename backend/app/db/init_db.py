@@ -23,6 +23,8 @@ def migrate_sqlite() -> None:
             connection.execute(text("ALTER TABLE user_profiles ADD COLUMN support_language VARCHAR(32) DEFAULT 'Korean'"))
         if "learning_language" not in profile_columns:
             connection.execute(text("ALTER TABLE user_profiles ADD COLUMN learning_language VARCHAR(32) DEFAULT 'English'"))
+        if "auto_analyze_documents" not in profile_columns:
+            connection.execute(text("ALTER TABLE user_profiles ADD COLUMN auto_analyze_documents BOOLEAN DEFAULT 1"))
         if "onboarding_completed" not in profile_columns:
             connection.execute(text("ALTER TABLE user_profiles ADD COLUMN onboarding_completed BOOLEAN DEFAULT 0"))
 

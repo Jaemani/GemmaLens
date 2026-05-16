@@ -19,8 +19,15 @@ class OllamaAdapter(ModelAdapter):
         self.runtime_config = ModelRuntimeService().provider_config()
         self.fallback = MockModelAdapter()
 
-    async def analyze_document(self, document_id: str, text: str, chunks: list[str]) -> AnalysisResult:
-        prompt = self._build_prompt(document_id, text)
+    async def analyze_document(
+        self,
+        document_id: str,
+        text: str,
+        chunks: list[str],
+        support_language: str = "Korean",
+        learning_language: str = "English",
+    ) -> AnalysisResult:
+        prompt = self._build_prompt(document_id, text, support_language, learning_language)
         for _ in range(2):
             try:
                 async with httpx.AsyncClient(timeout=45) as client:
@@ -40,11 +47,14 @@ class OllamaAdapter(ModelAdapter):
                     return AnalysisResult.model_validate(payload)
             except (httpx.HTTPError, json.JSONDecodeError, ValidationError) as exc:
                 logger.warning("Ollama analysis failed, retrying/falling back: %s", exc)
-        return await self.fallback.analyze_document(document_id, text, chunks)
+        return await self.fallback.analyze_document(document_id, text, chunks, support_language, learning_language)
 
-    def _build_prompt(self, document_id: str, text: str) -> str:
+    def _build_prompt(self, document_id: str, text: str, support_language: str, learning_language: str) -> str:
         return (
             "Analyze this academic text for language learning. Return only valid JSON "
             "matching fields: document_id, domain, difficulty, terms, phrases, sentences, summaries. "
+            f"For terms, include support_language_meaning in {support_language}. "
+            f"For phrases, include support_language_explanation in {support_language}. "
+            f"The learning language is {learning_language}. "
             f"document_id={document_id}\n\n{text[:8000]}"
         )

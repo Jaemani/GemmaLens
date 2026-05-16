@@ -58,7 +58,7 @@ class PaperMapService:
             for phrase in result.phrases:
                 self._add(phrases, phrase.phrase, phrase.explanation, section_number)
 
-        top_concepts = [item for item in self._rank(concepts, 20) if not self._is_paper_map_study_noise(str(item["text"]))][:10]
+        top_concepts = [item for item in self._rank(concepts, 40) if not self._is_paper_map_study_noise(str(item["text"]))][:20]
         top_terms = [item for item in self._rank(terms, 30) if not self._is_paper_map_study_noise(str(item["text"]))][:12]
         top_phrases = [item for item in self._rank(phrases, 80) if not self._is_paper_map_study_noise(str(item["text"]))][:40]
 
@@ -149,6 +149,21 @@ class PaperMapService:
             "particularly important for",
             "lead to more efficient models",
             "mainly due to practical considerations",
+            "bn algorithm steps",
+            "affine recovery mechanism",
+            "mini-batch-statistics simplification",
+            "mini-batch transform definition",
+            "training/inference split",
+            "deterministic prediction requirement",
+            "inference-statistics estimation",
+            "bn folding",
+            "training-to-inference conversion",
+            "learning-rate stability",
+            "scale-invariance argument",
+            "gradient-stabilization hypothesis",
+            "internal shift mechanism",
+            "saturation failure mode",
+            "batchnorm motivation",
         }
         demoted = {
             "deeper neural networks",
@@ -157,6 +172,10 @@ class PaperMapService:
             "language representation models",
             "cifar-10",
             "imagenet",
+            "dropout",
+            "imagenet classification",
+            "mini-batch",
+            "learning rate",
         }
         meta_signals = {
             "appendix",
@@ -334,7 +353,7 @@ class PaperMapService:
         if unique_summary_count > flow_limit:
             flow.append(f"...{unique_summary_count - flow_limit} more analyzed section summaries are folded into the lists below.")
 
-        priority_concepts = top_concepts[:5]
+        priority_concepts = self._select_priority_concepts(top_concepts, 6)
         priority_terms = top_terms[:8]
         reusable_expressions = self._select_reusable_expressions(top_phrases, analyzed_sections, 6)
 
@@ -377,6 +396,45 @@ class PaperMapService:
                 if latest_section in [int(section) for section in item.get("sections") or []]:
                     add(item)
         for item in top_phrases:
+            add(item)
+        return selected
+
+    def _select_priority_concepts(self, top_concepts: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+        selected: list[dict[str, Any]] = []
+        seen: set[str] = set()
+
+        def add(item: dict[str, Any]) -> None:
+            key = str(item.get("text") or "").lower()
+            if key and key not in seen and len(selected) < limit:
+                seen.add(key)
+                selected.append(item)
+
+        for item in top_concepts[:2]:
+            add(item)
+        method_path = [
+            "bn algorithm steps",
+            "mini-batch transform definition",
+            "affine recovery mechanism",
+            "training/inference split",
+            "inference-statistics estimation",
+            "bn folding",
+            "residual functions",
+            "shortcut connections",
+            "identity mapping",
+            "multi-head attention",
+            "scaled dot-product attention",
+            "self-attention",
+            "masked language model",
+            "next sentence prediction",
+        ]
+        for name in method_path:
+            for item in top_concepts:
+                if str(item.get("text") or "").lower() == name:
+                    add(item)
+        for item in top_concepts:
+            if self._rank_priority(str(item.get("text") or "")) == 0:
+                add(item)
+        for item in top_concepts:
             add(item)
         return selected
 

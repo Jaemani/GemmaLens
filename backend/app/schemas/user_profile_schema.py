@@ -12,6 +12,7 @@ class UserProfileRead(BaseModel):
     target_level: str
     support_language: str
     learning_language: str
+    auto_analyze_documents: bool
     onboarding_completed: bool
     created_at: datetime
 
@@ -23,4 +24,5 @@ class UserProfileUpdate(BaseModel):
     target_level: TargetLevel | None = None
     support_language: str | None = None
     learning_language: str | None = None
+    auto_analyze_documents: bool | None = None
     onboarding_completed: bool | None = None

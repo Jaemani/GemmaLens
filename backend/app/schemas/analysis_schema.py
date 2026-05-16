@@ -21,6 +21,7 @@ class DifficultyInfo(BaseModel):
 class TermItem(BaseModel):
     term: str
     meaning: str
+    support_language_meaning: str = ""
     domain_relevance: Literal["low", "medium", "high"]
     difficulty: Literal["easy", "medium", "hard"]
     source_sentence: str
@@ -69,6 +70,7 @@ class PhraseItem(BaseModel):
     phrase: str
     function: Literal["claim", "contrast", "limitation", "method", "result", "general"]
     explanation: str
+    support_language_explanation: str = ""
     source_sentence: str
     learning_priority: Literal["must_review", "useful", "field_term", "low_priority"] = "useful"
     reason: str = ""

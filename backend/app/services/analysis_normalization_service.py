@@ -11,13 +11,23 @@ class AnalysisNormalizationService:
     def __init__(self) -> None:
         self.quality = AnalysisQualityService()
 
-    def normalize_result(self, result: AnalysisResult, document_text: str) -> AnalysisResult:
-        return self.normalize_payload(result.model_dump(), result.document_id, document_text)
+    def normalize_result(self, result: AnalysisResult, document_text: str, support_language: str = "Korean") -> AnalysisResult:
+        return self.normalize_payload(result.model_dump(), result.document_id, document_text, support_language=support_language)
 
-    def normalize_payload(self, payload: dict[str, Any], document_id: str, document_text: str) -> AnalysisResult:
+    def normalize_payload(
+        self,
+        payload: dict[str, Any],
+        document_id: str,
+        document_text: str,
+        support_language: str = "Korean",
+    ) -> AnalysisResult:
         document_text = normalize_pdf_ligatures(document_text)
-        terms = self._terms(payload.get("terms"), document_text)
-        phrases = self._phrases(payload.get("phrases") or payload.get("academic_phrases") or payload.get("expressions"), document_text)
+        terms = self._terms(payload.get("terms"), document_text, support_language=support_language)
+        phrases = self._phrases(
+            payload.get("phrases") or payload.get("academic_phrases") or payload.get("expressions"),
+            document_text,
+            support_language=support_language,
+        )
         terms = self._merge_learning_rows(self._heuristic_terms(document_text), terms, "term", limit=14)
         phrases = self._merge_learning_rows(phrases, self._heuristic_phrases(document_text), "phrase", limit=12)
         if self._is_bert_text(document_text):
@@ -259,6 +269,8 @@ class AnalysisNormalizationService:
             normalized["summaries"] = self._heuristic_summaries(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
             normalized["summaries"] = self._heuristic_summaries(document_text)
+        normalized["terms"] = self._with_support_language_glosses(normalized["terms"], support_language, "term")
+        normalized["phrases"] = self._with_support_language_glosses(normalized["phrases"], support_language, "phrase")
         result = AnalysisResult.model_validate(normalized)
         warnings = [*result.quality_warnings, *self.quality.inspect(result, document_text)]
         return result.model_copy(update={"quality_warnings": sorted(set(warnings))})
@@ -288,7 +300,7 @@ class AnalysisNormalizationService:
             "reason": str(value.get("reason") or "Model did not provide a difficulty reason."),
         }
 
-    def _terms(self, value: Any, document_text: str) -> list[dict[str, Any]]:
+    def _terms(self, value: Any, document_text: str, support_language: str = "Korean") -> list[dict[str, Any]]:
         rows = value if isinstance(value, list) else []
         terms: list[dict[str, Any]] = []
         seen: set[str] = set()
@@ -312,10 +324,14 @@ class AnalysisNormalizationService:
             meaning = normalize_pdf_ligatures(
                 str(row.get("meaning") or row.get("context_meaning") or row.get("general_meaning") or "Meaning not provided.")
             ).strip()
+            support_meaning = normalize_pdf_ligatures(
+                str(row.get("support_language_meaning") or row.get("native_meaning") or "")
+            ).strip()
             terms.append(
                 {
                     "term": term,
                     "meaning": meaning,
+                    "support_language_meaning": support_meaning or self._support_language_gloss(term, meaning, support_language, kind="term"),
                     "domain_relevance": row.get("domain_relevance") or priority or "medium",
                     "difficulty": row.get("difficulty") or "medium",
                     "source_sentence": source_sentence,
@@ -330,7 +346,7 @@ class AnalysisNormalizationService:
             )
         return terms[:20]
 
-    def _phrases(self, value: Any, document_text: str) -> list[dict[str, Any]]:
+    def _phrases(self, value: Any, document_text: str, support_language: str = "Korean") -> list[dict[str, Any]]:
         rows = value if isinstance(value, list) else []
         phrases: list[dict[str, Any]] = []
         seen: set[str] = set()
@@ -364,11 +380,16 @@ class AnalysisNormalizationService:
                 continue
             seen.add(key)
             explanation = normalize_pdf_ligatures(str(row.get("explanation") or row.get("meaning") or "Explanation not provided.")).strip()
+            support_explanation = normalize_pdf_ligatures(
+                str(row.get("support_language_explanation") or row.get("native_explanation") or "")
+            ).strip()
             phrases.append(
                 {
                     "phrase": phrase,
                     "function": row.get("function") or row.get("category") or "general",
                     "explanation": explanation,
+                    "support_language_explanation": support_explanation
+                    or self._support_language_gloss(phrase, explanation, support_language, kind="phrase"),
                     "source_sentence": self._source_sentence(row.get("source_sentence"), phrase, document_text),
                     "learning_priority": row.get("learning_priority") or "useful",
                     "reason": normalize_pdf_ligatures(str(row.get("reason") or "Selected as a reusable expression.")),
@@ -405,6 +426,56 @@ class AnalysisNormalizationService:
                     }
                 )
         return phrases
+
+    def _support_language_gloss(self, text: str, meaning: str, support_language: str, kind: str) -> str:
+        language = (support_language or "").strip().lower()
+        key = text.strip().lower()
+        if language in {"korean", "ko", "한국어"}:
+            known = {
+                "self-attention": "문장 안의 토큰들이 서로 어떤 관련이 있는지 직접 보게 하는 attention 방식입니다.",
+                "transformer": "순환 구조 없이 attention 중심으로 문장을 처리하는 encoder-decoder 모델입니다.",
+                "scaled dot-product attention": "query와 key의 점수를 스케일링한 뒤 value를 섞는 attention 계산입니다.",
+                "multi-head attention": "여러 attention head가 서로 다른 관계를 병렬로 보게 하는 구조입니다.",
+                "encoder-decoder": "입력을 표현으로 바꾸는 encoder와 출력을 생성하는 decoder의 조합입니다.",
+                "sequence transduction": "한 sequence를 다른 sequence로 바꾸는 작업입니다. 예: 번역.",
+                "batch normalization": "mini-batch 통계로 layer 입력을 정규화해 학습을 안정화하는 방법입니다.",
+                "internal covariate shift": "학습 중 layer 입력 분포가 계속 바뀐다는 문제의식입니다.",
+                "mini-batch": "한 번의 업데이트에 함께 쓰는 작은 데이터 묶음입니다.",
+                "residual learning": "입력 전체가 아니라 보정해야 할 잔차를 학습하게 하는 방식입니다.",
+                "shortcut connections": "입력을 몇 layer 뒤로 바로 전달해 깊은 네트워크 학습을 돕는 연결입니다.",
+                "masked language model": "가려진 단어를 주변 문맥으로 예측하는 pre-training 과제입니다.",
+                "next sentence prediction": "두 문장이 실제로 이어지는지 맞히는 BERT pre-training 과제입니다.",
+                "we propose": "논문의 새 기여를 제시할 때 쓰는 표현입니다.",
+                "based solely on": "무엇 하나만을 기반으로 한다고 제한해서 말하는 표현입니다.",
+                "dispensing with": "기존에 쓰던 요소를 제거하거나 쓰지 않는다는 뜻입니다.",
+                "remains unclear": "아직 명확하지 않은 연구 문제를 표시합니다.",
+                "to address this gap": "앞에서 말한 연구 공백을 해결하기 위해 다음 방법을 제시합니다.",
+            }
+            if key in known:
+                return known[key]
+            if kind == "term":
+                return "이 섹션을 읽을 때 확인해야 하는 핵심 용어입니다. 새로 분석하면 더 구체적인 한국어 gloss가 생성됩니다."
+            return "논문 문장에서 재사용할 수 있는 표현입니다. 새로 분석하면 더 구체적인 한국어 gloss가 생성됩니다."
+        if not language or language in {"english", "en"}:
+            return meaning
+        return f"{support_language}: {meaning}"
+
+    def _with_support_language_glosses(self, rows: list[dict[str, Any]], support_language: str, kind: str) -> list[dict[str, Any]]:
+        text_key = "term" if kind == "term" else "phrase"
+        meaning_key = "meaning" if kind == "term" else "explanation"
+        support_key = "support_language_meaning" if kind == "term" else "support_language_explanation"
+        updated: list[dict[str, Any]] = []
+        for row in rows:
+            row = dict(row)
+            if not str(row.get(support_key) or "").strip():
+                row[support_key] = self._support_language_gloss(
+                    str(row.get(text_key) or ""),
+                    str(row.get(meaning_key) or ""),
+                    support_language,
+                    kind,
+                )
+            updated.append(row)
+        return updated
 
     def _concepts(self, value: Any, document_text: str, terms: list[dict[str, Any]]) -> list[dict[str, Any]]:
         rows = value if isinstance(value, list) else []

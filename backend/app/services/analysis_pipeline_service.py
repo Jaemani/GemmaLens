@@ -22,7 +22,13 @@ class AnalysisPipelineService:
         self.academic_text = AcademicTextService()
         self.sections = DocumentSectionService()
 
-    async def analyze(self, document_id: str, target_level: str | None = None) -> AnalysisResult | None:
+    async def analyze(
+        self,
+        document_id: str,
+        target_level: str | None = None,
+        support_language: str = "Korean",
+        learning_language: str = "English",
+    ) -> AnalysisResult | None:
         document = self.documents.get(document_id)
         if not document:
             return None
@@ -30,8 +36,8 @@ class AnalysisPipelineService:
         chunks = self.chunker.chunk(readable_text)
         analysis_text = self._analysis_text(readable_text)
         analysis_chunks = chunks[: self.settings.analysis_model_max_chunks]
-        result = await self.adapter.analyze_document(document.id, analysis_text, analysis_chunks)
-        result = self.normalizer.normalize_result(result, analysis_text)
+        result = await self.adapter.analyze_document(document.id, analysis_text, analysis_chunks, support_language, learning_language)
+        result = self.normalizer.normalize_result(result, analysis_text, support_language=support_language)
         if target_level and target_level != "unknown":
             result = result.model_copy(
                 update={
@@ -50,7 +56,14 @@ class AnalysisPipelineService:
         self.analyses.upsert(result)
         return result
 
-    async def analyze_section(self, document_id: str, section_index: int, target_level: str | None = None) -> AnalysisResult | None:
+    async def analyze_section(
+        self,
+        document_id: str,
+        section_index: int,
+        target_level: str | None = None,
+        support_language: str = "Korean",
+        learning_language: str = "English",
+    ) -> AnalysisResult | None:
         document = self.documents.get(document_id)
         if not document:
             return None
@@ -62,7 +75,7 @@ class AnalysisPipelineService:
         if self.section_analyses:
             cached = self.section_analyses.get_result(document_id, section_index)
             if cached:
-                normalized_cached = self.normalizer.normalize_result(cached, section_text)
+                normalized_cached = self.normalizer.normalize_result(cached, section_text, support_language=support_language)
                 if target_level and target_level != "unknown" and not normalized_cached.difficulty.reason.startswith("Calibrated against your"):
                     normalized_cached = normalized_cached.model_copy(
                         update={
@@ -79,8 +92,14 @@ class AnalysisPipelineService:
                 self.section_analyses.upsert(section_index, normalized_cached)
                 return normalized_cached
         chunks = self.chunker.chunk(section_text)
-        result = await self.adapter.analyze_document(document.id, section_text, chunks[: self.settings.analysis_model_max_chunks])
-        result = self.normalizer.normalize_result(result, section_text)
+        result = await self.adapter.analyze_document(
+            document.id,
+            section_text,
+            chunks[: self.settings.analysis_model_max_chunks],
+            support_language,
+            learning_language,
+        )
+        result = self.normalizer.normalize_result(result, section_text, support_language=support_language)
         result.quality_warnings.append(f"section:{section_index + 1}/{section_count}")
         if target_level and target_level != "unknown":
             result = result.model_copy(

@@ -15,5 +15,6 @@ class UserProfile(Base):
     target_level: Mapped[str] = mapped_column(String(32), default="C1")
     support_language: Mapped[str] = mapped_column(String(32), default="Korean")
     learning_language: Mapped[str] = mapped_column(String(32), default="English")
+    auto_analyze_documents: Mapped[bool] = mapped_column(Boolean, default=True)
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))

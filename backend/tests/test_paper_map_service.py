@@ -891,3 +891,62 @@ def test_paper_map_reusable_expressions_include_architecture_transition_signals(
 
     assert "identity mapping is sufficient" in expressions
     assert "only used when matching dimensions" in expressions
+
+
+def test_paper_map_promotes_batchnorm_method_path_over_supporting_context():
+    opening_text = "Batch Normalization reduces internal covariate shift and is evaluated on ImageNet with Dropout changes."
+    method_text = (
+        "The Batch Normalizing Transform BNγ,β is defined in Algorithm 1: compute mini-batch mean and variance, "
+        "normalize the activations, then apply learned scale and shift."
+    )
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-bn",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [],
+            "phrases": [],
+            "concepts": [
+                {"concept": "Batch Normalization", "explanation": "main method", "source_sentence": opening_text},
+                {"concept": "internal covariate shift", "explanation": "main problem", "source_sentence": opening_text},
+                {"concept": "Dropout", "explanation": "supporting regularization context", "source_sentence": opening_text},
+                {"concept": "ImageNet classification", "explanation": "supporting benchmark context", "source_sentence": opening_text},
+            ],
+            "sentences": [],
+            "summaries": {
+                "one_line": "The paper introduces Batch Normalization and its evaluation context.",
+                "simple": "The paper introduces Batch Normalization and its evaluation context.",
+                "academic": "The paper introduces Batch Normalization and its evaluation context.",
+                "study_notes": [],
+            },
+            "quality_warnings": [],
+        }
+    )
+    method = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "concepts": [
+                {"concept": "BN algorithm steps", "explanation": "core method procedure", "source_sentence": method_text},
+                {"concept": "mini-batch transform definition", "explanation": "normalization over a batch", "source_sentence": method_text},
+                {"concept": "affine recovery mechanism", "explanation": "learned scale and shift after normalization", "source_sentence": method_text},
+                {"concept": "training/inference split", "explanation": "different statistics during training and prediction", "source_sentence": method_text},
+            ],
+            "summaries": {**base.summaries.model_dump(), "one_line": "The section defines the BatchNorm transform and inference behavior."},
+        }
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows([(1, method)])).build(
+        "doc-bn", [opening_text, method_text]
+    )
+    priority = [item.text for item in paper_map.synthesis.priority_concepts]
+
+    assert priority[:4] == [
+        "Batch Normalization",
+        "internal covariate shift",
+        "BN algorithm steps",
+        "mini-batch transform definition",
+    ]
+    assert "Dropout" not in priority
+    assert "ImageNet classification" not in priority
+    assert "mini-batch" not in priority
+    assert "learning rate" not in priority
