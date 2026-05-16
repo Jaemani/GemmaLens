@@ -56,8 +56,8 @@ async function request<T>(path: string, init?: ApiRequestInit): Promise<T> {
   }
 }
 
-async function withClientActivity<T>(label: string, detail: string, action: () => Promise<T>) {
-  writeClientActivity(label, detail);
+async function withClientActivity<T>(label: string, detail: string, action: () => Promise<T>, href?: string) {
+  writeClientActivity(label, detail, href);
   try {
     return await action();
   } finally {
@@ -65,7 +65,7 @@ async function withClientActivity<T>(label: string, detail: string, action: () =
   }
 }
 
-function writeClientActivity(label: string, detail: string) {
+function writeClientActivity(label: string, detail: string, href?: string) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(
@@ -73,6 +73,7 @@ function writeClientActivity(label: string, detail: string) {
       JSON.stringify({
         label,
         detail,
+        href,
         updatedAt: Date.now()
       })
     );
@@ -182,8 +183,11 @@ export const api = {
     }
   },
   analyzeDocument: (documentId: string) =>
-    withClientActivity("Analyzing document", "Building full-document learning output", () =>
-      request<AnalysisResult>(`/documents/${documentId}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS })
+    withClientActivity(
+      "Analyzing document",
+      "Building full-document learning output",
+      () => request<AnalysisResult>(`/documents/${documentId}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
+      `/analysis/${documentId}`
     ),
   analyzeDocumentSection: (documentId: string, sectionIndex: number) =>
     request<AnalysisResult>(`/documents/${documentId}/sections/${sectionIndex}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
@@ -219,15 +223,24 @@ export const api = {
   updateProfile: (payload: Partial<Omit<UserProfile, "id" | "created_at">>) =>
     request<UserProfile>("/profile", { method: "PATCH", body: JSON.stringify(payload) }),
   translateText: (payload: { source_language: string; target_language: string; text: string }) =>
-    withClientActivity("Translating text", `${payload.source_language} -> ${payload.target_language}`, () =>
-      request<TranslationResponse>("/translate", { method: "POST", body: JSON.stringify(payload), timeoutMs: TRANSLATION_TIMEOUT_MS })
+    withClientActivity(
+      "Translating text",
+      `${payload.source_language} -> ${payload.target_language}`,
+      () => request<TranslationResponse>("/translate", { method: "POST", body: JSON.stringify(payload), timeoutMs: TRANSLATION_TIMEOUT_MS }),
+      "/translate"
     ),
   parseTranscript: (payload: { content: string; source_name: string }) =>
-    withClientActivity("Preparing video transcript", payload.source_name, () =>
-      request<TranscriptResponse>("/video/transcripts/parse", { method: "POST", body: JSON.stringify(payload) })
+    withClientActivity(
+      "Preparing video transcript",
+      payload.source_name,
+      () => request<TranscriptResponse>("/video/transcripts/parse", { method: "POST", body: JSON.stringify(payload) }),
+      "/video"
     ),
   fetchYouTubeTranscript: (payload: { url: string; languages?: string[] }) =>
-    withClientActivity("Fetching video transcript", "YouTube transcript import", () =>
-      request<TranscriptResponse>("/video/transcripts/youtube", { method: "POST", body: JSON.stringify(payload) })
+    withClientActivity(
+      "Fetching video transcript",
+      "YouTube transcript import",
+      () => request<TranscriptResponse>("/video/transcripts/youtube", { method: "POST", body: JSON.stringify(payload) }),
+      "/video"
     )
 };

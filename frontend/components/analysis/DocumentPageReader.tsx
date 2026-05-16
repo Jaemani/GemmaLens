@@ -165,12 +165,26 @@ export function DocumentPageReader({
       writeGlobalActivity({
         label: "Analyzing document sections",
         detail: `${batchStatus || "Preparing sections one by one"} · ${analyzedCount}/${sections.length} ready`,
+        href: `/analysis/${documentId}`,
         updatedAt: Date.now()
       });
     } else {
-      clearGlobalActivity();
+      if (allSectionsAnalyzed) clearGlobalActivity();
     }
   }, [allSectionsAnalyzed, analyzedCount, batchStatus, isBatchAnalyzing, onPreparationStatus, sections.length]);
+
+  useEffect(() => {
+    if (!isBatchAnalyzing) return;
+    const timer = window.setInterval(() => {
+      writeGlobalActivity({
+        label: "Analyzing document sections",
+        detail: `${batchStatus || "Preparing sections one by one"} · ${analyzedCount}/${sections.length} ready`,
+        href: `/analysis/${documentId}`,
+        updatedAt: Date.now()
+      });
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [analyzedCount, batchStatus, documentId, isBatchAnalyzing, sections.length]);
 
   async function analyzeSectionAt(index: number, options: { keepBusy?: boolean; stayOnCurrent?: boolean; showLesson?: boolean } = {}) {
     const section = sections[index];
@@ -854,7 +868,7 @@ function writeAutoStudyProgress(key: string, progress: AutoStudyProgress) {
   }
 }
 
-function writeGlobalActivity(activity: { label: string; detail: string; updatedAt: number }) {
+function writeGlobalActivity(activity: { label: string; detail: string; href?: string; updatedAt: number }) {
   try {
     window.localStorage.setItem("gemmalens:active-task", JSON.stringify(activity));
   } catch {
