@@ -299,7 +299,8 @@ export function DocumentPageReader({
               }`}
               title={`Section ${section.section_number}${section.analyzed ? " analyzed" : " not analyzed"}`}
             >
-              {section.analyzed && index !== pageIndex ? <CheckCircle2 size={13} /> : `S${section.section_number}`}
+              <span>S{section.section_number}</span>
+              {section.analyzed && index !== pageIndex ? <CheckCircle2 size={12} className="ml-1" /> : null}
             </button>
           ))}
         </div>

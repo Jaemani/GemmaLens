@@ -6,6 +6,8 @@
 - Compactified the reading profile card so it no longer dominates the top of the workspace.
 - Added PDF zoom controls and a higher default zoom so the original PDF pane works as a readable source, not just a thumbnail preview.
 - Fixed the PDF/result two-column layout to avoid horizontal overflow on normal laptop-width screens.
+- Section navigation now keeps section numbers visible even for analyzed sections instead of replacing them with anonymous check icons.
+- Collapsed paper-map analyzed-section summaries by default so the cumulative guide stays compact unless the user audits the section trail.
 - Added guardrails for Attention paper architecture/attention sections: figure captions and short equation fragments such as `The output is computed as a weighted sum 3` are now treated as extraction artifacts, not section summaries.
 - Added deterministic replacement summaries for Transformer architecture, scaled dot-product attention, and multi-head attention sections when the edge model returns caption/formula residue instead of a learning explanation.
 - Narrowed short-section filtering so only short artifact-like fragments are skipped; short valid summaries/sections are still preserved.

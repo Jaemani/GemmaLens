@@ -9,6 +9,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
   const [paperMap, setPaperMap] = useState<PaperMap | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSignals, setShowSignals] = useState(false);
+  const [showSectionSummaries, setShowSectionSummaries] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -114,8 +115,26 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
         ) : null}
       </div>
       <div className="border-t border-line p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Analyzed sections</p>
-        {paperMap.section_summaries.length ? (
+        <button
+          type="button"
+          onClick={() => setShowSectionSummaries((value) => !value)}
+          className="flex w-full items-center justify-between gap-3 text-left"
+        >
+          <span>
+            <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">Analyzed sections</span>
+            <span className="mt-1 block text-sm leading-6 text-neutral-600">
+              {paperMap.section_summaries.length
+                ? `${paperMap.section_summaries.length} section summaries are available. Open when you want to audit the section-by-section trail.`
+                : "Analyze a section to start building the paper map."}
+            </span>
+          </span>
+          {showSectionSummaries ? (
+            <ChevronDown size={18} className="shrink-0 text-neutral-500" />
+          ) : (
+            <ChevronRight size={18} className="shrink-0 text-neutral-500" />
+          )}
+        </button>
+        {showSectionSummaries && paperMap.section_summaries.length ? (
           <div className="mt-3 grid gap-3">
             {paperMap.section_summaries.map((summary) => (
               <article key={summary.text} className="rounded-md border border-line bg-surface p-3">
@@ -124,9 +143,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
               </article>
             ))}
           </div>
-        ) : (
-          <p className="mt-2 text-sm text-neutral-600">Analyze a section to start building the paper map.</p>
-        )}
+        ) : null}
       </div>
     </section>
   );

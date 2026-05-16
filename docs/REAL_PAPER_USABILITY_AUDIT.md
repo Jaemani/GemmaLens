@@ -60,6 +60,8 @@ Local demo records currently include:
 - The current section lesson now appears directly under the section reader instead of below the cumulative paper map. This makes the analyze/read loop visible immediately after a user studies a section.
 - The reading profile card was compacted, and the PDF/result grid was adjusted to avoid horizontal overflow on normal laptop-width viewports.
 - The PDF pane now has zoom controls and a higher default zoom. The original source is closer to a readable PDF view rather than a small page thumbnail.
+- The section strip keeps section numbers visible even after analysis, so users can identify `S2`, `S3`, etc. instead of seeing anonymous green check boxes.
+- Paper-map section summaries are collapsed by default. The paper map now opens as a study guide first, with the section-by-section audit trail available on demand.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
 - Added real-paper normalization fixtures for BatchNorm and BERT snippets so generic fragments and PDF split artifacts are rejected in tests.
 - Added an Attention/Transformer fixture so `the best performing models` is handled as a discourse signal rather than a saveable term/concept, while Transformer, self-attention, sequence transduction, and parallelization remain learnable.
