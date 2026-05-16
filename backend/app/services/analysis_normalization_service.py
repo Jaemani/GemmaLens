@@ -31,6 +31,8 @@ class AnalysisNormalizationService:
             terms = self._filter_resnet_cifar_architecture_noise(terms, "term")
         if self._is_resnet_cifar_depth_behavior_section(document_text):
             terms = self._filter_resnet_cifar_depth_behavior_noise(terms, "term")
+        if self._is_resnet_over_1000_layers_section(document_text):
+            terms = self._filter_resnet_over_1000_layers_noise(terms, "term")
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -60,6 +62,9 @@ class AnalysisNormalizationService:
         if self._is_resnet_cifar_depth_behavior_section(document_text):
             normalized["concepts"] = self._prefer_resnet_cifar_depth_behavior_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_resnet_cifar_depth_behavior_noise(normalized["phrases"], "phrase")
+        if self._is_resnet_over_1000_layers_section(document_text):
+            normalized["concepts"] = self._prefer_resnet_over_1000_layers_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_resnet_over_1000_layers_noise(normalized["phrases"], "phrase")
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -1024,6 +1029,34 @@ class AnalysisNormalizationService:
                     "medium",
                     "This explains the training adjustment needed for the 110-layer ResNet.",
                 ),
+                (
+                    "1202-layer network",
+                    "An aggressively deep ResNet variant used to test whether residual learning scales past 1000 layers.",
+                    "field_term",
+                    "hard",
+                    "This is the stress-test model in the over-1000-layer section.",
+                ),
+                (
+                    "overfitting",
+                    "A generalization failure where training error is very low but test performance is worse.",
+                    "field_term",
+                    "medium",
+                    "The paper uses this to explain why the 1202-layer network tests worse than the 110-layer network.",
+                ),
+                (
+                    "strong regularization",
+                    "Training constraints that reduce overfitting, such as maxout or dropout in the cited CIFAR-10 systems.",
+                    "field_term",
+                    "medium",
+                    "This explains the suggested direction for improving the very deep model.",
+                ),
+                (
+                    "deep and thin architectures",
+                    "Architectures that impose regularization by using many layers with limited width.",
+                    "field_term",
+                    "hard",
+                    "The authors use this design choice instead of maxout/dropout in the paper.",
+                ),
             ]
         else:
             known = [
@@ -1262,6 +1295,13 @@ class AnalysisNormalizationService:
                 ("when the depth increases", "general", "Marks depth as the condition under comparison."),
                 ("slightly too large to start converging", "limitation", "Explains why the 110-layer experiment needs a warmup schedule."),
                 ("warm up the training", "method", "Names the temporary lower-learning-rate training phase."),
+                ("aggressively deep model", "general", "Describes the 1202-layer network as an extreme depth experiment."),
+                ("shows no optimization difficulty", "result", "States that residual learning still optimizes the 1202-layer model."),
+                ("still open problems", "limitation", "Marks that optimization success does not solve every issue."),
+                ("worse than that of", "contrast", "Compares the 1202-layer test result against the 110-layer result."),
+                ("because of overfitting", "claim", "Explains the likely cause of worse test performance despite low training error."),
+                ("unnecessarily large", "limitation", "Explains why the 1202-layer network may overfit the small dataset."),
+                ("without distracting from", "method", "Explains why the paper avoids stronger regularization in this experiment."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
                 ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
@@ -1706,6 +1746,26 @@ class AnalysisNormalizationService:
                     "110-layer ResNet warmup",
                     "The training schedule adjustment used to make the 110-layer ResNet start converging.",
                     "This is a practical detail tied to very deep training.",
+                ),
+                (
+                    "over-1000-layer stress test",
+                    "The experiment that trains a 1202-layer residual network to test extreme depth.",
+                    "This separates optimization scalability from test-set generalization.",
+                ),
+                (
+                    "optimization success versus overfitting",
+                    "The 1202-layer network trains successfully but tests worse than the 110-layer network.",
+                    "This is the section's main nuance: optimization is solved, but generalization is not automatically solved.",
+                ),
+                (
+                    "small-dataset overfitting",
+                    "The claim that the 1202-layer model may be too large for CIFAR-10.",
+                    "This explains why more depth can stop helping even when training error is tiny.",
+                ),
+                (
+                    "regularization tradeoff",
+                    "The paper avoids maxout/dropout to keep the focus on optimization, while acknowledging stronger regularization may improve results.",
+                    "This helps the learner distinguish research focus from best possible benchmark performance.",
                 ),
                 (
                     "zero-padding shortcuts",
@@ -2175,6 +2235,27 @@ class AnalysisNormalizationService:
                     "This is a training-procedure sentence, not the main scientific claim.",
                 ),
                 (
+                    "shows no optimization difficulty",
+                    "A shows no B, and C is able to achieve D.",
+                    "The authors separate optimization success from later generalization problems.",
+                    "'shows no'는 문제가 관찰되지 않았다는 실험 결과 표현입니다.",
+                    "The sentence is important because it prevents the reader from misreading the 1202-layer failure as an optimization failure.",
+                ),
+                (
+                    "still open problems",
+                    "There are still open problems on A.",
+                    "The authors signal that extreme depth creates unresolved issues even after optimization succeeds.",
+                    "'open problems'는 아직 해결되지 않은 연구 문제를 뜻합니다.",
+                    "This marks a limitation, not a rejection of ResNet.",
+                ),
+                (
+                    "because of overfitting",
+                    "We argue that this is because of A.",
+                    "The authors explain why test performance worsens despite very low training error.",
+                    "'because of'는 원인을 명사구로 제시합니다.",
+                    "The pronoun 'this' refers to the worse testing result, so the reader must connect it backward.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -2563,6 +2644,23 @@ class AnalysisNormalizationService:
                         "Treat the 110-layer warmup as a practical training detail after the main comparison.",
                     ],
                 }
+            if self._is_resnet_over_1000_layers_section(document_text):
+                return {
+                    "one_line": "This section stress-tests a 1202-layer ResNet and separates optimization success from overfitting.",
+                    "simple": (
+                        "The authors train an aggressively deep 1202-layer ResNet. It has no optimization difficulty and reaches very low training error, "
+                        "but its test result is worse than the 110-layer ResNet, likely because the model is too large for CIFAR-10 and overfits."
+                    ),
+                    "academic": (
+                        "The section shows that residual learning can optimize an over-1000-layer network, but also identifies a generalization limit: "
+                        "the 1202-layer model may overfit the small CIFAR-10 dataset without stronger regularization."
+                    ),
+                    "study_notes": [
+                        "Separate optimization from generalization: training succeeds, testing worsens.",
+                        "The key limitation is overfitting, not failure of residual optimization.",
+                        "Read maxout/dropout as regularization context, not as the paper's main method.",
+                    ],
+                }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
                 return {
                     "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
@@ -2838,6 +2936,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_resnet_cifar_depth_behavior_section(document_text):
             return True
+        if self._is_resnet_over_1000_layers_section(document_text):
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -3068,6 +3168,7 @@ class AnalysisNormalizationService:
             or self._is_resnet_deep_bottleneck_results_section(document_text)
             or self._is_resnet_cifar_architecture_section(document_text)
             or self._is_resnet_cifar_depth_behavior_section(document_text)
+            or self._is_resnet_over_1000_layers_section(document_text)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
@@ -3085,6 +3186,10 @@ class AnalysisNormalizationService:
     def _is_resnet_cifar_depth_behavior_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "plain nets suffer from increased depth" in lowered and "110-layer resnet" in lowered
+
+    def _is_resnet_over_1000_layers_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "1202-layer network" in lowered and "because of overfitting" in lowered
 
     def _prefer_resnet_deep_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         blocked = {"feature maps", "resnet", "model", "we combine six models"}
@@ -3264,6 +3369,58 @@ class AnalysisNormalizationService:
 
     def _filter_resnet_cifar_depth_behavior_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {"resnets", "layer networks", "warm up the training", "until the training"}
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_over_1000_layers_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"dropout", "resnet", "dashed lines denote training"}
+        preferred = {
+            "over-1000-layer stress test": (
+                "The experiment that trains a 1202-layer residual network.",
+                "This is an extreme-depth test of residual optimization.",
+            ),
+            "optimization success versus overfitting": (
+                "The 1202-layer model trains successfully but tests worse than the 110-layer model.",
+                "This is the key reading distinction in the section.",
+            ),
+            "small-dataset overfitting": (
+                "The claim that the 1202-layer model may be too large for CIFAR-10.",
+                "This explains why test performance can get worse despite very low training error.",
+            ),
+            "regularization tradeoff": (
+                "The authors avoid maxout/dropout to keep the focus on optimization, while noting stronger regularization may help.",
+                "This separates the paper's experimental focus from maximum benchmark tuning.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = "1202-layer network" if value == "over-1000-layer stress test" else "overfitting"
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_resnet_over_1000_layers_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {"dropout", "resnet", "dashed lines denote training", "applied to", "exploring over 1000 layers"}
         return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
 
     def _score(self, value: Any, default: int) -> int:

@@ -74,8 +74,8 @@ class AnalysisPipelineService:
                             )
                         }
                     )
-                if f"section:{section_index + 1}/{section_count}" not in normalized_cached.quality_warnings:
-                    normalized_cached.quality_warnings.append(f"section:{section_index + 1}/{section_count}")
+                normalized_cached.quality_warnings = [warning for warning in normalized_cached.quality_warnings if not warning.startswith("section:")]
+                normalized_cached.quality_warnings.append(f"section:{section_index + 1}/{section_count}")
                 self.section_analyses.upsert(section_index, normalized_cached)
                 return normalized_cached
         chunks = self.chunker.chunk(section_text)

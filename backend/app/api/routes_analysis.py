@@ -60,8 +60,8 @@ def get_document_section_analysis(document_id: str, section_index: int, db: Sess
     if not result:
         raise not_found("Section analysis not found")
     normalized = AnalysisNormalizationService().normalize_result(result, section_text)
-    if f"section:{section_index + 1}/{section_count}" not in normalized.quality_warnings:
-        normalized.quality_warnings.append(f"section:{section_index + 1}/{section_count}")
+    normalized.quality_warnings = [warning for warning in normalized.quality_warnings if not warning.startswith("section:")]
+    normalized.quality_warnings.append(f"section:{section_index + 1}/{section_count}")
     return normalized
 
 

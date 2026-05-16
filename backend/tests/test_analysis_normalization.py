@@ -1209,3 +1209,47 @@ def test_resnet_cifar_depth_behavior_section_recovers_plain_vs_residual_contrast
         "This section shows CIFAR-10 plain nets degrade with depth while ResNets overcome the optimization difficulty."
     )
     assert result.sentences[0].core_structure == "A suffer from B and exhibit C when D."
+
+
+def test_resnet_over_1000_layers_section_recovers_optimization_vs_overfitting():
+    document = (
+        "When there are more layers, an individual layer of ResNets tends to modify the signal less. "
+        "Exploring Over 1000 layers. We explore an aggressively deep model of over 1000 layers. "
+        "We set n = 200 that leads to a 1202-layer network, which is trained as described above. "
+        "Our method shows no optimization difficulty, and this 1202-layer network is able to achieve training error <0.1%. "
+        "But there are still open problems on such aggressively deep models. "
+        "The testing result of this 1202-layer network is worse than that of our 110-layer network, although both have similar training error. "
+        "We argue that this is because of overfitting. The 1202-layer network may be unnecessarily large for this small dataset. "
+        "Strong regularization such as maxout or dropout is applied to obtain the best results on this dataset. "
+        "In this paper, we use no maxout/dropout and just simply impose regularization via deep and thin architectures by design, without distracting from the focus on the difficulties of optimization."
+    )
+    payload = {
+        "terms": [
+            {"term": "Dropout", "meaning": "too generic"},
+            {"term": "ResNet", "meaning": "too broad"},
+            {"term": "dashed lines denote training", "meaning": "figure artifact"},
+        ],
+        "concepts": [
+            {"concept": "Dropout", "explanation": "too generic"},
+            {"concept": "ResNet", "explanation": "too broad"},
+            {"concept": "dashed lines denote training", "explanation": "figure artifact"},
+        ],
+        "phrases": [{"phrase": "Applied to", "function": "result", "explanation": "too generic"}],
+        "summaries": {"one_line": "When there are more layers, an individual layer of ResNets tends to modify the signal less."},
+        "sentences": [{"sentence": "When there are more layers, an individual layer of ResNets tends to modify the signal less.", "core_structure": "Main claim + explanation."}],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-1202", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert not {"Dropout", "ResNet", "dashed lines denote training"} & terms
+    assert not {"Dropout", "ResNet", "dashed lines denote training"} & concepts
+    assert {"1202-layer network", "overfitting", "strong regularization", "deep and thin architectures"}.issubset(terms)
+    assert {"over-1000-layer stress test", "optimization success versus overfitting", "small-dataset overfitting", "regularization tradeoff"}.issubset(concepts)
+    assert {"shows no optimization difficulty", "still open problems", "worse than that of", "because of overfitting", "unnecessarily large", "without distracting from"}.issubset(phrases)
+    assert "Applied to" not in phrases
+    assert "Exploring Over 1000 layers" not in phrases
+    assert result.summaries.one_line == "This section stress-tests a 1202-layer ResNet and separates optimization success from overfitting."
+    assert result.sentences[0].core_structure == "A shows no B, and C is able to achieve D."

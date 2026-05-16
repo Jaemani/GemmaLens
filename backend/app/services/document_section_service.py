@@ -143,6 +143,10 @@ class DocumentSectionService:
             return True
         if lowered.startswith("method top-1 err") and "top-5 err" in lowered and "error rates" in lowered:
             return True
+        if "iter. (1e4)" in lowered and "dashed lines denote training error" in lowered:
+            return True
+        if "standard deviations" in lowered and "layer responses" in lowered and lowered.count("plain-") >= 2 and lowered.count("resnet-") >= 2:
+            return True
         if len(lowered) < 500:
             return False
         conv_count = lowered.count("conv")

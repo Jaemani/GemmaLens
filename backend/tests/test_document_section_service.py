@@ -153,3 +153,25 @@ def test_document_section_service_skips_imagenet_result_table_artifacts():
 
     assert "model top-1 err" not in joined
     assert "Next we investigate projection shortcuts" in joined
+
+
+def test_document_section_service_skips_resnet_cifar_figure_artifacts():
+    figure = (
+        "0 1 2 3 4 5 60 5 10 20 iter. (1e4) error (%) plain-20 plain-32 plain-44 plain-56 "
+        "ResNet-20 ResNet-32 ResNet-44 ResNet-56 ResNet-110 Figure 6. Training on CIFAR-10. "
+        "Dashed lines denote training error, and bold lines denote testing error. Left: plain networks. Middle: ResNets. "
+        "Standard deviations (std) of layer responses on CIFAR-10. plain-20 plain-56 ResNet-20 ResNet-56 ResNet-110."
+    )
+    text = (
+        "[[GEMMALENS_PDF_PAGE:8]]\n"
+        f"{figure} "
+        "[[GEMMALENS_PDF_PAGE:9]]\n"
+        "The 1202-layer network is unnecessarily deep and starts to expose optimization issues."
+    )
+
+    sections = DocumentSectionService().split_with_labels(text)
+    joined = " ".join(section.text for section in sections)
+
+    assert "iter. (1e4)" not in joined
+    assert "Dashed lines denote training error" not in joined
+    assert "The 1202-layer network" in joined
