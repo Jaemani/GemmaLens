@@ -2612,3 +2612,81 @@ def test_bert_squad_section_recovers_span_prediction_recipe():
     assert result.summaries.one_line == "This section explains how BERT fine-tunes on SQuAD by predicting answer-span start and end positions."
     assert result.sentences[0].core_structure == "The score of X is defined as Y, and the maximum-scoring X is used as Z."
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
+
+
+def test_bert_squad_results_section_recovers_table_and_v2_transition():
+    document = (
+        "Our best performing system outperforms the top leaderboard system by +1.5 F1 in ensembling and +1.3 F1 as a single system. "
+        "In fact, our single BERT model outperforms the top ensemble system in terms of F1 score. "
+        "System Dev Test EM F1 Top Leaderboard Systems Human 82.3 91.2 Ours BERTBASE Single 80.8 88.5 BERTLARGE Ensemble 85.8 91.8. "
+        "The BERT ensemble is 7x systems which use different pre-training checkpoints and fine-tuning seeds. "
+        "Without TriviaQA fine-tuning data, we only lose 0.1-0.4 F1, still outperforming all existing systems by a wide margin. "
+        "SQuAD 2.0 task extends the SQuAD 1.1 problem definition by allowing for the possibility that no short answer exists in the provided paragraph, making the problem more realistic. "
+        "We use a simple approach to extend the SQuAD v1.1 BERT model for this task. "
+        "We treat questions that do not have an answer as having an answer span with start and end at the [CLS] token."
+    )
+    payload = {
+        "terms": [
+            {"term": "ensembling", "meaning": "broad"},
+            {"term": "F1", "meaning": "metric fragment"},
+            {"term": "BERTBASE", "meaning": "model row"},
+        ],
+        "concepts": [
+            {"concept": "ensembling", "explanation": "term duplicated as concept"},
+            {"concept": "F1", "explanation": "term duplicated as concept"},
+            {"concept": "BERTBASE", "explanation": "term duplicated as concept"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "Our best performing system outperforms the top leaderboard system by +1.5 F1."},
+        "sentences": [{"sentence": "Our best performing system outperforms the top leaderboard system by +1.5 F1.", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:0"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-squad-results", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "SQuAD leaderboard",
+        "EM",
+        "F1 score",
+        "single system",
+        "ensemble system",
+        "BERTLARGE",
+        "TriviaQA fine-tuning data",
+        "pre-training checkpoints",
+        "fine-tuning seeds",
+        "SQuAD 2.0",
+        "no short answer",
+        "[CLS] token answer span",
+    }.issubset(terms)
+    assert "ensembling" not in terms
+    assert {
+        "SQuAD v1.1 result comparison",
+        "single versus ensemble distinction",
+        "BERT ensemble construction",
+        "TriviaQA ablation",
+        "EM/F1 table reading",
+        "SQuAD 2.0 no-answer extension",
+        "[CLS] no-answer handling",
+    }.issubset(concepts)
+    assert "ensembling" not in concepts
+    assert "F1" not in concepts
+    assert {
+        "outperforms the top leaderboard system",
+        "In fact",
+        "in terms of F1 score",
+        "Without TriviaQA",
+        "we only lose",
+        "still outperforming",
+        "by a wide margin",
+        "use different pre-training checkpoints",
+        "extends the SQuAD 1.1 problem definition by allowing",
+        "making the problem more realistic",
+        "We use a simple approach to extend",
+        "do not have an answer",
+    }.issubset(phrases)
+    assert result.summaries.one_line == "This section interprets BERT's SQuAD v1.1 results and transitions to SQuAD v2.0 no-answer handling."
+    assert result.sentences[0].core_structure == "Without X, we only lose Y, still doing Z."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings

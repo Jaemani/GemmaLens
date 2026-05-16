@@ -50,6 +50,9 @@ class AnalysisNormalizationService:
         if self._is_bert_squad_span_prediction_section(document_text):
             terms = self._prefer_bert_squad_span_prediction_terms(terms, document_text)
             phrases = self._prefer_bert_squad_span_prediction_phrases(phrases, document_text)
+        if self._is_bert_squad_results_transition_section(document_text):
+            terms = self._prefer_bert_squad_results_transition_terms(terms, document_text)
+            phrases = self._prefer_bert_squad_results_transition_phrases(phrases, document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -131,6 +134,9 @@ class AnalysisNormalizationService:
         if self._is_bert_squad_span_prediction_section(document_text):
             normalized["concepts"] = self._prefer_bert_squad_span_prediction_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._prefer_bert_squad_span_prediction_phrases(normalized["phrases"], document_text)
+        if self._is_bert_squad_results_transition_section(document_text):
+            normalized["concepts"] = self._prefer_bert_squad_results_transition_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_bert_squad_results_transition_phrases(normalized["phrases"], document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -2927,6 +2933,17 @@ class AnalysisNormalizationService:
                         "difficulty_reason": "The sentence is difficult because it mixes span notation, vector dot products, and prediction selection in one definition.",
                     }
                 ]
+            if self._is_bert_squad_results_transition_section(document_text):
+                sentence = self._source_sentence(None, "Without TriviaQA", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "Without X, we only lose Y, still doing Z.",
+                        "simplified_version": "Even without TriviaQA extra data, BERT loses only a small amount of F1 and still beats existing systems.",
+                        "korean_explanation": "'Without X'는 제거 조건을 만들고, 'still'은 그 조건에서도 결과가 유지된다는 점을 강조합니다.",
+                        "difficulty_reason": "The sentence combines an ablation condition, small metric loss, and comparison claim.",
+                    }
+                ]
             specs = [
                 (
                     "There are two existing strategies",
@@ -4621,6 +4638,24 @@ class AnalysisNormalizationService:
                         "The leaderboard paragraph is about fair comparison and data augmentation caveats.",
                     ],
                 }
+            if self._is_bert_squad_results_transition_section(document_text):
+                return {
+                    "one_line": "This section interprets BERT's SQuAD v1.1 results and transitions to SQuAD v2.0 no-answer handling.",
+                    "simple": (
+                        "BERT's SQuAD systems beat strong leaderboard and published systems, the ensemble combines multiple checkpoints and seeds, "
+                        "TriviaQA adds only a small F1 gain, and SQuAD 2.0 adds questions with no answer in the paragraph."
+                    ),
+                    "academic": (
+                        "The section is a result-table interpretation plus task-transition passage: BERTLARGE single and ensemble systems outperform prior SQuAD v1.1 systems, "
+                        "the ensemble uses different pre-training checkpoints and fine-tuning seeds, TriviaQA is an ablation variable, "
+                        "and SQuAD v2.0 is framed as a realistic no-answer extension handled via the [CLS] span."
+                    ),
+                    "study_notes": [
+                        "Read the table by separating EM/F1 metrics, single systems, ensembles, and TriviaQA variants.",
+                        "The main result is not every row; it is that BERT single/ensemble systems exceed prior leaderboard systems.",
+                        "The SQuAD v2.0 paragraph changes the task definition by adding no-answer cases.",
+                    ],
+                }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
                 return {
                     "one_line": "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning.",
@@ -6061,6 +6096,165 @@ class AnalysisNormalizationService:
         ]
         return [*promoted, *rest][:12]
 
+    def _prefer_bert_squad_results_transition_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"bertbase", "f1", "ensembling", "bert", "system"}
+        preferred = [
+            ("SQuAD leaderboard", "The benchmark ranking used to compare BERT against top QA systems.", "field_term", "medium", "This frames the result table."),
+            ("EM", "Exact Match, a SQuAD metric that requires the predicted answer to exactly match a reference answer.", "field_term", "medium", "This explains one table column."),
+            ("F1 score", "A token-overlap metric used to score SQuAD answers.", "field_term", "medium", "This explains the main result metric."),
+            ("single system", "A single model run rather than an ensemble.", "useful", "medium", "This distinguishes rows in the result table."),
+            ("ensemble system", "A combined system made from multiple model runs.", "field_term", "medium", "This explains why ensemble rows differ from single rows."),
+            ("BERTLARGE", "The larger BERT model variant used for the best SQuAD results.", "field_term", "medium", "This is the model variant driving the table result."),
+            ("TriviaQA fine-tuning data", "Extra QA data used before fine-tuning on SQuAD.", "field_term", "medium", "This explains the ablation row."),
+            ("pre-training checkpoints", "Different saved pre-trained models used inside the BERT ensemble.", "field_term", "hard", "This explains ensemble diversity."),
+            ("fine-tuning seeds", "Different random seeds used for fine-tuning runs in the ensemble.", "field_term", "hard", "This explains another ensemble variation source."),
+            ("SQuAD 2.0", "A harder SQuAD task that includes questions with no answer in the paragraph.", "field_term", "medium", "This is the task transition at the end of the section."),
+            ("no short answer", "The SQuAD 2.0 condition where the paragraph contains no answer span.", "field_term", "medium", "This is the new problem definition."),
+            ("[CLS] token answer span", "The way BERT represents no-answer questions by assigning start and end to [CLS].", "field_term", "hard", "This is the model adaptation for SQuAD 2.0."),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            target = {
+                "F1 score": "F1 score",
+                "TriviaQA fine-tuning data": "Without TriviaQA",
+                "pre-training checkpoints": "pre-training checkpoints",
+                "fine-tuning seeds": "fine-tuning seeds",
+                "SQuAD 2.0": "SQuAD\n2.0" if "SQuAD\n2.0" in document_text else "SQuAD 2.0",
+                "[CLS] token answer span": "[CLS] token",
+            }.get(term, term)
+            row = keyed.get(term.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "term": term,
+                    "meaning": row.get("meaning") or meaning,
+                    "domain_relevance": row.get("domain_relevance") or ("high" if priority == "field_term" else "medium"),
+                    "difficulty": row.get("difficulty") or difficulty,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "should_save": bool(row.get("should_save", True)),
+                    "learning_priority": row.get("learning_priority") or priority,
+                    "reason": row.get("reason") or reason,
+                    "context_meaning": row.get("context_meaning") or meaning,
+                    "general_meaning": row.get("general_meaning") or meaning,
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}
+        ]
+        return [*promoted, *rest][:14]
+
+    def _prefer_bert_squad_results_transition_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"ensembling", "f1", "bertbase", "bertlarge", "squad leaderboard"}
+        preferred = {
+            "SQuAD v1.1 result comparison": (
+                "BERT's best single and ensemble systems outperform prior SQuAD leaderboard systems.",
+                "This is the main table-reading claim.",
+                "outperforms the top leaderboard system",
+            ),
+            "single versus ensemble distinction": (
+                "The section compares BERT as a single system and as an ensemble system.",
+                "This prevents mixing rows with different inference setups.",
+                "single system",
+            ),
+            "BERT ensemble construction": (
+                "The BERT ensemble uses different pre-training checkpoints and fine-tuning seeds.",
+                "This explains what ensembling means in this table.",
+                "different pre-training checkpoints",
+            ),
+            "TriviaQA ablation": (
+                "Removing TriviaQA fine-tuning data loses only a small amount of F1.",
+                "This shows the SQuAD result is not solely dependent on extra QA data.",
+                "Without TriviaQA",
+            ),
+            "EM/F1 table reading": (
+                "SQuAD result tables report EM and F1 for development and test splits.",
+                "This helps the reader decode the table columns before comparing systems.",
+                "System Dev Test EM F1",
+            ),
+            "SQuAD 2.0 no-answer extension": (
+                "SQuAD 2.0 adds questions where no short answer exists in the paragraph.",
+                "This changes the problem from always extracting a span to detecting no-answer cases.",
+                "no short answer exists",
+            ),
+            "[CLS] no-answer handling": (
+                "BERT treats no-answer questions as an answer span whose start and end are at [CLS].",
+                "This is the practical adaptation from SQuAD v1.1 to v2.0.",
+                "[CLS] token",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            row = keyed.get(concept.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "concept": concept,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "related_terms": row.get("related_terms") or [concept],
+                    "why_it_matters": row.get("why_it_matters") or why_it_matters,
+                    "references": row.get("references") or self._references_near("", document_text),
+                    "learning_priority": row.get("learning_priority") or "field_term",
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _prefer_bert_squad_results_transition_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"best performing system", "outperforms", "in ensembling"}
+        preferred = [
+            ("outperforms the top leaderboard system", "result", "States the main benchmark comparison."),
+            ("In fact", "result", "Introduces a stronger or surprising follow-up claim."),
+            ("in terms of F1 score", "general", "Specifies the metric used for comparison."),
+            ("Without TriviaQA", "contrast", "Introduces an ablation condition."),
+            ("we only lose", "result", "Reports a small performance drop under an ablation."),
+            ("still outperforming", "result", "States that the result remains strong despite the ablation."),
+            ("by a wide margin", "result", "Signals a large comparison gap."),
+            ("use different pre-training checkpoints", "method", "Explains ensemble diversity."),
+            ("extends the SQuAD 1.1 problem definition by allowing", "method", "Defines the SQuAD 2.0 task change."),
+            ("making the problem more realistic", "claim", "Explains why the task change matters."),
+            ("We use a simple approach to extend", "method", "Introduces the adaptation strategy."),
+            ("do not have an answer", "limitation", "Identifies no-answer questions."),
+        ]
+        keyed = {str(row.get("phrase") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for phrase, function, explanation in preferred:
+            if phrase.lower() not in document_text.lower():
+                continue
+            row = keyed.get(phrase.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "phrase": phrase,
+                    "function": row.get("function") or function,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(row.get("source_sentence"), phrase, document_text),
+                    "learning_priority": row.get("learning_priority") or ("must_review" if function in {"method", "result", "contrast"} else "useful"),
+                    "reason": row.get("reason") or "Reusable result-table expression detected in the source.",
+                    "context_meaning": row.get("context_meaning") or explanation,
+                    "confidence": self._confidence(row.get("confidence"), 0.87),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("phrase") or "").strip().lower() not in blocked | {phrase.lower() for phrase, *_ in preferred}
+        ]
+        return [*promoted, *rest][:12]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -6098,6 +6292,7 @@ class AnalysisNormalizationService:
             or self._is_bert_glue_setup_results_section(document_text)
             or self._is_bert_glue_result_interpretation_section(document_text)
             or self._is_bert_squad_span_prediction_section(document_text)
+            or self._is_bert_squad_results_transition_section(document_text)
         )
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
@@ -6126,6 +6321,8 @@ class AnalysisNormalizationService:
         if self._is_bert_glue_result_interpretation_section(document_text):
             return True
         if self._is_bert_squad_span_prediction_section(document_text):
+            return True
+        if self._is_bert_squad_results_transition_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -6401,6 +6598,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_squad_span_prediction_section(document_text):
             return True
+        if self._is_bert_squad_results_transition_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -6468,6 +6667,16 @@ class AnalysisNormalizationService:
             and "start vector" in lowered
             and "maximum scoring span" in lowered
             and "triviaqa" in lowered
+        )
+
+    def _is_bert_squad_results_transition_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "outperforms the top leaderboard system" in lowered
+            and "different pre-training checkpoints" in lowered
+            and "squad" in lowered
+            and "no short answer exists" in lowered
+            and "[cls] token" in lowered
         )
 
     def _is_attention_text(self, document_text: str) -> bool:

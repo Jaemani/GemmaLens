@@ -74,7 +74,9 @@ class AnalysisQualityService:
             "token-level tasks": "tokenlevel tasks",
             "squad v11": "squad",
             "squad v1.1": "squad",
+            "squad leaderboard": "leaderboard",
             "softmax over paragraph tokens": "softmax over all of the words",
+            "triviaqa fine-tuning data": "triviaqa",
         }
         alias = support_aliases.get(value_lower)
         if alias and alias in source_lower:
