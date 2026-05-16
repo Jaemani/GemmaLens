@@ -153,13 +153,34 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
 }
 
 function SynthesisPanel({ synthesis }: { synthesis: NonNullable<PaperMap["synthesis"]> }) {
+  const [showFullFlow, setShowFullFlow] = useState(false);
+  const visibleFlow = showFullFlow ? synthesis.argument_flow : synthesis.argument_flow.slice(0, 6);
+  const hiddenFlowCount = Math.max(0, synthesis.argument_flow.length - visibleFlow.length);
+
   return (
     <div className="rounded-md border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Whole-paper learning draft</p>
         <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-neutral-500">{synthesis.status}</span>
       </div>
-      <GuideList title="Argument flow" rows={synthesis.argument_flow} />
+      <GuideList title="Argument flow" rows={visibleFlow} />
+      {hiddenFlowCount ? (
+        <button
+          type="button"
+          onClick={() => setShowFullFlow(true)}
+          className="mt-2 rounded-md border border-line bg-panel px-3 py-2 text-xs font-semibold text-ink hover:bg-white"
+        >
+          Show {hiddenFlowCount} more sections
+        </button>
+      ) : showFullFlow && synthesis.argument_flow.length > 6 ? (
+        <button
+          type="button"
+          onClick={() => setShowFullFlow(false)}
+          className="mt-2 rounded-md border border-line bg-panel px-3 py-2 text-xs font-semibold text-ink hover:bg-white"
+        >
+          Collapse argument flow
+        </button>
+      ) : null}
       <div className="mt-4 grid gap-4">
         <SynthesisList title="Priority concepts" rows={synthesis.priority_concepts} limit={6} />
         <SynthesisList title="Priority terms" rows={synthesis.priority_terms} limit={8} />
