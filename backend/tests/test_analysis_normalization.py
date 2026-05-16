@@ -879,3 +879,56 @@ def test_resnet_shortcut_option_section_filters_training_hyperparameter_noise():
     assert "residual network" not in phrases
     assert result.summaries.one_line == "This section shows how the plain ImageNet baseline is converted into a residual network."
     assert result.sentences[0].core_structure == "Based on A, we insert B, which turn C into D."
+
+
+def test_resnet_imagenet_plain_network_section_filters_heading_and_hyperparameter_noise():
+    document = (
+        "We use a weight decay of 0.0001 and a momentum of 0.9. "
+        "4. Experiments 4.1. ImageNet Classification We evaluate our method on the ImageNet 2012 classification dataset "
+        "that consists of 1000 classes. We evaluate both top-1 and top-5 error rates. "
+        "Plain Networks. We first evaluate 18-layer and 34-layer plain nets. "
+        "The results in Table 2 show that the deeper 34-layer plain net has higher validation error than the shallower 18-layer plain net. "
+        "To reveal the reasons, in Fig. 4 we compare their training/validation errors during the training procedure. "
+        "We have observed the degradation problem."
+    )
+    payload = {
+        "terms": [
+            {"term": "ImageNet Classification We", "meaning": "heading glue"},
+            {"term": "Plain Networks", "meaning": "heading glue"},
+            {"term": "we evaluate our method", "meaning": "sentence fragment"},
+        ],
+        "concepts": [
+            {"concept": "ImageNet Classification We", "explanation": "heading glue"},
+            {"concept": "Plain Networks", "explanation": "heading glue"},
+        ],
+        "phrases": [
+            {
+                "phrase": "weight decay of 0.0001 and a momentum of 0.9",
+                "function": "general",
+                "explanation": "hyperparameter noise",
+            }
+        ],
+        "summaries": {
+            "one_line": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+            "simple": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+            "academic": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+        },
+        "sentences": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-imagenet-plain", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "ImageNet Classification We" not in terms
+    assert "Plain Networks" not in terms
+    assert "we evaluate our method" not in terms
+    assert "ImageNet Classification We" not in concepts
+    assert "Plain Networks" not in concepts
+    assert "weight decay of 0.0001 and a momentum of 0.9" not in phrases
+    assert {"ImageNet 2012 classification dataset", "top-1 and top-5 error rates", "18-layer and 34-layer plain nets"}.issubset(terms)
+    assert {"higher validation error", "training/validation errors", "degradation problem"}.issubset(concepts)
+    assert {"We evaluate our method", "We first evaluate", "The results in Table 2 show that", "To reveal the reasons"}.issubset(phrases)
+    assert result.summaries.one_line == "This section starts the ImageNet experiments and shows degradation in deeper plain networks."
+    assert result.sentences[0].core_structure == "We evaluate our method on dataset X that consists of Y."

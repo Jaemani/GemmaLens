@@ -133,6 +133,10 @@ class PaperMapService:
             "only used when matching dimensions",
             "applicable to convolutional layers",
             "to provide instances for discussion",
+            "the results in table 2 show that",
+            "we evaluate our method",
+            "we first evaluate",
+            "to reveal the reasons",
         }
         demoted = {
             "deeper neural networks",

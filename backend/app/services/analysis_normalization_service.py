@@ -143,6 +143,8 @@ class AnalysisNormalizationService:
                 "residual network",
             }:
                 continue
+            if "weight decay" in phrase.lower() and "momentum" in phrase.lower():
+                continue
             if not self._appears_in_text(phrase, document_text):
                 continue
             key = phrase.lower()
@@ -768,6 +770,41 @@ class AnalysisNormalizationService:
                     "It grounds the paper's empirical claims.",
                 ),
                 (
+                    "ImageNet 2012 classification dataset",
+                    "The benchmark dataset used for the paper's main image-classification experiments.",
+                    "field_term",
+                    "medium",
+                    "This anchors the experimental setting.",
+                ),
+                (
+                    "top-1 and top-5 error rates",
+                    "ImageNet evaluation metrics that measure whether the correct class is the first prediction or within the top five predictions.",
+                    "field_term",
+                    "medium",
+                    "These are the metrics used to report classification performance.",
+                ),
+                (
+                    "18-layer and 34-layer plain nets",
+                    "The two non-residual baseline depths compared in the first ImageNet experiment.",
+                    "field_term",
+                    "medium",
+                    "This comparison reveals the degradation problem in plain networks.",
+                ),
+                (
+                    "higher validation error",
+                    "Worse validation-set performance, used here as evidence that the deeper plain network performs worse.",
+                    "field_term",
+                    "medium",
+                    "This is the first concrete result in the ImageNet plain-network experiment.",
+                ),
+                (
+                    "training/validation errors",
+                    "The error curves compared to diagnose whether the problem is optimization or generalization.",
+                    "field_term",
+                    "medium",
+                    "This tells the reader what the figure comparison is meant to reveal.",
+                ),
+                (
                     "CIFAR-10",
                     "A small image classification benchmark used for controlled experiments.",
                     "useful",
@@ -959,6 +996,12 @@ class AnalysisNormalizationService:
                 ("To provide instances for discussion", "general", "Introduces concrete model instances after the formulation."),
                 ("as follows", "general", "Signals that a structured list or description follows."),
                 ("is worth noticing", "claim", "Flags an observation the authors want the reader to notice."),
+                ("We evaluate our method", "method", "Introduces the benchmark evaluation setting."),
+                ("We first evaluate", "method", "Signals the first experiment in a sequence."),
+                ("The results in Table 2 show that", "result", "Turns table data into the section's main experimental claim."),
+                ("show that", "result", "Introduces the experimental finding."),
+                ("To reveal the reasons", "method", "Explains why the authors inspect training and validation curves."),
+                ("we compare", "method", "Introduces a direct empirical comparison."),
                 ("trained end-to-end", "method", "Signals that the whole network remains trainable as one model."),
                 ("We show that", "result", "Introduces a list of empirical claims."),
                 ("easy to optimize", "result", "States the optimization benefit of residual networks."),
@@ -1244,6 +1287,31 @@ class AnalysisNormalizationService:
                     "plain network",
                     "The non-residual VGG-style baseline used for comparison.",
                     "This helps the learner separate the baseline architecture from the residual version.",
+                ),
+                (
+                    "ImageNet 2012 classification dataset",
+                    "The benchmark used for the paper's main image-classification experiment.",
+                    "This sets the evaluation context for the results.",
+                ),
+                (
+                    "top-1 and top-5 error rates",
+                    "The metrics used to evaluate ImageNet classification performance.",
+                    "This helps the learner interpret the experimental results.",
+                ),
+                (
+                    "18-layer and 34-layer plain nets",
+                    "The shallow/deep plain-network pair used to expose degradation.",
+                    "This comparison shows why residual connections are needed.",
+                ),
+                (
+                    "higher validation error",
+                    "The observed worse validation performance of the deeper plain network.",
+                    "This is the first result signal in the ImageNet experiment.",
+                ),
+                (
+                    "training/validation errors",
+                    "The curves used to diagnose the reason for the deeper plain network's worse performance.",
+                    "This connects the experiment to the optimization argument.",
                 ),
                 (
                     "residual network",
@@ -1552,6 +1620,27 @@ class AnalysisNormalizationService:
                     "The phrase changes the reading mode from theory/formula to architecture description.",
                 ),
                 (
+                    "We evaluate our method",
+                    "We evaluate our method on dataset X that consists of Y.",
+                    "The authors introduce the benchmark, data split, and evaluation setting.",
+                    "'We evaluate our method on'은 실험 섹션에서 평가 대상과 데이터셋을 여는 표현입니다.",
+                    "The sentence is dense because it packs dataset name, class count, train/validation/test split, and metric context.",
+                ),
+                (
+                    "The results in Table 2 show that",
+                    "The results in Table X show that A has higher B than C.",
+                    "The authors state the first experimental finding: the deeper plain network performs worse than the shallower plain network.",
+                    "'The results show that'은 표나 그림을 해석해서 주장으로 바꾸는 논문식 표현입니다.",
+                    "The sentence is important because it turns raw table data into the degradation argument.",
+                ),
+                (
+                    "To reveal the reasons",
+                    "To reveal the reasons, we compare A and B during C.",
+                    "The authors explain why they inspect training and validation error curves.",
+                    "'To reveal the reasons'는 결과를 단순 보고하지 않고 원인을 분석하겠다는 신호입니다.",
+                    "The phrase changes the reading mode from result reporting to diagnostic comparison.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -1719,6 +1808,23 @@ class AnalysisNormalizationService:
                 ],
             }
         if self._is_resnet_text(document_text):
+            if "imagenet classification" in compact_lower and "34-layer plain net has higher validation error" in compact_lower:
+                return {
+                    "one_line": "This section starts the ImageNet experiments and shows degradation in deeper plain networks.",
+                    "simple": (
+                        "The authors describe the ImageNet evaluation setup, then compare 18-layer and 34-layer plain networks. "
+                        "The deeper 34-layer plain network has higher validation error, so the degradation problem appears in the experiment."
+                    ),
+                    "academic": (
+                        "The section establishes the ImageNet classification protocol and reports the first plain-network comparison, where increased "
+                        "depth worsens validation error and motivates inspecting training/validation curves for degradation."
+                    ),
+                    "study_notes": [
+                        "Separate setup details from the result: dataset/metrics first, plain-network comparison second.",
+                        "The key result is not the exact hyperparameter list; it is that the 34-layer plain net performs worse than the 18-layer one.",
+                        "Use 'The results in Table 2 show that' as a reusable expression for turning table data into a claim.",
+                    ],
+                }
             if "based on the above plain network" in compact_lower and "we insert shortcut connections" in compact_lower:
                 return {
                     "one_line": "This section shows how the plain ImageNet baseline is converted into a residual network.",
@@ -2065,6 +2171,8 @@ class AnalysisNormalizationService:
             "example network architectures" in summary_signal or "batch normalization" in summary_signal
         ):
             return True
+        if "imagenet classification" in compact_lower and "34-layer plain net has higher validation error" in compact_lower:
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -2198,6 +2306,8 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"example network", "example network architectures"}:
             return ""
+        if lowered in {"imagenet classification we", "plain networks", "we evaluate our method"}:
+            return ""
         if lowered.startswith(("we describe ", "we also note ", "we can also use ")):
             return ""
         if lowered in {"reveals that network", "has higher training", "higher training", "deeper network"}:
@@ -2280,6 +2390,7 @@ class AnalysisNormalizationService:
             or ("reasonable preconditioning" in lowered and "shortcut connection" in lowered)
             or ("identity mapping is sufficient" in lowered and "network architectures" in lowered)
             or self._is_resnet_shortcut_option_section(document_text)
+            or ("imagenet classification" in lowered and "34-layer plain net has higher validation error" in lowered)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
