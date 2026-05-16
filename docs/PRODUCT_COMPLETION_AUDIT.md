@@ -43,7 +43,7 @@ Evaluate GemmaLens as a real user reading famous academic PDFs end to end. The a
 - PDF extraction still loses equations, columns, and some mathematical layout; the UI is honest about this but does not solve OCR/layout recovery.
 - Dictionary review is organized but not yet an actual learning schedule.
 - Video transcript analysis is aligned visually, but the full video-result flow needs the same depth of famous-paper auditing.
-- Quiz is cleaner and avoids invalid analysis requests, but it still builds prompts from base analysis only rather than the complete section-level paper guide.
+- Quiz now builds prompts from complete paper-map priority concepts, terms, and expressions when available, then falls back to base analysis items. It is still lightweight and not a full spaced-repetition scheduler.
 
 ## Current Verdict
 

@@ -5,10 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
 import { cleanDocumentPreview, displayableDocuments } from "@/lib/documentDisplay";
-import type { AnalysisResult, DocumentListItem } from "@/lib/types";
+import type { AnalysisResult, DocumentListItem, PaperMap } from "@/lib/types";
 
-type Source = { document: DocumentListItem; analysis: AnalysisResult };
-type QuizItem = { prompt: string; answer: string; source: string; type: "term" | "phrase" | "sentence" };
+type Source = { document: DocumentListItem; analysis: AnalysisResult | null; paperMap: PaperMap | null };
+type QuizItem = { prompt: string; answer: string; source: string; type: "concept" | "term" | "phrase" | "sentence" };
 
 const CACHE_PREFIX = "gemmalens.quiz.";
 
@@ -22,9 +22,15 @@ export default function QuizPage() {
     let cancelled = false;
     async function loadSources() {
       try {
-        const documents = displayableDocuments((await api.listDocuments()).filter((document) => document.has_analysis));
+        const documents = displayableDocuments((await api.listDocuments()).filter((document) => document.has_analysis || (document.analyzed_sections ?? 0) > 0));
         const settled = await Promise.allSettled(
-          documents.map(async (document) => ({ document, analysis: await api.getAnalysis(document.id) }))
+          documents.map(async (document) => {
+            const [analysis, paperMap] = await Promise.all([
+              document.has_analysis ? api.getAnalysis(document.id).catch(() => null) : Promise.resolve(null),
+              (document.analyzed_sections ?? 0) > 0 ? api.getPaperMap(document.id).catch(() => null) : Promise.resolve(null)
+            ]);
+            return { document, analysis, paperMap };
+          })
         );
         const ready = settled.flatMap((entry) => (entry.status === "fulfilled" ? [entry.value] : []));
         if (cancelled) return;
@@ -49,12 +55,12 @@ export default function QuizPage() {
       return;
     }
     const cached = window.localStorage.getItem(CACHE_PREFIX + selected.document.id);
-    setItems(cached ? JSON.parse(cached) : buildQuiz(selected.analysis));
+    setItems(cached ? JSON.parse(cached) : buildQuiz(selected));
   }, [selected]);
 
   function regenerate() {
     if (!selected) return;
-    const next = buildQuiz(selected.analysis).sort(() => Math.random() - 0.5);
+    const next = buildQuiz(selected).sort(() => Math.random() - 0.5);
     setItems(next);
   }
 
@@ -131,7 +137,38 @@ export default function QuizPage() {
   );
 }
 
-function buildQuiz(analysis: AnalysisResult): QuizItem[] {
+function buildQuiz(source: Source): QuizItem[] {
+  const mapItems = source.paperMap ? buildPaperMapQuiz(source.paperMap) : [];
+  const analysisItems = source.analysis ? buildAnalysisQuiz(source.analysis) : [];
+  return [...mapItems, ...analysisItems].slice(0, 18);
+}
+
+function buildPaperMapQuiz(paperMap: PaperMap): QuizItem[] {
+  const synthesis = paperMap.synthesis;
+  if (!synthesis) return [];
+  return [
+    ...synthesis.priority_concepts.slice(0, 6).map((concept): QuizItem => ({
+      type: "concept",
+      prompt: `Why does "${concept.text}" matter in this paper?`,
+      answer: concept.meaning,
+      source: `Paper sections: ${concept.sections.map((section) => `S${section}`).join(", ")}`
+    })),
+    ...synthesis.priority_terms.slice(0, 6).map((term): QuizItem => ({
+      type: "term",
+      prompt: `What does "${term.text}" mean in this paper?`,
+      answer: term.meaning,
+      source: `Paper sections: ${term.sections.map((section) => `S${section}`).join(", ")}`
+    })),
+    ...synthesis.reusable_expressions.slice(0, 4).map((phrase): QuizItem => ({
+      type: "phrase",
+      prompt: `What academic move does "${phrase.text}" make?`,
+      answer: phrase.meaning,
+      source: `Paper sections: ${phrase.sections.map((section) => `S${section}`).join(", ")}`
+    }))
+  ];
+}
+
+function buildAnalysisQuiz(analysis: AnalysisResult): QuizItem[] {
   return [
     ...analysis.terms.slice(0, 8).map((term): QuizItem => ({
       type: "term",
