@@ -71,6 +71,15 @@ class AnalysisNormalizationService:
         if self._is_bert_ner_feature_table_section(document_text):
             terms = self._prefer_bert_ner_feature_table_terms(terms, document_text)
             phrases = self._prefer_bert_ner_feature_table_phrases(phrases, document_text)
+        if self._is_bert_conclusion_section(document_text):
+            terms = self._prefer_bert_conclusion_terms(terms, document_text)
+            phrases = self._prefer_bert_conclusion_phrases(phrases, document_text)
+        if self._is_bert_appendix_learning_section(document_text):
+            terms = self._prefer_bert_appendix_terms(terms, document_text)
+            phrases = self._prefer_bert_appendix_phrases(phrases, document_text)
+        if self._is_reference_list_section(document_text):
+            terms = self._prefer_reference_list_terms(terms, document_text)
+            phrases = self._prefer_reference_list_phrases(phrases, document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -173,6 +182,15 @@ class AnalysisNormalizationService:
         if self._is_bert_ner_feature_table_section(document_text):
             normalized["concepts"] = self._prefer_bert_ner_feature_table_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._prefer_bert_ner_feature_table_phrases(normalized["phrases"], document_text)
+        if self._is_bert_conclusion_section(document_text):
+            normalized["concepts"] = self._prefer_bert_conclusion_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_bert_conclusion_phrases(normalized["phrases"], document_text)
+        if self._is_bert_appendix_learning_section(document_text):
+            normalized["concepts"] = self._prefer_bert_appendix_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_bert_appendix_phrases(normalized["phrases"], document_text)
+        if self._is_reference_list_section(document_text):
+            normalized["concepts"] = self._prefer_reference_list_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_reference_list_phrases(normalized["phrases"], document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -2902,6 +2920,17 @@ class AnalysisNormalizationService:
         return rows
 
     def _heuristic_sentences(self, document_text: str) -> list[dict[str, str]]:
+        if self._is_reference_list_section(document_text):
+            sentence = self._source_sentence(None, "In Proceedings of", document_text)
+            return [
+                {
+                    "sentence": sentence,
+                    "core_structure": "Author(s). Year. Title. Venue.",
+                    "simplified_version": "A reference entry names the authors, year, paper title, and publication venue.",
+                    "korean_explanation": "참고문헌은 일반 문장이 아니라 저자, 연도, 제목, 학회/저널 정보를 나열하는 형식입니다.",
+                    "difficulty_reason": "This is citation metadata, so it should be skimmed for sources rather than studied as prose.",
+                }
+            ]
         if self._is_bert_text(document_text):
             if self._is_bert_masked_lm_procedure_section(document_text):
                 sentence = self._source_sentence(None, "In contrast to", document_text)
@@ -3044,6 +3073,40 @@ class AnalysisNormalizationService:
                         "simplified_version": "To compare against fine-tuning, they freeze BERT and use its layer activations as features.",
                         "korean_explanation": "'To ablate'는 비교 실험의 목적을 나타내고, 'by extracting'은 방법을 설명합니다.",
                         "difficulty_reason": "The sentence is dense because it describes purpose, method, and parameter-freezing in one structure.",
+                    }
+                ]
+            if self._is_bert_conclusion_section(document_text):
+                sentence = self._source_sentence(None, "Our major contribution", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "Our major contribution is X, allowing Y.",
+                        "simplified_version": "The paper's main contribution is extending transfer learning from unidirectional models to deep bidirectional BERT.",
+                        "korean_explanation": "'Our major contribution is'는 논문 결론에서 핵심 기여를 요약하는 표현이고, 'allowing'은 그 결과를 설명합니다.",
+                        "difficulty_reason": "The sentence combines contribution framing with a result clause that summarizes the whole paper.",
+                    }
+                ]
+            if self._is_bert_appendix_learning_section(document_text):
+                profile = self._bert_appendix_profile(document_text) or {}
+                sentence = self._source_sentence(None, str(profile.get("sentence_target") or ""), document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": str(profile.get("core_structure") or "Appendix setup/result sentence."),
+                        "simplified_version": str(profile.get("simplified_version") or "This appendix detail supports the main BERT method or experiment."),
+                        "korean_explanation": str(profile.get("korean_explanation") or "부록 문장은 본문 방법이나 실험 세부사항을 보충합니다."),
+                        "difficulty_reason": str(profile.get("difficulty_reason") or "Appendix sections mix prose, examples, tables, and implementation details."),
+                    }
+                ]
+            if self._is_reference_list_section(document_text):
+                sentence = self._source_sentence(None, "In Proceedings of", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "Author(s). Year. Title. Venue.",
+                        "simplified_version": "A reference entry names the authors, year, paper title, and publication venue.",
+                        "korean_explanation": "참고문헌은 일반 문장이 아니라 저자, 연도, 제목, 학회/저널 정보를 나열하는 형식입니다.",
+                        "difficulty_reason": "This is citation metadata, so it should be skimmed for sources rather than studied as prose.",
                     }
                 ]
             specs = [
@@ -4518,6 +4581,23 @@ class AnalysisNormalizationService:
                     "When reading results, separate optimization claims from accuracy claims.",
                 ],
             }
+        if self._is_reference_list_section(document_text):
+            return {
+                "one_line": "This is a reference-list section, so it should be skimmed for cited sources rather than studied as prose.",
+                "simple": (
+                    "The text is bibliography metadata: authors, years, titles, venues, and preprint labels. "
+                    "For language learning, it is better to recognize citation formats and source types than save author names as vocabulary."
+                ),
+                "academic": (
+                    "This section functions as the paper's reference list, mapping claims in the main text to prior papers, datasets, benchmarks, proceedings, journals, and arXiv preprints. "
+                    "It is not part of the argument flow and should be treated as citation navigation."
+                ),
+                "study_notes": [
+                    "Skip this during first-pass reading unless you need to trace a cited method or dataset.",
+                    "Do not save author names as vocabulary.",
+                    "Useful patterns are venue phrases such as 'In Proceedings of' and source labels such as 'arXiv preprint'.",
+                ],
+            }
         if self._is_attention_text(document_text):
             return {
                 "one_line": "The paper introduces the Transformer, an attention-only architecture for sequence transduction.",
@@ -4536,6 +4616,26 @@ class AnalysisNormalizationService:
                 ],
             }
         if self._is_bert_text(document_text):
+            if self._is_bert_conclusion_section(document_text):
+                return {
+                    "one_line": "This conclusion says BERT extends transfer learning from unidirectional models to deep bidirectional architectures.",
+                    "simple": (
+                        "The conclusion summarizes the paper's claim: unsupervised pre-training is central to language understanding, "
+                        "and BERT generalizes the transfer-learning benefit to one deep bidirectional model that handles many NLP tasks."
+                    ),
+                    "academic": (
+                        "The section closes the paper by positioning BERT as a bidirectional generalization of language-model transfer learning, "
+                        "contrasting prior low-resource gains from deep unidirectional architectures with BERT's broad multi-task NLP applicability."
+                    ),
+                    "study_notes": [
+                        "Read this as the final thesis, not as new experimental evidence.",
+                        "The key phrase is 'Our major contribution is...', which names the contribution directly.",
+                        "Stop before the references when studying the conclusion as language input.",
+                    ],
+                }
+            if self._is_bert_appendix_learning_section(document_text):
+                profile = self._bert_appendix_profile(document_text) or {}
+                return profile["summaries"]
             if "masked language model" in lower and "next sentence prediction" in lower and "contributions of our paper" in lower:
                 return {
                     "one_line": "This section explains BERT's pre-training tasks and lists the paper's main contributions.",
@@ -7180,6 +7280,168 @@ class AnalysisNormalizationService:
             ],
         )
 
+    def _prefer_bert_conclusion_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "term",
+            [
+                ("transfer learning", "Using knowledge from pre-training to improve downstream NLP tasks.", "transfer learning"),
+                ("language models", "Models whose pre-training drives the transfer-learning gains discussed in the conclusion.", "language models"),
+                ("unsupervised pre-training", "Pre-training without task-specific labels before downstream adaptation.", "unsupervised pre-training"),
+                ("language understanding systems", "NLP systems that benefit from rich pre-training.", "language understanding systems"),
+                ("low-resource tasks", "Tasks with limited labeled data that can benefit from pre-training.", "low-resource tasks"),
+                ("deep unidirectional architectures", "Earlier one-direction architectures that transfer learning had helped.", "deep unidirectional architectures"),
+                ("deep bidirectional architectures", "BERT's contribution target: models using both directions deeply.", "deep bidirectional architectures"),
+                ("pre-trained model", "The same BERT model reused across many NLP tasks.", "same pre-trained model"),
+                ("NLP tasks", "The broad target set BERT can tackle after pre-training.", "NLP tasks"),
+            ],
+            limit=14,
+            blocked={"finetuning", "unidirectional architectures", "bert", "pre-training"},
+        )
+
+    def _prefer_bert_conclusion_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "concept",
+            [
+                ("pre-training as core NLP infrastructure", "The conclusion states that unsupervised pre-training is integral to language understanding systems.", "integral part"),
+                ("low-resource transfer benefit", "Pre-training lets even low-resource tasks benefit from stronger representations.", "low-resource tasks"),
+                ("bidirectional generalization claim", "BERT generalizes prior transfer gains from unidirectional to deep bidirectional architectures.", "deep bidirectional architectures"),
+                ("single model across many tasks", "The same pre-trained model can tackle a broad set of NLP tasks.", "same pre-trained model"),
+            ],
+            limit=8,
+            blocked={"finetuning", "unsupervised pre-training", "unidirectional architectures", "bert", "pre-training"},
+        )
+
+    def _prefer_bert_conclusion_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_phrase_rows(
+            rows,
+            document_text,
+            [
+                ("Recent empirical improvements due to", "claim", "Introduces the evidence trend behind the conclusion."),
+                ("have demonstrated that", "claim", "States a conclusion from prior results."),
+                ("is an integral part of", "claim", "Marks something as central rather than optional."),
+                ("In particular", "general", "Narrows the previous claim to a specific case."),
+                ("Our major contribution is", "claim", "Directly names the paper's contribution."),
+                ("further generalizing these findings", "claim", "Explains how the paper extends prior work."),
+                ("allowing the same pre-trained model to", "result", "Connects the contribution to its practical consequence."),
+                ("successfully tackle a broad set of", "result", "States breadth of applicability."),
+            ],
+        )
+
+    def _prefer_reference_list_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        candidates = [
+            ("Proceedings", "Conference publication venue marker.", "Proceedings"),
+            ("arXiv preprint", "Preprint source marker for papers not necessarily in proceedings.", "arXiv preprint"),
+            ("Association for Computational Linguistics", "Common NLP conference publisher or venue organization.", "Association for Computational Linguistics"),
+            ("Journal of Machine Learning Research", "Journal venue marker in ML references.", "Journal of Machine Learning Research"),
+            ("Computational linguistics", "Journal or field label appearing in an NLP reference.", "Computational linguistics"),
+            ("SemEval", "Shared-task evaluation venue marker.", "SemEval"),
+            ("EMNLP", "NLP conference venue abbreviation.", "EMNLP"),
+            ("ACL", "NLP conference venue abbreviation.", "ACL"),
+            ("CoRR", "Preprint repository label used in some references.", "CoRR"),
+            ("IJCAI", "AI conference venue abbreviation.", "IJCAI"),
+            ("CVPR09", "Computer vision conference venue marker.", "CVPR09"),
+            ("Advances in neural information processing systems", "Machine-learning proceedings venue.", "Advances in neural information processing systems"),
+        ]
+        lowered = document_text.lower()
+        preferred = [(term, meaning, target) for term, meaning, target in candidates if target.lower() in lowered]
+        promoted = []
+        for term, meaning, target in preferred[:10]:
+            promoted.append(
+                {
+                    "term": term,
+                    "meaning": meaning,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "domain_relevance": "medium",
+                    "difficulty": "medium",
+                    "should_save": False,
+                    "learning_priority": "low_priority",
+                    "confidence": 0.86,
+                    "user_state": "suggested",
+                }
+            )
+        return promoted
+
+    def _prefer_reference_list_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        preferred = [
+            ("bibliography navigation", "Use the section to trace sources, not as normal reading prose.", ""),
+            ("source type recognition", "Identify whether a cited item is a conference paper, journal article, benchmark, dataset, or preprint.", "Proceedings"),
+            ("citation metadata pattern", "Reference entries usually follow author-year-title-venue structure.", ""),
+            ("related-work trail", "References connect the paper's claims to earlier methods, datasets, and benchmarks.", "arXiv preprint"),
+        ]
+        return [
+            {
+                "concept": concept,
+                "explanation": explanation,
+                "source_sentence": self._source_sentence(None, target, document_text),
+                "related_terms": [concept],
+                "why_it_matters": explanation,
+                "references": self._references_near("", document_text),
+                "learning_priority": "low_priority",
+                "confidence": 0.86,
+                "user_state": "suggested",
+            }
+            for concept, explanation, target in preferred
+        ]
+
+    def _prefer_reference_list_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_phrase_rows(
+            rows,
+            document_text,
+            [
+                ("In Proceedings of", "general", "Introduces a conference-paper venue."),
+                ("In Advances in", "general", "Introduces a proceedings venue."),
+                ("In International Conference", "general", "Introduces a conference venue."),
+                ("In EMNLP", "general", "Uses a conference abbreviation as the venue."),
+                ("In ACL", "general", "Uses a conference abbreviation as the venue."),
+                ("In NIPS", "general", "Uses a conference abbreviation as the venue."),
+                ("In CoNLL", "general", "Uses a workshop/conference abbreviation as the venue."),
+                ("arXiv preprint", "general", "Marks a preprint citation."),
+                ("Association for Computational Linguistics", "general", "Names a common NLP publication organization."),
+                ("Journal of Machine Learning Research", "general", "Names a journal venue."),
+            ],
+        )
+
+    def _prefer_bert_appendix_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        profile = self._bert_appendix_profile(document_text)
+        if not profile:
+            return rows
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "term",
+            profile["terms"],
+            limit=14,
+            blocked={"bert", "pre-training", "fine-tuning", "openai gpt", "elmo", "token", "representations", "entailment"},
+        )
+
+    def _prefer_bert_appendix_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        profile = self._bert_appendix_profile(document_text)
+        if not profile:
+            return rows
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "concept",
+            profile["concepts"],
+            limit=8,
+            blocked={"bert", "pre-training", "fine-tuning", "openai gpt", "elmo", "token", "representations", "entailment"},
+        )
+
+    def _prefer_bert_appendix_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        profile = self._bert_appendix_profile(document_text)
+        if not profile:
+            return rows
+        return self._prefer_phrase_rows(
+            rows,
+            document_text,
+            profile["phrases"],
+            blocked={"we demonstrate", "allows us to"},
+        )
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -7224,6 +7486,9 @@ class AnalysisNormalizationService:
             or self._is_bert_model_size_effect_section(document_text)
             or self._is_bert_feature_based_transition_section(document_text)
             or self._is_bert_ner_feature_table_section(document_text)
+            or self._is_bert_conclusion_section(document_text)
+            or self._is_bert_appendix_learning_section(document_text)
+            or self._is_reference_list_section(document_text)
         )
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
@@ -7266,6 +7531,12 @@ class AnalysisNormalizationService:
         if self._is_bert_feature_based_transition_section(document_text):
             return True
         if self._is_bert_ner_feature_table_section(document_text):
+            return True
+        if self._is_bert_conclusion_section(document_text):
+            return True
+        if self._is_bert_appendix_learning_section(document_text):
+            return True
+        if self._is_reference_list_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -7555,6 +7826,10 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_ner_feature_table_section(document_text):
             return True
+        if self._is_bert_conclusion_section(document_text):
+            return True
+        if self._is_bert_appendix_learning_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -7696,6 +7971,419 @@ class AnalysisNormalizationService:
             and "without fine-tuning any parameters of bert" in lowered
             and "top four hidden layers" in lowered
         )
+
+    def _is_bert_appendix_learning_section(self, document_text: str) -> bool:
+        return self._bert_appendix_profile(document_text) is not None
+
+    def _bert_appendix_profile(self, document_text: str) -> dict[str, Any] | None:
+        lowered = document_text.lower()
+
+        def profile(
+            one_line: str,
+            simple: str,
+            academic: str,
+            notes: list[str],
+            terms: list[tuple[str, str, str]],
+            concepts: list[tuple[str, str, str]],
+            phrases: list[tuple[str, str, str]],
+            sentence_target: str,
+            core_structure: str,
+            simplified_version: str,
+            korean_explanation: str,
+            difficulty_reason: str,
+        ) -> dict[str, Any]:
+            return {
+                "summaries": {"one_line": one_line, "simple": simple, "academic": academic, "study_notes": notes},
+                "terms": terms,
+                "concepts": concepts,
+                "phrases": phrases,
+                "sentence_target": sentence_target,
+                "core_structure": core_structure,
+                "simplified_version": simplified_version,
+                "korean_explanation": korean_explanation,
+                "difficulty_reason": difficulty_reason,
+            }
+
+        if "masked lm and the masking procedure" in lowered and "80% of the time" in lowered:
+            return profile(
+                "This appendix illustrates BERT's 80/10/10 masking procedure and why it preserves contextual representations.",
+                (
+                    "The appendix uses 'my dog is hairy' to show that selected tokens become [MASK] 80% of the time, random words 10%, "
+                    "and unchanged words 10%. This forces BERT to keep contextual representations for every token."
+                ),
+                (
+                    "The section expands the Masked LM objective with a concrete replacement procedure, explains the distributional-context motivation, "
+                    "and notes the training-cost tradeoff of predicting only 15% of tokens."
+                ),
+                ["Treat the examples as method illustration, not new claims.", "The key learning item is the 80/10/10 rule.", "The transition points toward later masking ablations."],
+                [
+                    ("80% of the time", "The main replacement case in BERT's selected-token masking rule.", "80% of the time"),
+                    ("[MASK] token", "The special token used for most selected MLM positions.", "[MASK] token"),
+                    ("random word", "The 10% case where a selected token is replaced with a random word.", "random word"),
+                    ("Keep the word unchanged", "The 10% case where the selected token is kept unchanged.", "Keep the word unchanged"),
+                    ("distributional contextual representation", "A representation that preserves contextual information for every token.", "distributional contextual representation"),
+                    ("15% of tokens", "The selected token fraction for MLM prediction.", "15% of tokens"),
+                ],
+                [
+                    ("masking-procedure example", "The appendix turns the MLM replacement rule into concrete examples.", "my dog is hairy"),
+                    ("contextual-representation pressure", "The encoder cannot know which tokens will be predicted, so every token must remain informative.", "forced to keep"),
+                    ("MLM training-cost tradeoff", "MLM predicts fewer positions per batch than a standard language model.", "15% of tokens"),
+                ],
+                [
+                    ("can be further illustrated by", "method", "Introduces a worked example."),
+                    ("The purpose of this is to", "claim", "Explains design motivation."),
+                    ("The advantage of this procedure is that", "claim", "Introduces the benefit of a method."),
+                    ("so it is forced to", "result", "Connects design to model behavior."),
+                    ("Compared to", "contrast", "Introduces a method comparison."),
+                ],
+                "The advantage of this procedure is that",
+                "The advantage of X is that Y, so Z.",
+                "The masking rule helps because the encoder must keep useful context for every token.",
+                "'The advantage of this procedure is that'은 방법의 장점을 설명하는 논문식 표현입니다.",
+                "The sentence links a procedure, the model's uncertainty, and the representation consequence.",
+            )
+        if "next sentence prediction" in lowered and "a.2 pre-training procedure" in lowered:
+            return profile(
+                "This appendix gives concrete NSP examples and then explains how BERT pre-training sequences are built.",
+                "The section shows IsNext and NotNext examples, then says each training sequence samples two text spans, marks them with A/B embeddings, and uses a 50/50 next-sentence rule.",
+                (
+                    "The appendix operationalizes NSP and pre-training input construction: span sampling, segment embeddings, balanced next/random sentence pairs, "
+                    "length limits, and MLM masking after WordPiece tokenization."
+                ),
+                ["Read this as implementation detail for Section 3.1.", "Do not memorize the example sentences; learn the IsNext/NotNext construction.", "A/B embeddings and the 50/50 rule are the useful details."],
+                [
+                    ("IsNext", "Label for a true next-sentence pair.", "Label = IsNext"),
+                    ("NotNext", "Label for a random non-next sentence pair.", "Label = NotNext"),
+                    ("training input sequence", "The constructed BERT pre-training example.", "training input sequence"),
+                    ("A embedding", "Segment embedding for the first sampled span.", "A embedding"),
+                    ("B embedding", "Segment embedding for the second sampled span.", "B embedding"),
+                    ("combined length", "The total token length limit for the two spans.", "combined length"),
+                    ("WordPiece tokenization", "Tokenization applied before LM masking.", "WordPiece tokenization"),
+                ],
+                [
+                    ("NSP worked example", "The examples show how IsNext and NotNext pairs look.", "Label = IsNext"),
+                    ("pre-training sequence construction", "Two spans are sampled and marked as sentence A and B.", "sample two spans"),
+                    ("balanced next-sentence sampling", "Half the B spans are actual next sentences and half are random.", "50% of the time"),
+                ],
+                [
+                    ("can be illustrated in the following examples", "method", "Introduces examples."),
+                    ("To generate each training input sequence", "method", "Introduces construction procedure."),
+                    ("which we refer to as", "general", "Defines local terminology."),
+                    ("50% of the time", "method", "States a balanced sampling rule."),
+                    ("which is done for", "claim", "Connects procedure to objective."),
+                ],
+                "To generate each training input sequence",
+                "To generate X, we sample Y, which we refer to as Z.",
+                "BERT builds pre-training examples by sampling two spans and treating them as sentence A and sentence B.",
+                "'To generate'는 절차 설명의 시작이고, 'which we refer to as'는 용어 정의입니다.",
+                "The sentence mixes implementation steps with a local definition of 'sentences'.",
+            )
+        if "we use adam with learning rate" in lowered and "a.3 fine-tuning procedure" in lowered:
+            return profile(
+                "This appendix lists BERT pre-training hyperparameters, compute setup, sequence-length schedule, and fine-tuning search ranges.",
+                "The section specifies Adam settings, dropout, GELU, TPU training, four-day pre-training, a 128-to-512 sequence-length schedule, and task-specific fine-tuning ranges.",
+                (
+                    "The appendix is an implementation recipe: optimizer configuration, regularization, activation choice, compute budget, quadratic attention cost, "
+                    "staged sequence lengths, and fine-tuning hyperparameter search."
+                ),
+                [
+                    "This is not language argument flow; it is reproducibility detail.",
+                    "Save hyperparameter terms only if you need to reproduce the model.",
+                    "The most useful reading pattern is exception language: 'with the exception of'.",
+                ],
+                [
+                    ("Adam", "Optimizer used for BERT pre-training.", "Adam"),
+                    ("learning rate warmup", "Gradual learning-rate increase over initial steps.", "learning rate warmup"),
+                    ("linear decay", "Learning-rate schedule after warmup.", "linear decay"),
+                    ("dropout probability", "Regularization probability kept at 0.1.", "dropout probability"),
+                    ("gelu activation", "Activation used instead of ReLU.", "gelu activation"),
+                    ("Cloud TPUs", "Hardware used for pre-training.", "Cloud TPUs"),
+                    ("attention is quadratic", "Attention cost grows quadratically with sequence length.", "attention is quadratic"),
+                    ("sequence length", "Input length staged from 128 to 512.", "sequence length"),
+                    ("batch size", "Fine-tuning hyperparameter exception.", "batch size"),
+                    ("training epochs", "Fine-tuning hyperparameter exception.", "training epochs"),
+                ],
+                [
+                    ("pre-training implementation recipe", "The section gives optimizer, activation, dropout, compute, and sequence schedule.", "We use Adam"),
+                    ("sequence-length curriculum", "Most steps use length 128, then final steps use length 512.", "sequence length of 128"),
+                    ("fine-tuning hyperparameter search", "Fine-tuning varies batch size, learning rate, and epochs.", "with the exception"),
+                ],
+                [
+                    ("We use", "method", "Introduces implementation choices."),
+                    ("rather than", "contrast", "Contrasts activation choices."),
+                    ("was performed on", "method", "States compute setup."),
+                    ("To speed up", "method", "Introduces an efficiency workaround."),
+                    ("with the exception of", "contrast", "Names what changes from pre-training to fine-tuning."),
+                    ("we found the following range", "method", "Introduces search ranges."),
+                ],
+                "with the exception of",
+                "For X, most Y are the same as Z, with the exception of A, B, and C.",
+                "Fine-tuning mostly reuses pre-training settings, except for a few task-specific hyperparameters.",
+                "'with the exception of'는 대부분은 같지만 일부만 다르다는 대조 표현입니다.",
+                "The sentence packs a general rule and a list of exceptions into one reproducibility statement.",
+            )
+        compact_lowered = re.sub(r"\s+", " ", lowered)
+        if "comparison of bert" in compact_lowered and "minimally compared" in lowered:
+            return profile(
+                "This appendix compares BERT, ELMo, and OpenAI GPT and explains why BERT's gains are attributed to bidirectionality and pre-training tasks.",
+                (
+                    "The section says BERT and GPT are fine-tuning approaches, ELMo is feature-based, GPT is the closest comparison, "
+                    "and BERT was designed to be close to GPT so ablations can isolate bidirectionality and the two pre-training tasks."
+                ),
+                "The appendix positions BERT against ELMo and GPT through transfer mode, architecture, corpus, special-token timing, training steps, and ablation logic.",
+                [
+                    "This is a comparison map, not another generic BERT intro.",
+                    "The important claim is attribution: gains come mainly from bidirectionality and pre-training tasks.",
+                    "Use the bullet list to understand controlled differences.",
+                ],
+                [
+                    ("finetuning approaches", "Transfer mode used by BERT and OpenAI GPT.", "finetuning approaches"),
+                    ("feature-based approach", "Transfer mode used by ELMo.", "feature-based approach"),
+                    ("left-to-right Transformer LM", "OpenAI GPT's pre-training method.", "left-to-right Transformer LM"),
+                    ("BooksCorpus", "Training corpus shared by GPT and BERT.", "BooksCorpus"),
+                    ("Wikipedia", "Additional BERT training corpus.", "Wikipedia"),
+                    ("[SEP]", "Separator token learned during BERT pre-training.", "[SEP]"),
+                    ("[CLS]", "Classifier token learned during BERT pre-training.", "[CLS]"),
+                    ("sentence A/B embeddings", "Segment embeddings learned during BERT pre-training.", "sentence A/B embeddings"),
+                ],
+                [
+                    ("BERT/GPT controlled comparison", "BERT design choices were made close to GPT to enable minimal comparison.", "minimally compared"),
+                    ("transfer-mode contrast", "BERT/GPT use fine-tuning while ELMo uses feature extraction.", "feature-based approach"),
+                    ("improvement attribution", "The appendix says most gains come from bidirectionality and two pre-training tasks.", "core argument"),
+                ],
+                [
+                    ("Here we studies the differences", "general", "Introduces a comparison section despite awkward grammar."),
+                    ("in addition to", "general", "Adds another comparison dimension."),
+                    ("The most comparable existing", "contrast", "Identifies the closest baseline."),
+                    ("were intentionally made to", "claim", "Explains design motivation."),
+                    ("so that", "claim", "Introduces purpose."),
+                    ("account for the majority of", "claim", "States attribution of improvements."),
+                ],
+                "The core argument of this work",
+                "The core argument is that X and Y account for Z.",
+                "The appendix claims BERT's gains mostly come from bidirectionality and its two pre-training tasks.",
+                "'The core argument'는 논문이 무엇을 입증하려는지 직접 알려주는 표현입니다.",
+                "The sentence compresses attribution across multiple model differences.",
+            )
+        if "illustration of fine-tuning" in lowered and "mnli multi-genre" in lowered:
+            return profile(
+                "This appendix links BERT fine-tuning diagrams to the start of the GLUE dataset descriptions.",
+                (
+                    "The section explains that BERT adds one output layer for each task, distinguishes sequence-level from token-level tasks, "
+                    "defines figure symbols, and then starts the GLUE benchmark descriptions with MNLI."
+                ),
+                "The appendix serves as a task-format guide: output-layer minimalism, sequence-versus-token tasks, diagram notation, and GLUE dataset taxonomy.",
+                [
+                    "Use the figure notation to read later task descriptions.",
+                    "Do not save every GLUE dataset name equally; save the task type.",
+                    "This section bridges architecture diagrams and benchmark descriptions.",
+                ],
+                [
+                    ("task-specific output layer", "The small layer added on top of BERT for a task.", "additional output layer"),
+                    ("sequence-level tasks", "Tasks classified at sentence or sentence-pair level.", "sequence-level tasks"),
+                    ("token-level tasks", "Tasks predicting labels or spans for tokens.", "token-level tasks"),
+                    ("input embedding", "Figure symbol E.", "input embedding"),
+                    ("contextual representation", "Figure symbol Ti.", "contextual representation"),
+                    ("MNLI", "Multi-Genre Natural Language Inference dataset.", "MNLI"),
+                    ("entailment classification", "Task type for MNLI.", "entailment classification"),
+                ],
+                [
+                    ("minimal task adaptation", "BERT uses one additional output layer for task-specific models.", "minimal number of parameters"),
+                    ("task granularity distinction", "The appendix separates sequence-level and token-level tasks.", "sequence-level tasks"),
+                    ("GLUE dataset taxonomy", "The section begins listing GLUE task definitions.", "GLUE benchmark includes"),
+                ],
+                [
+                    ("can be seen in", "general", "Points to a figure."),
+                    ("are formed by incorporating", "method", "Explains model construction."),
+                    ("so a minimal number of", "result", "States the parameter-efficiency consequence."),
+                    ("represents the contextual representation", "general", "Defines figure notation."),
+                    ("includes the following datasets", "general", "Introduces a benchmark list."),
+                ],
+                "Our task-specific models are formed",
+                "Models are formed by incorporating X with Y, so Z.",
+                "BERT task models add only a small output layer, so few parameters are learned from scratch.",
+                "'so'는 구조적 선택과 그 결과를 연결합니다.",
+                "The sentence combines architecture construction and parameter-efficiency rationale.",
+            )
+        if "qnli question natural language inference" in lowered and "sts-b" in lowered:
+            return profile(
+                "This appendix explains several GLUE task definitions: QNLI, SST-2, CoLA, and STS-B.",
+                "The section defines QNLI as binary QA-derived classification, SST-2 as sentiment classification, CoLA as acceptability judgment, and STS-B as semantic similarity scoring.",
+                "The appendix is a benchmark-reading guide that maps dataset names to task formats, label types, and source data.",
+                ["For learning, pair each acronym with its task format.", "Ignore figure-token debris in the middle.", "This is useful because GLUE tables assume you know these task names."],
+                [
+                    ("QNLI", "Question Natural Language Inference converted from SQuAD.", "QNLI"),
+                    ("binary classification task", "A task with two label choices.", "binary classification task"),
+                    ("Stanford Sentiment Treebank", "Source dataset for the SST-2 sentiment task.", "Stanford Sentiment Treebank"),
+                    ("CoLA", "Corpus of Linguistic Acceptability.", "CoLA"),
+                    ("linguistically acceptable", "Whether a sentence is acceptable English.", "linguistically"),
+                    ("STS-B", "Semantic Textual Similarity Benchmark.", "STS-B"),
+                    ("Semantic Textual Similarity", "Meaning similarity benchmark for sentence pairs.", "Semantic Textual Similarity"),
+                ],
+                [
+                    ("QNLI task conversion", "QNLI turns SQuAD into binary question-sentence classification.", "converted to a binary classification task"),
+                    ("single-sentence classification tasks", "SST-2 and CoLA classify one sentence.", "single-sentence classification"),
+                    ("semantic similarity benchmark", "STS-B scores meaning similarity for sentence pairs.", "Semantic Textual Similarity"),
+                ],
+                [
+                    ("is a version of", "general", "Introduces dataset lineage."),
+                    ("has been converted to", "method", "Explains task transformation."),
+                    ("consisting of", "general", "Defines dataset contents."),
+                    ("where the goal is to", "claim", "States task objective."),
+                    ("drawn from", "general", "Names data source."),
+                ],
+                "has been converted to a binary classification task",
+                "X is a version of Y which has been converted to Z.",
+                "QNLI is derived from SQuAD but converted into binary classification.",
+                "'has been converted to'는 데이터셋이 원래 형태에서 다른 task format으로 바뀌었다는 뜻입니다.",
+                "The sentence mixes dataset origin, citation, and task transformation.",
+            )
+        if "mrpc microsoft research paraphrase corpus" in lowered and "wnli winograd" in lowered:
+            return profile(
+                "This appendix finishes GLUE task descriptions and introduces extra ablations on training steps.",
+                "The section defines MRPC, RTE, and WNLI, explains why WNLI is excluded for fair GPT comparison, then starts an ablation about how many pre-training steps BERT needs.",
+                "The appendix combines benchmark caveats with ablation setup: paraphrase equivalence, entailment with less data, problematic WNLI construction, majority-class handling, and training-step sensitivity.",
+                ["This is mixed: first GLUE dataset notes, then ablation setup.", "The WNLI exclusion is an evaluation caveat, not vocabulary.", "The training-step question continues in the next section."],
+                [
+                    ("MRPC", "Microsoft Research Paraphrase Corpus.", "MRPC"),
+                    ("semantically equivalent", "Whether two sentences mean the same thing.", "semantically equivalent"),
+                    ("RTE", "Recognizing Textual Entailment.", "RTE"),
+                    ("WNLI", "Winograd NLI.", "WNLI"),
+                    ("majority class", "Baseline prediction class used for WNLI.", "majority class"),
+                    ("single-task fine-tuning", "Fine-tuning one task at a time.", "single-task fine-tuning"),
+                    ("multitask fine-tuning", "Fine-tuning with multiple tasks together.", "multitask fine-tuning"),
+                    ("pre-training steps", "Number of steps used before fine-tuning.", "pre-training"),
+                ],
+                [
+                    ("paraphrase-equivalence task", "MRPC asks whether two sentences are semantically equivalent.", "semantically equivalent"),
+                    ("WNLI exclusion caveat", "WNLI is excluded because GLUE notes construction issues.", "exclude this set"),
+                    ("training-step ablation setup", "The section begins asking how much pre-training BERT needs.", "Effect of Number of Training Steps"),
+                ],
+                [
+                    ("consists of sentence pairs", "general", "Defines a sentence-pair dataset."),
+                    ("with human annotations for whether", "general", "Explains labels."),
+                    ("similar to", "contrast", "Relates one task to another."),
+                    ("We therefore exclude", "claim", "States an evaluation decision."),
+                    ("This allows us to answer", "method", "Introduces ablation questions."),
+                ],
+                "We therefore exclude this set",
+                "We therefore exclude X to be fair to Y.",
+                "The authors exclude WNLI because its construction issues make comparison unfair.",
+                "'therefore'는 앞의 문제 설명에서 평가 결정으로 이어지는 논리 연결입니다.",
+                "The sentence relies on the previous caveat to justify an experimental exclusion.",
+            )
+        if "c. 2 ablation for different masking procedures" in lowered and "mlm model does converge" in lowered:
+            return profile(
+                "This appendix reports that MLM converges slower than LTR but quickly outperforms it, then sets up masking-strategy ablations.",
+                "The section answers a training-step question: MLM is slightly slower but more accurate than LTR early on. It then introduces masking-procedure ablations for MNLI and NER.",
+                "The appendix connects pre-training efficiency to downstream quality, then frames masking strategy as a pre-training/fine-tuning mismatch control tested under fine-tuning and feature-based NER.",
+                [
+                    "The useful distinction is convergence speed versus absolute accuracy.",
+                    "The masking table belongs to the next section.",
+                    "Feature-based NER is expected to amplify mismatch because it cannot adjust BERT.",
+                ],
+                [
+                    ("MLM model", "Masked language model pre-training variant.", "MLM model"),
+                    ("LTR model", "Left-to-right language model comparison.", "LTR model"),
+                    ("absolute accuracy", "Accuracy level, not convergence speed.", "absolute accuracy"),
+                    ("masking strategies", "Different token replacement distributions.", "masking strategies"),
+                    ("pre-training/fine-tuning mismatch", "Mismatch because [MASK] appears in pre-training but not fine-tuning.", "mismatch between pre-training and fine-tuning"),
+                    ("MNLI", "Downstream task used in masking ablation.", "MNLI"),
+                    ("NER", "Named entity recognition task used in masking ablation.", "NER"),
+                    ("feature-based approach", "Frozen-feature setting expected to amplify mismatch.", "feature-based approach"),
+                ],
+                [
+                    ("speed-quality tradeoff", "MLM converges slower but reaches better accuracy than LTR.", "converge slightly slower"),
+                    ("masking mismatch motivation", "Masking strategies reduce [MASK] mismatch between pre-training and fine-tuning.", "mismatch between pre-training and fine-tuning"),
+                    ("feature-based mismatch sensitivity", "Feature extraction cannot adjust BERT representations during task training.", "will not have the chance to adjust"),
+                ],
+                [
+                    ("does converge slightly slower than", "contrast", "Compares convergence speed."),
+                    ("However, in terms of", "contrast", "Switches to a different metric."),
+                    ("begins to outperform", "result", "States early result advantage."),
+                    ("we mention that", "general", "Refers back to the main method section."),
+                    ("The following is an ablation study", "method", "Introduces ablation purpose."),
+                    ("as we expect", "claim", "Gives an experimental expectation."),
+                ],
+                "However, in terms of absolute accuracy",
+                "However, in terms of X, A begins to outperform B.",
+                "MLM may train slower, but it becomes more accurate than LTR quickly.",
+                "'in terms of'는 비교 기준을 바꾸는 표현입니다.",
+                "The sentence contrasts speed with accuracy, so the reader must track which metric is being discussed.",
+            )
+        if "numbers in the left part of the table" in lowered and "fine-tuning is surprisingly robust" in lowered:
+            return profile(
+                "This appendix interprets the masking-rate ablation table and says fine-tuning is robust but feature-based NER is sensitive.",
+                "The left table columns are MASK/SAME/RND probabilities; the right columns are dev results. Fine-tuning barely changes across masking strategies, but feature-based NER suffers when only MASK is used.",
+                "The appendix explains Table C.2: masking probabilities, MNLI/NER dev results, last-four-layer features, fine-tuning robustness, and feature-based sensitivity to pre-training/fine-tuning mismatch.",
+                [
+                    "Read left columns as masking probabilities and right columns as results.",
+                    "The important contrast is fine-tuning robustness versus feature-based sensitivity.",
+                    "This closes the appendix by validating the 80/10/10 strategy.",
+                ],
+                [
+                    ("MASK", "Probability of replacing selected tokens with [MASK].", "MASK"),
+                    ("R ND strategy", "Masking condition where selected tokens are replaced randomly.", "R ND strategy"),
+                    ("Dev set results", "Validation results reported in the table.", "Dev set results"),
+                    ("last 4 layers", "Feature representation used for feature-based NER.", "last 4 layers"),
+                    ("fine-tuning is surprisingly robust", "Fine-tuning performs similarly across masking strategies.", "fine-tuning is surprisingly robust"),
+                    ("featurebased approach", "Feature extraction setting sensitive to masking mismatch.", "featurebased approach"),
+                    ("NER", "Named entity recognition task in the masking ablation.", "NER"),
+                ],
+                [
+                    ("masking-rate table reading", "The table separates replacement probabilities from downstream dev results.", "left part of the table"),
+                    ("fine-tuning robustness", "Fine-tuning is less sensitive to masking strategy changes.", "surprisingly robust"),
+                    ("feature-based masking sensitivity", "Using only MASK hurts feature-based NER.", "problematic"),
+                ],
+                [
+                    ("represent the probabilities of", "general", "Explains table columns."),
+                    ("For the feature-based approach", "method", "Introduces a specific setting."),
+                    ("which was shown to be", "claim", "References prior section evidence."),
+                    ("From the table it can be seen that", "result", "Introduces table interpretation."),
+                    ("However, as expected", "contrast", "Introduces an expected negative result."),
+                    ("performs much worse than", "result", "States result comparison."),
+                ],
+                "From the table it can be seen that",
+                "From the table it can be seen that X is Y.",
+                "The table shows fine-tuning is robust to masking strategy changes.",
+                "'From the table it can be seen that'은 표에서 해석을 끌어내는 표현입니다.",
+                "The sentence asks the reader to move from numeric table values to a written conclusion.",
+            )
+        return None
+
+    def _is_bert_conclusion_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "6 conclusion" in lowered
+            and "our major contribution is" in lowered
+            and "deep bidirectional architectures" in lowered
+            and "broad set of nlp tasks" in lowered
+        )
+
+    def _is_reference_list_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        citation_markers = sum(
+            marker in lowered
+            for marker in (
+                "in proceedings of",
+                "in advances in",
+                "in international conference",
+                "in emnlp",
+                "in acl",
+                "in naacl",
+                "in iclr",
+                "in nips",
+                "in conll",
+                "arxiv preprint",
+                "technical report",
+                "association for computational linguistics",
+                "journal of machine learning research",
+                "journalism bulletin",
+                "pages ",
+            )
+        )
+        has_many_years = len(re.findall(r"\b(?:19|20)\d{2}\b", lowered)) >= 4
+        return has_many_years and citation_markers >= 2 and not self._is_bert_conclusion_section(document_text)
 
     def _is_attention_text(self, document_text: str) -> bool:
         lowered = document_text.lower()
