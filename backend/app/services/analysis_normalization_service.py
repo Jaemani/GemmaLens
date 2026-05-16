@@ -129,7 +129,13 @@ class AnalysisNormalizationService:
                 continue
             if phrase.lower() in {"string", "phrase", "actual phrase"}:
                 continue
-            if phrase.lower() in {"residual learning framework", "batch normalization", "internal covariate shift", "scaled dot-product attention"}:
+            if phrase.lower() in {
+                "residual learning framework",
+                "batch normalization",
+                "internal covariate shift",
+                "scaled dot-product attention",
+                "very deep models",
+            }:
                 continue
             if not self._appears_in_text(phrase, document_text):
                 continue
