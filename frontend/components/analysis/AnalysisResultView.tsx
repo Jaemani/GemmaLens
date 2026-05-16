@@ -180,6 +180,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           <SectionPreparationPanel
             status={sectionPreparation}
             onStop={() => setStopSectionPreparation(true)}
+            stopRequested={stopSectionPreparation}
             onContinue={() => {
               setStopSectionPreparation(false);
               setContinueSectionPreparationKey((value) => value + 1);
@@ -266,6 +267,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
         <SectionPreparationPanel
           status={sectionPreparation}
           onStop={() => setStopSectionPreparation(true)}
+          stopRequested={stopSectionPreparation}
           onContinue={() => {
             setStopSectionPreparation(false);
             setContinueSectionPreparationKey((value) => value + 1);
@@ -391,10 +393,12 @@ function shouldOpenSectionWorkspaceWithoutBaseAnalysis(document: DocumentRead) {
 function SectionPreparationPanel({
   status,
   onStop,
+  stopRequested,
   onContinue
 }: {
   status: SectionPreparationStatus | null;
   onStop: () => void;
+  stopRequested: boolean;
   onContinue: () => void;
 }) {
   if (!status) return null;
@@ -421,7 +425,7 @@ function SectionPreparationPanel({
           <p className="text-xs font-semibold uppercase tracking-wide text-accent">Section preparation</p>
           <h2 className="mt-1 text-lg font-semibold text-ink">{status.message}</h2>
           <p className="mt-1 text-sm font-medium text-neutral-700">
-            {status.ready} / {status.total} ready · Mode: {status.mode}
+            {status.ready} / {status.total} ready
             {status.running ? ", currently running" : ""}
           </p>
         </div>
@@ -434,9 +438,10 @@ function SectionPreparationPanel({
             <button
               type="button"
               onClick={onStop}
+              disabled={stopRequested}
               className="rounded-md border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-ink hover:bg-blue-100"
             >
-              Stop after current section
+              {stopRequested ? "Stopping after current..." : "Stop after current section"}
             </button>
           ) : canContinue ? (
             <button
@@ -452,6 +457,9 @@ function SectionPreparationPanel({
       <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white">
         <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${progress}%` }} />
       </div>
+      {stopRequested && status.running ? (
+        <p className="mt-2 text-xs font-semibold text-accent">Stop requested. The current model request will finish, then preparation will pause.</p>
+      ) : null}
     </section>
   );
 }

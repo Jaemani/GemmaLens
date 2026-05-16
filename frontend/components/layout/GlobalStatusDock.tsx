@@ -92,7 +92,7 @@ export function GlobalStatusDock() {
         <div className="flex shrink-0 items-center gap-2">
           <div className={`flex items-center gap-1 font-semibold ${aliveTone}`}>
             <Circle size={7} fill="currentColor" className={alive && !activity ? "animate-pulse" : ""} />
-            {alive === null ? "Check" : alive ? "Alive" : "Off"}
+            {expanded ? (alive === null ? "Check" : alive ? "Alive" : "Off") : null}
           </div>
           <button
             type="button"

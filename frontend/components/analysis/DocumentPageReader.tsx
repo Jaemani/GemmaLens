@@ -57,6 +57,12 @@ export function DocumentPageReader({
   const currentPageSectionNumber = currentSection ? sectionNumberWithinPdfPage(sections, pageIndex) : null;
   const previousPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, -1);
   const nextPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, 1);
+  const currentSectionSummary =
+    sectionAnalysis && sectionAnalysisIndex === currentSection?.index
+      ? sectionAnalysis.summaries.one_line
+      : currentSection?.analyzed
+        ? "Loading this section summary..."
+        : currentSection?.preview;
 
   useEffect(() => {
     let cancelled = false;
@@ -180,8 +186,8 @@ export function DocumentPageReader({
     });
     if (isBatchAnalyzing) {
       writeGlobalActivity({
-        label: "Analyzing document sections",
-        detail: `${batchStatus || "Preparing sections one by one"} · ${analyzedCount}/${sections.length} ready`,
+        label: "Analyzing",
+        detail: `${batchStatus || "Preparing sections"} · ${analyzedCount}/${sections.length} ready`,
         href: `/analysis/${documentId}`,
         updatedAt: Date.now()
       });
@@ -194,8 +200,8 @@ export function DocumentPageReader({
     if (!isBatchAnalyzing) return;
     const timer = window.setInterval(() => {
       writeGlobalActivity({
-        label: "Analyzing document sections",
-        detail: `${batchStatus || "Preparing sections one by one"} · ${analyzedCount}/${sections.length} ready`,
+        label: "Analyzing",
+        detail: `${batchStatus || "Preparing sections"} · ${analyzedCount}/${sections.length} ready`,
         href: `/analysis/${documentId}`,
         updatedAt: Date.now()
       });
@@ -301,7 +307,7 @@ export function DocumentPageReader({
           break;
         }
         const sectionNumber = sections[index].section_number;
-        const statusBefore = `Preparing section ${sectionNumber} / ${sections.length} one by one...`;
+        const statusBefore = `Preparing section ${sectionNumber} / ${sections.length}...`;
         setBatchStatus(statusBefore);
         const result = await api.analyzeDocumentSection(documentId, sections[index].index);
         completed += 1;
@@ -374,7 +380,7 @@ export function DocumentPageReader({
             Document section {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
           </p>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-700">
-            {currentSection?.preview || "Choose a section from the strip below."}
+            {currentSectionSummary || "Choose a section from the strip below."}
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
