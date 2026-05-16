@@ -555,3 +555,45 @@ def test_resnet_depth_motivation_section_rejects_fragments():
     assert "very deep models" not in phrases
     assert result.summaries.one_line == "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize."
     assert result.sentences[0].core_structure == "Is learning better X as easy as doing Y?"
+
+
+def test_resnet_constructed_solution_section_rejects_fragments():
+    document = (
+        "The degradation of training accuracy indicates that not all systems are similarly easy to optimize. "
+        "Let us consider a shallower architecture and its deeper counterpart that adds more layers onto it. "
+        "There exists a solution by construction to the deeper model: the added layers are identity mapping, "
+        "and the other layers are copied from the learned shallower model. The existence of this constructed solution "
+        "indicates that a deeper model should produce no higher training error than its shallower counterpart. "
+        "But experiments show that our current solvers on hand are unable to find solutions."
+    )
+    payload = {
+        "terms": [
+            {"term": "degradation", "meaning": "bad short fragment"},
+            {"term": "training", "meaning": "too broad"},
+            {"term": "deeper model", "meaning": "generic fragment"},
+            {"term": "learned shallower model", "meaning": "local fragment"},
+        ],
+        "concepts": [
+            {"concept": "degradation", "explanation": "bad short fragment"},
+            {"concept": "training", "explanation": "too broad"},
+            {"concept": "deeper model", "explanation": "generic fragment"},
+        ],
+        "summaries": {"one_line": document.split(".")[0] + ".", "simple": document.split(".")[0] + ".", "academic": document.split(".")[0] + "."},
+        "sentences": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-construct", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "degradation" not in terms
+    assert "training" not in terms
+    assert "deeper model" not in terms
+    assert "learned shallower model" not in terms
+    assert "deeper model" not in concepts
+    assert {"constructed solution", "shallower architecture", "identity mapping", "higher training error"}.issubset(terms)
+    assert {"constructed solution", "shallower architecture"}.issubset(concepts)
+    assert {"There exists a solution by construction", "no higher training error than", "experiments show that"}.issubset(phrases)
+    assert result.summaries.one_line == "This section explains why degradation is surprising: a deeper model should be able to copy a shallower one."
+    assert result.sentences[0].core_structure == "There exists a solution by construction to X: A are B, and C are copied from D."

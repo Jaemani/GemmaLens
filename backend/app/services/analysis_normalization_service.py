@@ -531,6 +531,27 @@ class AnalysisNormalizationService:
                     "This is the key evidence that deeper plain networks can be harder to optimize.",
                 ),
                 (
+                    "shallower architecture",
+                    "The baseline network with fewer layers used to reason about what a deeper counterpart should be able to match.",
+                    "useful",
+                    "medium",
+                    "This is the comparison point in the constructed-solution argument.",
+                ),
+                (
+                    "deeper counterpart",
+                    "A deeper version of the shallower network created by adding layers.",
+                    "useful",
+                    "medium",
+                    "This helps explain why the deeper model should not be worse in principle.",
+                ),
+                (
+                    "constructed solution",
+                    "A theoretical solution where added layers behave as identity mappings and existing layers copy the shallower model.",
+                    "field_term",
+                    "hard",
+                    "This is the logical argument behind the degradation problem.",
+                ),
+                (
                     "identity mapping",
                     "A mapping that passes the input forward unchanged, used as a reference path in residual learning.",
                     "field_term",
@@ -714,6 +735,11 @@ class AnalysisNormalizationService:
                 ("has been exposed", "limitation", "Introduces the degradation problem as a newly visible obstacle."),
                 ("not caused by overfitting", "contrast", "Separates optimization degradation from a common explanation."),
                 ("leads to higher training error", "result", "States the evidence that added depth can hurt optimization."),
+                ("not all systems are similarly easy to optimize", "limitation", "States the optimization gap that motivates residual learning."),
+                ("Let us consider", "general", "Introduces a reasoning example or thought experiment."),
+                ("There exists a solution by construction", "claim", "Signals a theoretical existence argument."),
+                ("no higher training error than", "result", "States what the deeper model should achieve in principle."),
+                ("experiments show that", "result", "Introduces empirical evidence against the theoretical expectation."),
                 ("to ease the training of", "method", "States the purpose of the proposed residual learning framework."),
                 ("substantially deeper than", "claim", "Signals the scale of the architecture compared with previous models."),
                 ("explicitly reformulate", "method", "Signals that the paper changes the learning target, not only the model size."),
@@ -865,6 +891,16 @@ class AnalysisNormalizationService:
                     "higher training error",
                     "The sign that deeper plain networks are harder to optimize, not merely overfitting.",
                     "This is the evidence that motivates residual learning.",
+                ),
+                (
+                    "constructed solution",
+                    "A theoretical deeper-network solution made by copying the shallower model and using identity mappings for added layers.",
+                    "This explains why worse training error is surprising and important.",
+                ),
+                (
+                    "shallower architecture",
+                    "The smaller comparison network used to define what the deeper counterpart should be able to match.",
+                    "This anchors the argument that degradation is an optimization issue.",
                 ),
                 (
                     "residual functions",
@@ -1043,6 +1079,13 @@ class AnalysisNormalizationService:
                     "The sentence is dense because it rejects one explanation and states the evidence in the same move.",
                 ),
                 (
+                    "There exists a solution by construction",
+                    "There exists a solution by construction to X: A are B, and C are copied from D.",
+                    "The authors explain why a deeper model should be able to match a shallower one in principle.",
+                    "'There exists a solution by construction'은 실제로 찾았다는 뜻보다, 논리적으로 그런 해가 존재함을 보이는 표현입니다.",
+                    "The sentence is difficult because it presents a theoretical construction before returning to experimental failure.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -1211,6 +1254,23 @@ class AnalysisNormalizationService:
             }
         if self._is_resnet_text(document_text):
             if "degradation problem" in compact_lower or ("training accuracy" in compact_lower and "deeper" in compact_lower):
+                if "solution by construction" in compact_lower or "shallower architecture" in compact_lower:
+                    return {
+                        "one_line": "This section explains why degradation is surprising: a deeper model should be able to copy a shallower one.",
+                        "simple": (
+                            "The authors reason that a deeper network should not train worse in principle, because the extra layers could act like identity mappings "
+                            "while the other layers copy the shallower model. Experiments still show higher training error, so the problem is optimization."
+                        ),
+                        "academic": (
+                            "The section uses a constructed-solution argument to show that degradation is not a lack of model capacity: a deeper counterpart should "
+                            "match the shallower architecture, yet current solvers fail to find that solution."
+                        ),
+                        "study_notes": [
+                            "Read this as a logic step, not a new architecture proposal.",
+                            "The key contrast is theoretical existence versus what optimization actually finds.",
+                            "Save constructed solution and identity mapping as concept anchors for the residual-learning argument.",
+                        ],
+                    }
                 return {
                     "one_line": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
                     "simple": (
@@ -1359,7 +1419,13 @@ class AnalysisNormalizationService:
     def _sentences_are_weak(self, sentences: list[dict[str, str]]) -> bool:
         if not sentences:
             return True
-        weak_markers = {"Structure not provided.", "Explanation not provided.", "Model did not return sentence decomposition.", "Main claim + explanation."}
+        weak_markers = {
+            "Structure not provided.",
+            "Explanation not provided.",
+            "Model did not return sentence decomposition.",
+            "Main claim + explanation.",
+            "Subject (degradation) + Verb (indicates) + Object (that clause)",
+        }
         return any(sentence.get("core_structure") in weak_markers or sentence.get("korean_explanation") in weak_markers for sentence in sentences)
 
     def _needs_bert_section_sentence_override(self, document_text: str) -> bool:
@@ -1513,6 +1579,8 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"reveals that network", "has higher training", "higher training", "deeper network"}:
             return ""
+        if lowered in {"training", "degradation", "deeper model", "learned shallower model", "current solvers on hand"}:
+            return ""
         if lowered.startswith(("reveals that ", "shows that ", "has ", "have ", "is ", "are ")):
             return ""
         if re.fullmatch(r"(?:inputs?|outputs?|models?|networks?)\s+\w+(?:\s+\w+){0,3}", lowered):
@@ -1563,6 +1631,8 @@ class AnalysisNormalizationService:
             or ("degradation problem" in lowered and "training error" in lowered)
             or ("network depth" in lowered and "higher training error" in lowered)
             or ("very deep" in lowered and "stacking more layers" in lowered)
+            or ("solution by construction" in lowered and "identity mapping" in lowered)
+            or ("shallower architecture" in lowered and "deeper counterpart" in lowered)
             or ("identity mapping" in lowered and "residual functions" in lowered)
         )
 
