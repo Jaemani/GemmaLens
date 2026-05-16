@@ -48,6 +48,7 @@ Local demo records currently include:
 - Raw source-grounded signal lists are collapsed by default. This reduces the long report-like page and lets the user inspect raw concepts/terms/expressions only when needed.
 - Whole-paper draft priority lists show only the top three compact items by default, so the paper-level study plan remains scannable.
 - The old full generated-output report is collapsed by default. The main reading workspace now prioritizes PDF/source, section study, paper map, whole-paper draft, and current section lesson.
+- Paper-map coverage now includes the base first-section analysis even when later section caches exist. This fixes a real BERT smoke-test mismatch where the reader showed section 1 analyzed but the paper map only summarized section 3.
 - Already analyzed sections now load their cached lesson when selected, so the green analyzed state leads back to usable learning content rather than only acting as a status marker.
 - Analysis-column learning cards now stay single-column in the PDF workspace. The previous multi-column layout made concept and term cards too narrow on normal desktop widths.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.

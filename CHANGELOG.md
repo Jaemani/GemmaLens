@@ -26,6 +26,7 @@
 - Collapsed raw source-grounded signal lists by default, keeping the paper map focused on the study guide and whole-paper draft unless the user chooses to inspect the underlying items.
 - Trimmed whole-paper draft priority lists to the top three items with short descriptions, so the draft stays scannable instead of becoming another long report.
 - Collapsed the legacy detailed generated output by default on analysis pages, keeping the PDF workspace centered on source reading, section study, and the paper-level learning draft.
+- Fixed paper-map coverage when both a base analysis and later section caches exist. The paper map now includes section 1 alongside later analyzed sections instead of silently dropping it.
 - Added cached section-lesson retrieval. Selecting an already analyzed section now loads its saved lesson instead of requiring the user to run analysis again.
 - Simplified analysis-column card grids to one readable column in the PDF workspace, avoiding cramped concept/term/expression cards on normal desktop widths.
 - Replaced the native embedded PDF iframe with a PDF.js canvas preview, so the demo reliably shows the original PDF and supports PDF page Previous/Next controls.

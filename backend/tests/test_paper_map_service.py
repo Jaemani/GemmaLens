@@ -15,6 +15,14 @@ class FakeSectionAnalysisRepository:
         return []
 
 
+class FakeSectionAnalysisRepositoryWithRows:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def list_results(self, document_id: str):
+        return self.rows
+
+
 def test_paper_map_normalizes_base_analysis_when_no_section_cache():
     text = (
         "Training Deep Neural Networks is complicated by the fact that the distribution "
@@ -125,3 +133,45 @@ def test_paper_map_guide_separates_partial_coverage_from_whole_paper_claim():
     assert paper_map.synthesis.argument_flow
     assert any("Concept path" in item for item in paper_map.guide.reading_focus)
     assert any("next unstudied section" in item for item in paper_map.guide.next_steps)
+
+
+def test_paper_map_includes_base_analysis_with_section_cache():
+    text_one = "We introduce BERT, a bidirectional representation model."
+    text_three = "The contributions of our paper include masked language modeling."
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-3",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [{"term": "BERT", "meaning": "representation model", "domain_relevance": "high", "difficulty": "hard", "source_sentence": text_one, "should_save": True}],
+            "phrases": [],
+            "concepts": [{"concept": "BERT", "explanation": "main model", "source_sentence": text_one}],
+            "sentences": [],
+            "summaries": {"one_line": "The first section introduces BERT.", "simple": "The first section introduces BERT.", "academic": "The first section introduces BERT.", "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+    section_three = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "terms": [
+                {
+                    "term": "masked language model",
+                    "meaning": "pre-training objective",
+                    "domain_relevance": "high",
+                    "difficulty": "hard",
+                    "source_sentence": text_three,
+                    "should_save": True,
+                }
+            ],
+            "concepts": [{"concept": "masked language model", "explanation": "pre-training objective", "source_sentence": text_three}],
+            "summaries": {"one_line": "The third section lists contributions.", "simple": "The third section lists contributions.", "academic": "The third section lists contributions.", "study_notes": []},
+        }
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows([(2, section_three)])).build(
+        "doc-3", [text_one, "middle", text_three]
+    )
+
+    assert paper_map.analyzed_sections == [1, 3]
+    assert [summary.text for summary in paper_map.section_summaries] == ["Section 1", "Section 3"]

@@ -80,7 +80,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
         </button>
       </div>
       <div className="grid gap-4 p-5">
-        <div className="rounded-md border border-line bg-surface p-4 lg:col-span-3">
+        <div className="rounded-md border border-line bg-surface p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{guide.title}</p>
           <p className="mt-2 text-sm leading-6 text-ink">{guide.thesis_so_far}</p>
           <p className="mt-2 text-xs leading-5 text-neutral-600">{guide.coverage_note}</p>
