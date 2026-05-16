@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3001";
+const port = new URL(baseURL).port || "3001";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 30_000,
@@ -7,12 +10,12 @@ export default defineConfig({
   fullyParallel: true,
   reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
   use: {
-    baseURL: "http://127.0.0.1:3001",
+    baseURL,
     trace: "retain-on-failure"
   },
   webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1 --port 3001",
-    url: "http://127.0.0.1:3001",
+    command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
+    url: baseURL,
     reuseExistingServer: true,
     timeout: 120_000
   },

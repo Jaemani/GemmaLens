@@ -128,7 +128,7 @@ Important current policy:
 - Paper-map ranking now promotes core methods over generic descriptors, so cumulative guides prioritize ideas such as residual learning before broad descriptors such as deeper networks.
 - The current Batch Normalization smoke result now separates concepts (`internal covariate shift`, `Batch Normalization`, `mini-batch`) from vocabulary (`stochastic gradient descent`, `learning rate`, `vanishing gradients`) and reusable academic expressions (`is complicated by the fact that`, `as opposed to`, `This motivates us to`).
 - The current BERT smoke result now separates core BERT concepts and vocabulary (`BERT`, `pre-training`, `fine-tuning`, `masked language model`, `next sentence prediction`) from incidental terms that appear elsewhere in the full paper but should not drive the first learning guide.
-- Added A/B controls for save behavior, labels, layout, item detail, review state, and user-fit mode.
+- Added browser-local A/B controls for save behavior, labels, layout, item detail, review state, and user-fit mode, then removed them from the learner-facing navigation after the core workflow stabilized.
 - Added user-facing section-level status when analysis is section-limited.
 - Hid internal validator warnings from the result UI because they are debugging signals, not learning content.
 - Prevented silent mock fallback on MLX failure.

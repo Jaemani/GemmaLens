@@ -9,7 +9,6 @@ This gives the team a real shared flow:
 - create document
 - run analysis
 - open structured result
-- test A/B cleanup controls
 - save dictionary items
 
 The deployed backend should run `MockModelAdapter`. Real Gemma analysis stays local until the runtime path is decided.
