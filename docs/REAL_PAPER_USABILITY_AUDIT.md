@@ -44,6 +44,10 @@ Local demo records currently include:
 - The cumulative paper map refreshes after section analysis.
 - The cumulative paper map now starts with a reading guide: thesis so far, honest coverage note, reading focus, and next steps. This makes it behave more like a reading companion than three isolated lists.
 - The paper map now includes a deterministic whole-paper learning draft assembled from analyzed section caches: argument flow, priority concepts, priority terms, reusable expressions, and review plan. This is not model-backed final synthesis yet, but it gives users a study plan instead of raw lists only.
+- The whole-paper learning draft appears before raw concept/term/expression lists, so the user sees a study plan before lower-level signals.
+- Raw source-grounded signal lists are collapsed by default. This reduces the long report-like page and lets the user inspect raw concepts/terms/expressions only when needed.
+- Whole-paper draft priority lists show only the top three compact items by default, so the paper-level study plan remains scannable.
+- The old full generated-output report is collapsed by default. The main reading workspace now prioritizes PDF/source, section study, paper map, whole-paper draft, and current section lesson.
 - Already analyzed sections now load their cached lesson when selected, so the green analyzed state leads back to usable learning content rather than only acting as a status marker.
 - Analysis-column learning cards now stay single-column in the PDF workspace. The previous multi-column layout made concept and term cards too narrow on normal desktop widths.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.

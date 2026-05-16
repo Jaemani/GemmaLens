@@ -22,6 +22,10 @@
 - Added Attention/Transformer paper normalization guardrails so discourse signals such as `the best performing models` are not treated as saveable vocabulary, while Transformer, self-attention, sequence transduction, and parallelization are preserved as learning objects.
 - Added a paper-map reading guide that synthesizes analyzed sections into `thesis so far`, coverage note, reading focus, and next steps instead of only showing concept/term/expression lists.
 - Added a deterministic whole-paper learning draft inside the paper map: argument flow, priority concepts, priority terms, reusable expressions, and review plan built from analyzed section caches.
+- Moved the whole-paper learning draft above raw concept/term/expression lists so the paper map reads like a study guide before exposing source-grounded signals.
+- Collapsed raw source-grounded signal lists by default, keeping the paper map focused on the study guide and whole-paper draft unless the user chooses to inspect the underlying items.
+- Trimmed whole-paper draft priority lists to the top three items with short descriptions, so the draft stays scannable instead of becoming another long report.
+- Collapsed the legacy detailed generated output by default on analysis pages, keeping the PDF workspace centered on source reading, section study, and the paper-level learning draft.
 - Added cached section-lesson retrieval. Selecting an already analyzed section now loads its saved lesson instead of requiring the user to run analysis again.
 - Simplified analysis-column card grids to one readable column in the PDF workspace, avoiding cramped concept/term/expression cards on normal desktop widths.
 - Replaced the native embedded PDF iframe with a PDF.js canvas preview, so the demo reliably shows the original PDF and supports PDF page Previous/Next controls.

@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { AnalysisResult, DocumentRead } from "@/lib/types";
@@ -37,6 +38,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const [paperMapRefreshKey, setPaperMapRefreshKey] = useState(0);
   const [requestedPdfPage, setRequestedPdfPage] = useState<number | null>(null);
   const [sectionLesson, setSectionLesson] = useState<{ analysis: AnalysisResult; sectionNumber: number } | null>(null);
+  const [showDetailedOutput, setShowDetailedOutput] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -209,11 +211,30 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       ) : null}
       {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
       {sectionLesson ? <SectionLessonCard analysis={sectionLesson.analysis} sectionNumber={sectionLesson.sectionNumber} isAnalyzingNext={false} /> : null}
-      <ConceptMapPanel analysis={analysis} sourceKind={isVideoSource ? "video" : "document"} />
-      {config.resultLayout === "readingContextFirst" ? reader : null}
-      {learningObjects}
-      {summaries}
-      {sentenceStructures}
+      <section className="rounded-lg border border-line bg-panel shadow-material">
+        <button
+          type="button"
+          onClick={() => setShowDetailedOutput((value) => !value)}
+          className="flex w-full items-center justify-between gap-3 p-4 text-left"
+        >
+          <span>
+            <span className="block text-sm font-semibold text-ink">Detailed generated output</span>
+            <span className="mt-1 block text-xs leading-5 text-neutral-600">
+              Open for the full model output: concept cards, learning-object table, layered summaries, and sentence structures.
+            </span>
+          </span>
+          {showDetailedOutput ? <ChevronDown size={18} className="shrink-0 text-neutral-500" /> : <ChevronRight size={18} className="shrink-0 text-neutral-500" />}
+        </button>
+      </section>
+      {showDetailedOutput ? (
+        <>
+          <ConceptMapPanel analysis={analysis} sourceKind={isVideoSource ? "video" : "document"} />
+          {config.resultLayout === "readingContextFirst" ? reader : null}
+          {learningObjects}
+          {summaries}
+          {sentenceStructures}
+        </>
+      ) : null}
     </div>
   );
 

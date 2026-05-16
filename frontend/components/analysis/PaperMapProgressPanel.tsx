@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { PaperMap } from "@/lib/types";
@@ -8,6 +8,7 @@ import type { PaperMap } from "@/lib/types";
 export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { documentId: string; refreshKey?: number }) {
   const [paperMap, setPaperMap] = useState<PaperMap | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSignals, setShowSignals] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -88,10 +89,29 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
             <GuideList title="Next steps" rows={guide.next_steps} />
           </div>
         </div>
-        <MapList title="Concepts" rows={paperMap.top_concepts} />
-        <MapList title="Terms" rows={paperMap.top_terms} />
-        <MapList title="Expressions" rows={paperMap.top_phrases} />
         <SynthesisPanel synthesis={synthesis} />
+        <div className="rounded-md border border-line bg-panel p-4">
+          <button
+            type="button"
+            onClick={() => setShowSignals((value) => !value)}
+            className="flex w-full items-center justify-between gap-3 text-left"
+          >
+            <span>
+              <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">Source-grounded signals</span>
+              <span className="mt-1 block text-sm leading-6 text-neutral-600">
+                Raw concepts, terms, and expressions behind the draft. Open when you want to inspect or save items.
+              </span>
+            </span>
+            {showSignals ? <ChevronDown size={18} className="shrink-0 text-neutral-500" /> : <ChevronRight size={18} className="shrink-0 text-neutral-500" />}
+          </button>
+        </div>
+        {showSignals ? (
+          <>
+            <MapList title="Concepts" rows={paperMap.top_concepts} />
+            <MapList title="Terms" rows={paperMap.top_terms} />
+            <MapList title="Expressions" rows={paperMap.top_phrases} />
+          </>
+        ) : null}
       </div>
       <div className="border-t border-line p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Analyzed sections</p>
@@ -136,13 +156,13 @@ function SynthesisList({ title, rows }: { title: string; rows: PaperMap["top_ter
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
       {rows.length ? (
         <div className="mt-2 space-y-3">
-          {rows.slice(0, 5).map((row) => (
+          {rows.slice(0, 3).map((row) => (
             <div key={row.text} className="border-t border-line pt-3 first:border-t-0 first:pt-0">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-semibold text-ink">{row.text}</p>
                 <span className="shrink-0 text-[11px] font-semibold text-neutral-500">S{row.sections.join(", ")}</span>
               </div>
-              <p className="mt-1 text-xs leading-5 text-neutral-600">{row.meaning}</p>
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-600">{row.meaning}</p>
             </div>
           ))}
         </div>
