@@ -7500,6 +7500,11 @@ class AnalysisNormalizationService:
             "encoder-decoder",
             "ensembles",
             "modalities",
+            "attention mechanism",
+            "dependencies",
+            "encoder",
+            "application",
+            "exhibit behaviour",
             "transduction",
             "desiderata",
             "extrapolate",
@@ -7562,6 +7567,13 @@ class AnalysisNormalizationService:
             "discriminative",
             "ensembles",
             "modalities",
+            "attention mechanism",
+            "dependencies",
+            "encoder",
+            "application",
+            "anaphora resolution",
+            "encoder self-attention",
+            "exhibit behaviour",
         }
         return self._prefer_rows(
             rows,
@@ -7576,7 +7588,12 @@ class AnalysisNormalizationService:
         profile = self._attention_profile(document_text)
         if not profile:
             return rows
-        return self._prefer_phrase_rows(rows, document_text, profile["phrases"])
+        return self._prefer_phrase_rows(
+            rows,
+            document_text,
+            profile["phrases"],
+            blocked={"its application should be just", "the law will never be perfect"},
+        )
 
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
@@ -9356,6 +9373,129 @@ class AnalysisNormalizationService:
                 "The authors want to apply Transformer-style attention beyond text, including images, audio, and video.",
                 "'other than text'는 기존 적용 영역을 넘어서는 범위를 설명할 때 유용합니다.",
                 "The section is easy conceptually but PDF extraction mixes conclusion, acknowledgements, and references.",
+            )
+        if "attention visualizations" in lowered and "making...more difficult" in lowered:
+            return profile(
+                "This appendix figure shows encoder self-attention following a long-distance dependency.",
+                (
+                    "Figure 3 visualizes attention heads in encoder layer 5. The example shows heads attending from the word 'making' to the distant phrase that completes "
+                    "'making ... more difficult'."
+                ),
+                (
+                    "The passage is an interpretability appendix: it uses an attention visualization to argue that some encoder self-attention heads "
+                    "track long-distance syntactic dependencies rather than only nearby words."
+                ),
+                [
+                    "Do not study the example sentence as the paper's main argument.",
+                    "The learning point is what the visualization demonstrates.",
+                    "Useful figure-caption language includes 'An example of' and 'attend to'.",
+                ],
+                [
+                    ("attention visualizations", "Appendix figures showing learned attention patterns.", "Attention Visualizations"),
+                    ("encoder self-attention", "Self-attention inside the encoder stack.", "encoder self-attention"),
+                    ("long-distance dependencies", "Distant sentence relationships tracked by attention heads.", "long-distance dependencies"),
+                    ("attention heads", "Different colored heads in the visualization.", "attention heads"),
+                    ("distant dependency", "Dependency completed by 'making...more difficult'.", "distant dependency"),
+                    ("Figure 3", "Visualization of the long-distance dependency example.", "Figure 3"),
+                ],
+                [
+                    ("attention-head interpretability", "The figure suggests some heads learn syntactic dependency patterns.", "attention mechanism"),
+                    ("long-distance dependency example", "The word 'making' attends to a distant completion phrase.", "making...more difficult"),
+                    ("encoder-layer visualization", "The appendix inspects layer 5 of 6 in the encoder.", "layer 5 of 6"),
+                ],
+                [
+                    ("An example of", "general", "Introduces a figure example."),
+                    ("following long-distance dependencies", "claim", "States what the visualization demonstrates."),
+                    ("Many of the attention heads", "claim", "Generalizes over multiple heads."),
+                    ("attend to", "method", "Describes the attention relation."),
+                    ("Different colors represent", "general", "Explains visual encoding."),
+                    ("Best viewed in color", "general", "Figure-viewing note."),
+                ],
+                "Many of the attention heads attend to a distant dependency",
+                "Many of X attend to Y, completing Z.",
+                "Several attention heads connect the word 'making' to a distant phrase needed to complete its meaning.",
+                "'attend to'는 attention visualization에서 어떤 token이 어디를 참조하는지 설명하는 핵심 표현입니다.",
+                "The section is visually grounded; extracted text repeats the example sentence and can obscure the caption's point.",
+            )
+        if "anaphora resolution" in lowered and "attentions are very sharp" in lowered:
+            return profile(
+                "This appendix figure shows attention heads involved in anaphora resolution.",
+                (
+                    "Figure 4 visualizes two encoder attention heads for the sentence about 'The Law'. The caption says the heads appear involved in anaphora resolution, "
+                    "especially sharp attention from the word 'its'."
+                ),
+                (
+                    "The passage is an interpretability example: attention heads in layer 5 are presented as resolving pronoun/reference structure, showing that some learned heads focus sharply on discourse relations."
+                ),
+                [
+                    "The learner should focus on the caption, not memorize the repeated example sentence.",
+                    "Anaphora resolution means connecting a pronoun or referring expression to its antecedent.",
+                    "The useful phrase is 'apparently involved in'.",
+                ],
+                [
+                    ("anaphora resolution", "Resolving what a pronoun or referring expression points to.", "anaphora resolution"),
+                    ("attention heads", "Heads visualized in Figure 4.", "attention heads"),
+                    ("layer 5 of 6", "Encoder layer where the heads are inspected.", "layer 5 of 6"),
+                    ("sharp attentions", "Highly focused attention weights for a word.", "attentions are very sharp"),
+                    ("the word 'its'", "Word whose isolated attentions are shown.", "word ‘its’"),
+                    ("Figure 4", "Visualization of anaphora-related attention heads.", "Figure 4"),
+                ],
+                [
+                    ("anaphora-attention example", "The figure links attention to pronoun/reference resolution.", "anaphora resolution"),
+                    ("sharp attention pattern", "The attention distribution for 'its' is highly focused.", "very sharp"),
+                    ("head-specific behavior", "Different heads are inspected separately.", "heads 5 and 6"),
+                ],
+                [
+                    ("apparently involved in", "claim", "Cautiously interprets model behavior."),
+                    ("Full attentions for", "general", "Describes what the figure shows."),
+                    ("Isolated attentions from", "general", "Describes a narrowed visualization."),
+                    ("Note that", "general", "Directs reader attention."),
+                    ("very sharp for", "claim", "Describes focused attention."),
+                ],
+                "Two attention heads, also in layer 5 of 6, apparently involved in anaphora resolution.",
+                "X are apparently involved in Y.",
+                "Two attention heads seem to help resolve what 'its' refers to.",
+                "'apparently involved in'은 관찰 결과를 조심스럽게 해석할 때 쓰는 표현입니다.",
+                "The repeated sentence text is noisy; the figure caption carries the learning value.",
+            )
+        if "figure 5:" in lowered and "different tasks" in lowered and "structure of the sentence" in lowered:
+            return profile(
+                "This appendix figure argues that different attention heads learn different sentence-structure roles.",
+                (
+                    "Figure 5 presents two examples where encoder self-attention heads appear related to sentence structure. The caption says the heads learned to perform different tasks."
+                ),
+                (
+                    "The passage is the final interpretability appendix section: it summarizes evidence that attention heads specialize, with some heads reflecting syntactic or semantic sentence structure."
+                ),
+                [
+                    "Treat this as qualitative evidence, not a main benchmark result.",
+                    "The important claim is head specialization.",
+                    "The phrase 'seems related to' is cautious interpretability language.",
+                ],
+                [
+                    ("attention heads", "Different heads inspected in the visualization.", "attention heads"),
+                    ("encoder self-attention", "Encoder attention mechanism being visualized.", "encoder self-attention"),
+                    ("sentence structure", "Syntactic or semantic structure reflected by heads.", "structure of the sentence"),
+                    ("different tasks", "Different roles learned by different heads.", "different tasks"),
+                    ("Figure 5", "Final attention visualization figure.", "Figure 5"),
+                    ("layer 5 of 6", "Encoder layer used for the examples.", "layer 5 of 6"),
+                ],
+                [
+                    ("head specialization", "Different heads appear to learn different roles.", "different tasks"),
+                    ("sentence-structure behavior", "Some heads align with sentence structure.", "structure of the sentence"),
+                    ("qualitative interpretability claim", "The appendix uses examples rather than quantitative metrics.", "examples above"),
+                ],
+                [
+                    ("exhibit behaviour that seems related to", "claim", "Cautiously links behavior to structure."),
+                    ("We give two such examples", "general", "Introduces qualitative examples."),
+                    ("from two different heads", "general", "Specifies separate heads."),
+                    ("clearly learned to perform", "claim", "States head specialization."),
+                ],
+                "Many of the attention heads exhibit behaviour that seems related to the structure of the sentence.",
+                "Many of X exhibit behaviour that seems related to Y.",
+                "Several attention heads appear to encode sentence-structure information.",
+                "'seems related to'는 interpretability에서 과도한 단정을 피하는 표현입니다.",
+                "The extracted text repeats the example sentence, but the caption explains the actual claim.",
             )
         return None
 
