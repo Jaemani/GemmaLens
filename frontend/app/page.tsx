@@ -76,17 +76,17 @@ export default async function DashboardPage() {
           <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
             <h2 className="font-semibold">Current learning loop</h2>
             <div className="mt-4 space-y-3">
-              <LoopStep label="1" title="Extract" text="PDF, text, markdown, or transcript" />
-              <LoopStep label="2" title="Analyze" text="Terms, phrases, syntax, summaries" />
-              <LoopStep label="3" title="Review" text="Save, translate, quiz, revisit" />
+              <LoopStep label="1" title="Section study" text="Read the source and analyze one paper section at a time" />
+              <LoopStep label="2" title="Paper map" text="Merge section lessons into argument flow and priority items" />
+              <LoopStep label="3" title="Review queue" text="Save concepts, terms, expressions, and sentence patterns" />
             </div>
           </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-3">
-          <Capability icon={<FileText size={18} />} title="Document-aware" text="Prioritizes vocabulary and structures by source context and domain." />
-          <Capability icon={<BookMarked size={18} />} title="Learner-fitted" text="Uses level, language pair, and saved items to guide what to show." />
-          <Capability icon={<PlayCircle size={18} />} title="Multimodal path" text="Documents first, video transcripts next, translation and quiz as tools." />
+          <Capability icon={<FileText size={18} />} title="Source beside lesson" text="PDF pages stay visible while extracted sections become learning objects." />
+          <Capability icon={<BookMarked size={18} />} title="Paper-level memory" text="Complete papers produce priority concepts, terms, expressions, and review prompts." />
+          <Capability icon={<PlayCircle size={18} />} title="Support tools" text="Video, translation, dictionary, and quiz support the reading workflow." />
         </section>
       </div>
     </AppShell>

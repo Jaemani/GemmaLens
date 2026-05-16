@@ -189,6 +189,7 @@ Local demo records currently include:
 - Follow-up quiz audit exposed that review prompts should use complete paper maps when available, not only the initial base analysis. The quiz now builds concept, term, and expression prompts from paper-map priority lists before falling back to base-analysis items.
 - Dictionary follow-up audit exposed that the page still lacked a sense of review timing. Saved items now show lightweight `New`, `Review soon`, and `Familiar` states derived from encounter and view counts, with summary cards and table badges.
 - Section-study audit exposed a repeated-click problem for incomplete long PDFs: users could only advance in batches of three sections. The reader now keeps the small `Auto-study next 3` path for slow local models and adds `Study remaining N` for users who want to push toward a complete paper guide.
+- Dashboard audit exposed that the learning loop still sounded like a generic extract/analyze/review pipeline. It now describes the actual product loop: section study, paper map, and review queue.
 
 ## Still Weak
 
