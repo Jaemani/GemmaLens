@@ -173,6 +173,8 @@ Local demo records currently include:
 - Completed BatchNorm 31/31 live API audit. Every section is analyzed, non-section quality warnings are empty, and non-reference sections pass a minimum learning-density check.
 - Paper-map completion audit exposed another whole-paper UX issue: valid learning sections with short `table` or `figure` summaries were filtered out of the cumulative guide. The map now keeps architecture tables, model-variation ablation tables, and attention-head appendix figures when their summaries are explicitly learning-oriented.
 - Completed cross-paper live API audit for the four complete demo PDFs: ResNet 28/28, Transformer 23/23, BatchNorm 31/31, and BERT 37/37 all report complete section-level paper maps.
+- Playwright inspection exposed a local-stack mismatch: the frontend proxy expects backend `8012`, while the audit backend had been running on `8010`. The local backend is now running on `8012`, matching README/scripts/frontend defaults.
+- Playwright inspection also exposed a completed-document UX problem: the paper map appeared after the current section lesson, and completed documents still showed unfinished-study actions. The analysis page now shows the whole-paper guide before the selected section lesson, labels completed documents as `Complete section guide`, hides next/auto-study actions when all sections are analyzed, and expands paper-level priority lists beyond three items.
 
 ## Still Weak
 

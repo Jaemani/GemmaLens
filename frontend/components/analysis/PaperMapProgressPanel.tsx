@@ -36,6 +36,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
   const analyzedCount = paperMap.analyzed_sections.length;
   const totalSections = paperMap.total_sections || Math.max(analyzedCount, 1);
   const progress = totalSections ? Math.min(100, Math.round((analyzedCount / totalSections) * 100)) : 0;
+  const complete = Boolean(totalSections && analyzedCount >= totalSections);
   const guide = paperMap.guide ?? {
     title: "Reading guide",
     thesis_so_far: analyzedCount ? "This map is built from analyzed sections only." : "No section has been analyzed yet.",
@@ -57,9 +58,11 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line p-5">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Paper map</p>
-          <h2 className="mt-1 text-lg font-semibold">What this paper is teaching so far</h2>
+          <h2 className="mt-1 text-lg font-semibold">{complete ? "Whole-paper learning guide" : "What this paper is teaching so far"}</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">
-            Built from analyzed sections only. It grows as you analyze more sections, so it does not pretend the whole paper is complete.
+            {complete
+              ? "Built from every analyzed section: argument flow, priority concepts, vocabulary, expressions, and review plan."
+              : "Built from analyzed sections only. It grows as you analyze more sections, so it does not pretend the whole paper is complete."}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-neutral-600">
             <span>
@@ -158,22 +161,22 @@ function SynthesisPanel({ synthesis }: { synthesis: NonNullable<PaperMap["synthe
       </div>
       <GuideList title="Argument flow" rows={synthesis.argument_flow} />
       <div className="mt-4 grid gap-4">
-        <SynthesisList title="Priority concepts" rows={synthesis.priority_concepts} />
-        <SynthesisList title="Priority terms" rows={synthesis.priority_terms} />
-        <SynthesisList title="Reusable expressions" rows={synthesis.reusable_expressions} />
+        <SynthesisList title="Priority concepts" rows={synthesis.priority_concepts} limit={6} />
+        <SynthesisList title="Priority terms" rows={synthesis.priority_terms} limit={8} />
+        <SynthesisList title="Reusable expressions" rows={synthesis.reusable_expressions} limit={6} />
       </div>
       <GuideList title="Review plan" rows={synthesis.review_plan} />
     </div>
   );
 }
 
-function SynthesisList({ title, rows }: { title: string; rows: PaperMap["top_terms"] }) {
+function SynthesisList({ title, rows, limit }: { title: string; rows: PaperMap["top_terms"]; limit: number }) {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
       {rows.length ? (
         <div className="mt-2 space-y-3">
-          {rows.slice(0, 3).map((row) => (
+          {rows.slice(0, limit).map((row) => (
             <div key={row.text} className="border-t border-line pt-3 first:border-t-0 first:pt-0">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-semibold text-ink">{row.text}</p>

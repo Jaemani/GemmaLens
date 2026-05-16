@@ -35,6 +35,7 @@ export function DocumentPageReader({
   const currentSection = sections[pageIndex];
   const page = currentSection?.text ?? "";
   const analyzedCount = sections.filter((section) => section.analyzed).length;
+  const allSectionsAnalyzed = Boolean(sections.length && analyzedCount >= sections.length);
   const nextUnanalyzedIndex = sections.findIndex((section, index) => index > pageIndex && !section.analyzed);
   const fallbackUnanalyzedIndex = sections.findIndex((section) => !section.analyzed);
   const targetUnanalyzedIndex = nextUnanalyzedIndex >= 0 ? nextUnanalyzedIndex : fallbackUnanalyzedIndex;
@@ -227,26 +228,35 @@ export function DocumentPageReader({
           <p className="mt-2 text-xs font-semibold text-neutral-600">
             {analyzedCount} / {sections.length || 1} sections analyzed
           </p>
+          {allSectionsAnalyzed ? (
+            <p className="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
+              Complete section guide
+            </p>
+          ) : null}
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
-          <button
-            type="button"
-            onClick={goToNextUnanalyzed}
-            disabled={targetUnanalyzedIndex < 0 || isBatchAnalyzing}
-            className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
-          >
-            <SkipForward size={16} />
-            Next unstudied
-          </button>
-          <button
-            type="button"
-            onClick={autoStudyNextSections}
-            disabled={!plannedBatchIndices.length || isBatchAnalyzing || isAnalyzing}
-            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-3 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
-          >
-            <ScanText size={16} />
-            {isBatchAnalyzing ? "Auto-studying..." : "Auto-study next 3"}
-          </button>
+          {!allSectionsAnalyzed ? (
+            <>
+              <button
+                type="button"
+                onClick={goToNextUnanalyzed}
+                disabled={targetUnanalyzedIndex < 0 || isBatchAnalyzing}
+                className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
+              >
+                <SkipForward size={16} />
+                Next unstudied
+              </button>
+              <button
+                type="button"
+                onClick={autoStudyNextSections}
+                disabled={!plannedBatchIndices.length || isBatchAnalyzing || isAnalyzing}
+                className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-3 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
+              >
+                <ScanText size={16} />
+                {isBatchAnalyzing ? "Auto-studying..." : "Auto-study next 3"}
+              </button>
+            </>
+          ) : null}
           {document.source_type === "pdf" && !document.has_original_file ? (
             <>
               <button
@@ -278,7 +288,7 @@ export function DocumentPageReader({
             className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
           >
             <ScanText size={16} />
-            {isAnalyzing ? "Analyzing section..." : currentSection?.analyzed ? "Re-analyze section" : "Analyze this section"}
+            {isAnalyzing ? "Analyzing section..." : currentSection?.analyzed ? "Refresh section lesson" : "Analyze this section"}
           </button>
         </div>
       </div>

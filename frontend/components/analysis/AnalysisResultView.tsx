@@ -274,8 +274,8 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           hideInlineLesson
         />
       ) : null}
-      {sectionLesson ? <SectionLessonCard analysis={sectionLesson.analysis} sectionNumber={sectionLesson.sectionNumber} isAnalyzingNext={false} /> : null}
       {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
+      {sectionLesson ? <SectionLessonCard analysis={sectionLesson.analysis} sectionNumber={sectionLesson.sectionNumber} isAnalyzingNext={false} /> : null}
       <section className="rounded-lg border border-line bg-panel shadow-material">
         <button
           type="button"
