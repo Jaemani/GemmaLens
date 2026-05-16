@@ -80,6 +80,9 @@ class AnalysisNormalizationService:
         if self._is_reference_list_section(document_text):
             terms = self._prefer_reference_list_terms(terms, document_text)
             phrases = self._prefer_reference_list_phrases(phrases, document_text)
+        if self._is_attention_learning_section(document_text):
+            terms = self._prefer_attention_terms(terms, document_text)
+            phrases = self._prefer_attention_phrases(phrases, document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -191,6 +194,9 @@ class AnalysisNormalizationService:
         if self._is_reference_list_section(document_text):
             normalized["concepts"] = self._prefer_reference_list_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._prefer_reference_list_phrases(normalized["phrases"], document_text)
+        if self._is_attention_learning_section(document_text):
+            normalized["concepts"] = self._prefer_attention_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_attention_phrases(normalized["phrases"], document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -234,7 +240,11 @@ class AnalysisNormalizationService:
         if self._is_resnet_imagenet_localization_rcnn_section(document_text):
             normalized["concepts"] = self._prefer_resnet_imagenet_localization_rcnn_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_resnet_imagenet_localization_rcnn_noise(normalized["phrases"], "phrase")
-        if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
+        if (
+            self._sentences_are_weak(normalized["sentences"])
+            or self._needs_bert_section_sentence_override(document_text)
+            or self._is_attention_learning_section(document_text)
+        ):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
             normalized["summaries"] = self._heuristic_summaries(document_text)
@@ -2931,6 +2941,18 @@ class AnalysisNormalizationService:
                     "difficulty_reason": "This is citation metadata, so it should be skimmed for sources rather than studied as prose.",
                 }
             ]
+        if self._is_attention_learning_section(document_text):
+            profile = self._attention_profile(document_text) or {}
+            sentence = self._source_sentence(None, str(profile.get("sentence_target") or ""), document_text)
+            return [
+                {
+                    "sentence": sentence,
+                    "core_structure": str(profile.get("core_structure") or "Transformer section sentence."),
+                    "simplified_version": str(profile.get("simplified_version") or "This section explains part of the Transformer paper."),
+                    "korean_explanation": str(profile.get("korean_explanation") or "이 문장은 Transformer 논문의 핵심 구조를 설명합니다."),
+                    "difficulty_reason": str(profile.get("difficulty_reason") or "The section mixes architecture, notation, and method motivation."),
+                }
+            ]
         if self._is_bert_text(document_text):
             if self._is_bert_masked_lm_procedure_section(document_text):
                 sentence = self._source_sentence(None, "In contrast to", document_text)
@@ -4598,6 +4620,9 @@ class AnalysisNormalizationService:
                     "Useful patterns are venue phrases such as 'In Proceedings of' and source labels such as 'arXiv preprint'.",
                 ],
             }
+        if self._is_attention_learning_section(document_text):
+            profile = self._attention_profile(document_text) or {}
+            return profile["summaries"]
         if self._is_attention_text(document_text):
             return {
                 "one_line": "The paper introduces the Transformer, an attention-only architecture for sequence transduction.",
@@ -7442,6 +7467,38 @@ class AnalysisNormalizationService:
             blocked={"we demonstrate", "allows us to"},
         )
 
+    def _prefer_attention_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        profile = self._attention_profile(document_text)
+        if not profile:
+            return rows
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "term",
+            profile["terms"],
+            limit=14,
+            blocked={"transformer", "new simple network", "decoder stacks encoder", "neural networks"},
+        )
+
+    def _prefer_attention_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        profile = self._attention_profile(document_text)
+        if not profile:
+            return rows
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "concept",
+            profile["concepts"],
+            limit=8,
+            blocked={"transformer", "new simple network", "decoder stacks encoder", "neural networks"},
+        )
+
+    def _prefer_attention_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        profile = self._attention_profile(document_text)
+        if not profile:
+            return rows
+        return self._prefer_phrase_rows(rows, document_text, profile["phrases"])
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -7535,6 +7592,8 @@ class AnalysisNormalizationService:
         if self._is_bert_conclusion_section(document_text):
             return True
         if self._is_bert_appendix_learning_section(document_text):
+            return True
+        if self._is_attention_learning_section(document_text):
             return True
         if self._is_reference_list_section(document_text):
             return True
@@ -8384,6 +8443,301 @@ class AnalysisNormalizationService:
         )
         has_many_years = len(re.findall(r"\b(?:19|20)\d{2}\b", lowered)) >= 4
         return has_many_years and citation_markers >= 2 and not self._is_bert_conclusion_section(document_text)
+
+    def _is_attention_learning_section(self, document_text: str) -> bool:
+        return self._attention_profile(document_text) is not None
+
+    def _attention_profile(self, document_text: str) -> dict[str, Any] | None:
+        lowered = document_text.lower()
+        compact_lowered = re.sub(r"\s+", " ", lowered)
+
+        def profile(
+            one_line: str,
+            simple: str,
+            academic: str,
+            notes: list[str],
+            terms: list[tuple[str, str, str]],
+            concepts: list[tuple[str, str, str]],
+            phrases: list[tuple[str, str, str]],
+            sentence_target: str,
+            core_structure: str,
+            simplified_version: str,
+            korean_explanation: str,
+            difficulty_reason: str,
+        ) -> dict[str, Any]:
+            return {
+                "summaries": {"one_line": one_line, "simple": simple, "academic": academic, "study_notes": notes},
+                "terms": terms,
+                "concepts": concepts,
+                "phrases": phrases,
+                "sentence_target": sentence_target,
+                "core_structure": core_structure,
+                "simplified_version": simplified_version,
+                "korean_explanation": korean_explanation,
+                "difficulty_reason": difficulty_reason,
+            }
+
+        if "introduction recurrent neural networks" in compact_lowered and "factor computation along" in lowered and "symbol positions" in lowered:
+            return profile(
+                "This introduction explains why recurrent sequence models limit parallel training before motivating attention.",
+                (
+                    "The section reviews RNN/LSTM/GRU sequence models and explains their sequential computation bottleneck. "
+                    "Because hidden states depend on previous positions, recurrence limits parallelization and makes long-range dependencies harder."
+                ),
+                (
+                    "The passage sets up the Transformer by diagnosing recurrent encoder-decoder models: position-by-position computation, "
+                    "sequential dependency, batching constraints, and difficulty connecting distant token positions."
+                ),
+                [
+                    "Read this as problem setup, not the Transformer method yet.",
+                    "The key contrast is sequential recurrence versus parallel attention.",
+                    "Save terms that explain why recurrence is a bottleneck.",
+                ],
+                [
+                    ("recurrent neural networks", "Sequence models that process tokens step by step.", "Recurrent neural networks"),
+                    ("long short-term memory", "LSTM, a recurrent model family used in sequence modeling.", "long short-term memory"),
+                    ("gated recurrent neural networks", "GRU-style recurrent models used for sequence tasks.", "gated recurrent"),
+                    ("sequence modeling", "Modeling ordered token sequences.", "sequence modeling"),
+                    ("sequence transduction", "Mapping one sequence to another, as in translation.", "transduction problems"),
+                    ("symbol positions", "Token positions along which recurrent computation is factored.", "symbol positions"),
+                    ("parallelization", "Running computation for positions at the same time.", "parallelization"),
+                    ("hidden states", "Intermediate recurrent states generated step by step.", "hidden states"),
+                ],
+                [
+                    ("recurrent-computation bottleneck", "RNNs factor computation by position, limiting parallel training.", "factor computation"),
+                    ("hidden-state chain", "Each recurrent state depends on the previous state and current input.", "hidden states"),
+                    ("Transformer motivation", "The section motivates replacing recurrence with attention.", "parallelization"),
+                ],
+                [
+                    ("have been firmly established as", "claim", "States prior accepted baseline status."),
+                    ("Numerous efforts have since continued to", "general", "Introduces ongoing prior work."),
+                    ("typically factor computation along", "method", "Explains recurrent computation structure."),
+                    ("precludes parallelization", "limitation", "States the bottleneck."),
+                    ("critical in sequence modeling tasks", "claim", "Explains why the limitation matters."),
+                ],
+                "Recurrent models typically factor computation",
+                "X typically factor computation along Y, generating Z.",
+                "RNNs compute position by position, which creates hidden states and limits parallel training.",
+                "'typically factor computation along'은 모델이 어떤 축으로 계산을 나누는지 설명하는 표현입니다.",
+                "The sentence compresses model structure, computation order, and the hidden-state dependency.",
+            )
+        if "significantly more parallelization" in lowered and "2 background" in lowered:
+            return profile(
+                "This transition links the Transformer's parallelization claim to prior convolutional and attention-based sequence models.",
+                (
+                    "The section says the Transformer trains quickly and then reviews earlier attempts to reduce sequential computation, "
+                    "including convolutional models and attention mechanisms."
+                ),
+                (
+                    "The passage bridges introduction and architecture: it positions Extended Neural GPU, ByteNet, and ConvS2S as prior parallel-computation efforts, "
+                    "then distinguishes the Transformer's fully self-attentive transduction design."
+                ),
+                [
+                    "This is a literature-positioning section.",
+                    "Track which models are convolutional baselines and which idea is attention.",
+                    "The key claim is not only quality, but training parallelism.",
+                ],
+                [
+                    ("parallelization", "The ability to train positions in parallel.", "parallelization"),
+                    ("P100 GPUs", "Hardware used to state the training-time result.", "P100 GPUs"),
+                    ("sequential computation", "Step-by-step computation the paper aims to reduce.", "sequential computation"),
+                    ("Extended Neural GPU", "Prior model aiming to reduce sequential computation.", "Extended Neural GPU"),
+                    ("ByteNet", "Prior convolutional sequence model.", "ByteNet"),
+                    ("ConvS2S", "Prior convolutional sequence-to-sequence model.", "ConvS2S"),
+                    ("hidden representations", "Representations computed in parallel by prior CNN models.", "hidden representations"),
+                    ("input and output positions", "Sequence positions whose representations are computed.", "input and output positions"),
+                ],
+                [
+                    ("parallel-computation lineage", "The section maps prior work that also reduces sequential computation.", "reducing sequential computation"),
+                    ("convolutional baseline family", "ByteNet and ConvS2S use CNNs as their basic building block.", "convolutional neural networks"),
+                    ("Transformer efficiency claim", "The model reaches strong translation quality after a short GPU training window.", "twelve hours"),
+                ],
+                [
+                    ("allows for significantly more", "result", "States a comparative efficiency benefit."),
+                    ("can reach a new state of the art", "result", "Claims benchmark performance."),
+                    ("forms the foundation of", "claim", "Connects a goal to prior work."),
+                    ("all of which use", "general", "Groups related prior methods."),
+                    ("computing hidden representations in parallel", "method", "Explains the prior models' parallel mechanism."),
+                ],
+                "The goal of reducing sequential computation",
+                "The goal of X also forms the foundation of Y.",
+                "Prior models also tried to reduce sequential computation, mainly through convolution.",
+                "'forms the foundation of'는 어떤 목표가 여러 선행연구의 기반이라는 뜻입니다.",
+                "The sentence links a research goal to several model families in one compressed literature map.",
+            )
+        if "first transduction model relying entirely on self-attention" in lowered and "3 model architecture" in lowered:
+            return profile(
+                "This section states the Transformer's novelty and introduces the encoder-decoder architecture frame.",
+                (
+                    "The authors claim the Transformer is the first transduction model that relies entirely on self-attention, "
+                    "then move into the standard encoder-decoder structure used by competitive sequence transduction models."
+                ),
+                (
+                    "The passage is the method transition: it distinguishes the Transformer from RNN/CNN-aligned models, previews the self-attention motivation, "
+                    "and anchors the architecture in encoder-decoder sequence modeling."
+                ),
+                [
+                    "This is where the paper moves from motivation to method.",
+                    "Separate novelty claim from architecture setup.",
+                    "The useful phrase is 'To the best of our knowledge, however'.",
+                ],
+                [
+                    ("self-attention", "The sole mechanism the Transformer uses for transduction representations.", "self-attention"),
+                    ("transduction model", "A model that maps one sequence to another.", "transduction model"),
+                    ("sequencealigned RNNs", "RNNs aligned to sequence positions, which the Transformer avoids.", "sequencealigned RNNs"),
+                    ("convolution", "A prior sequence modeling mechanism the Transformer avoids.", "convolution"),
+                    ("encoder-decoder structure", "Architecture pattern with input encoder and output decoder.", "encoder-decoder structure"),
+                    ("input sequence", "The sequence consumed by the encoder.", "input sequence"),
+                    ("output sequence", "The sequence produced by the decoder.", "output sequence"),
+                ],
+                [
+                    ("attention-only novelty claim", "The paper claims the Transformer relies entirely on self-attention.", "relying entirely on self-attention"),
+                    ("method-section roadmap", "The authors announce they will describe and motivate self-attention.", "following sections"),
+                    ("encoder-decoder architecture frame", "The Transformer is introduced inside the standard sequence transduction frame.", "encoder-decoder structure"),
+                ],
+                [
+                    ("To the best of our knowledge", "claim", "Qualifies a novelty claim."),
+                    ("relying entirely on", "method", "States the exclusive mechanism."),
+                    ("without using", "contrast", "Names excluded mechanisms."),
+                    ("In the following sections", "general", "Introduces a roadmap."),
+                    ("Most competitive", "claim", "Frames the baseline architecture family."),
+                ],
+                "relying entirely on self-attention",
+                "X is the first Y relying entirely on Z without using A or B.",
+                "The authors claim the Transformer is the first sequence transduction model based only on self-attention.",
+                "'relying entirely on'은 핵심 메커니즘 하나에만 의존한다는 강한 설계 표현입니다.",
+                "The sentence combines novelty, mechanism, and excluded alternatives.",
+            )
+        if "encoder is composed of a stack" in lowered and "multi-head self-attention mechanism" in lowered:
+            return profile(
+                "This section defines the Transformer's encoder/decoder stacks and their repeated sub-layer pattern.",
+                (
+                    "The encoder has six identical layers, each with multi-head self-attention and a position-wise feed-forward network. "
+                    "Residual connections and layer normalization wrap the sub-layers, and the decoder adds masked self-attention."
+                ),
+                (
+                    "The passage specifies the architectural recipe: stacked encoder/decoder layers, two encoder sub-layers, decoder masking, residual connections, "
+                    "layer normalization, and fixed dimensionality across embeddings and sub-layer outputs."
+                ),
+                [
+                    "This is architecture anatomy; read it like a parts list.",
+                    "Separate sub-layer types from wrapper operations.",
+                    "Masked decoder self-attention is different from encoder self-attention.",
+                ],
+                [
+                    ("encoder stack", "Six repeated encoder layers.", "encoder is composed of a stack"),
+                    ("decoder stack", "Repeated decoder layers with an extra masked attention sub-layer.", "decoder"),
+                    ("multi-head self-attention", "Attention sub-layer used inside Transformer blocks.", "multi-head self-attention"),
+                    ("positionwise fully connected feed-forward network", "Fully connected sub-layer applied at each position.", "positionwise fully connected"),
+                    ("residual connection", "Skip connection around each sub-layer.", "residual"),
+                    ("layer normalization", "Normalization applied after sub-layer residual addition.", "layer normalization"),
+                    ("subsequent positions", "Future decoder positions that masking prevents attention to.", "subsequent positions"),
+                    ("dmodel", "Model dimensionality used across sub-layers and embeddings.", "dmodel"),
+                ],
+                [
+                    ("encoder block recipe", "Each encoder layer combines self-attention and feed-forward sub-layers.", "Each layer has two sub-layers"),
+                    ("residual-normalization wrapper", "Each sub-layer is wrapped with residual connection and layer normalization.", "residual"),
+                    ("decoder autoregressive masking", "The decoder masks future output positions during generation.", "masked"),
+                ],
+                [
+                    ("is composed of a stack of", "method", "Defines repeated architecture layers."),
+                    ("Each layer has", "method", "Introduces sub-layer components."),
+                    ("We employ", "method", "States an architectural choice."),
+                    ("around each of", "method", "Explains wrapper placement."),
+                    ("to prevent positions from attending to", "method", "Explains masking purpose."),
+                ],
+                "Each layer has two sub-layers",
+                "Each layer has A. The first is B, and the second is C.",
+                "Each Transformer encoder layer contains self-attention followed by a feed-forward network.",
+                "'The first is..., and the second is...'는 구성요소를 순서대로 정의하는 구조입니다.",
+                "The sentence is easy grammatically but dense because every noun phrase is a model component.",
+            )
+        if "scaled dot-product attention" in lowered and "queries and keys" in lowered and "values of dimension" in lowered:
+            return profile(
+                "This section defines scaled dot-product attention with queries, keys, values, softmax, and 1/sqrt(dk) scaling.",
+                (
+                    "Attention maps queries and key-value pairs to outputs. The Transformer computes query-key dot products, divides by sqrt(dk), "
+                    "uses softmax to get weights, and applies those weights to values."
+                ),
+                (
+                    "The passage formalizes the core attention operation: Q/K/V dimensions, dot-product compatibility, softmax weighting, matrix implementation, "
+                    "and scaling to avoid unstable large dot products."
+                ),
+                [
+                    "This is the math core; learn Q, K, V before memorizing the formula.",
+                    "Scaling is there for optimization stability.",
+                    "Do not save generic words like 'input' or 'values' without the Q/K/V role.",
+                ],
+                [
+                    ("queries", "Vectors that ask what information is needed.", "queries"),
+                    ("keys", "Vectors matched against queries.", "keys"),
+                    ("values", "Vectors whose weighted sum becomes the output.", "values"),
+                    ("dot products", "Compatibility scores between queries and keys.", "dot products"),
+                    ("softmax function", "Function that turns scores into attention weights.", "softmax"),
+                    ("dk", "Key/query dimensionality used in the scaling factor.", "dk"),
+                    ("1√dk", "Scaling factor that reduces large dot-product effects.", "1√dk"),
+                    ("additive attention", "Alternative attention mechanism compared with dot-product attention.", "additive attention"),
+                ],
+                [
+                    ("Q/K/V attention roles", "Queries, keys, and values define the attention computation.", "queries and keys"),
+                    ("scaled dot-product formula", "The Transformer scales dot products before softmax.", "scale the dot products"),
+                    ("stability motivation", "Scaling counters large dot products that push softmax into tiny gradients.", "counteract this effect"),
+                ],
+                [
+                    ("We call our particular", "method", "Names the method variant."),
+                    ("The input consists of", "method", "Defines inputs to a formula."),
+                    ("We compute", "method", "Introduces computation steps."),
+                    ("The two most commonly used", "contrast", "Introduces method comparison."),
+                    ("To counteract this effect", "method", "Explains why scaling is added."),
+                ],
+                "To counteract this effect",
+                "To counteract X, we scale Y by Z.",
+                "The Transformer scales dot products to avoid unstable softmax behavior.",
+                "'To counteract this effect'는 앞에서 말한 문제에 대한 해결책을 도입하는 표현입니다.",
+                "The sentence depends on the previous explanation of large dot products and softmax gradients.",
+            )
+        if "multi-head attention" in lowered and "linearly project the queries" in lowered:
+            return profile(
+                "This section explains multi-head attention as parallel learned projections of Q, K, and V.",
+                (
+                    "Instead of doing one attention operation, the model projects queries, keys, and values several times, runs attention in parallel, "
+                    "concatenates the heads, and projects the result."
+                ),
+                (
+                    "The passage motivates multi-head attention as a way to attend jointly to different representation subspaces and positions through learned projections, "
+                    "parallel attention heads, concatenation, and output projection."
+                ),
+                [
+                    "Read each head as one learned attention view.",
+                    "Track the pipeline: project -> attend in parallel -> concatenate -> output projection.",
+                    "The point is representational diversity, not only more parameters.",
+                ],
+                [
+                    ("multi-head attention", "Attention with multiple parallel projected heads.", "Multi-Head Attention"),
+                    ("linear projections", "Learned projections applied to Q, K, and V.", "linearly project"),
+                    ("attention heads", "Parallel attention operations over projected Q/K/V.", "head"),
+                    ("projected versions", "Projected Q/K/V versions processed by attention heads.", "projected versions"),
+                ],
+                [
+                    ("parallel projection pipeline", "Q/K/V are projected multiple times and attended in parallel.", "linearly project"),
+                    ("subspace attention benefit", "Different heads attend to different representation subspaces.", "representation subspaces"),
+                    ("single-head averaging limitation", "A single attention head can blur information through averaging.", "averaging inhibits"),
+                ],
+                [
+                    ("Instead of performing", "contrast", "Introduces an alternative to the simpler method."),
+                    ("we found it beneficial to", "claim", "States empirical design preference."),
+                    ("with different, learned", "method", "Describes learned projections."),
+                    ("On each of these", "method", "Explains repeated operation over projected versions."),
+                    ("allows the model to jointly attend to", "result", "States the benefit of multi-head attention."),
+                    ("With a single attention head", "contrast", "Contrasts the limitation of the baseline."),
+                ],
+                "allows the model to jointly attend to",
+                "X allows the model to jointly attend to A at B.",
+                "Multi-head attention lets the model attend to different subspaces and positions at the same time.",
+                "'allows the model to'는 구조적 선택이 가능하게 하는 기능을 설명합니다.",
+                "The sentence uses abstract nouns, so the reader must map them back to Q/K/V projections and heads.",
+            )
+        return None
 
     def _is_attention_text(self, document_text: str) -> bool:
         lowered = document_text.lower()

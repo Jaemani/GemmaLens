@@ -393,6 +393,9 @@ def test_attention_intro_summary_replaces_long_first_sentence_copy():
 
     assert result.summaries.one_line == "This section explains recurrent sequence-modeling baselines before the Transformer contrast."
     assert "background" in result.summaries.study_notes[0].lower()
+    assert "hidden states" in {term.term for term in result.terms}
+    assert "long-range dependencies" not in {term.term for term in result.terms}
+    assert "hidden-state chain" in {concept.concept for concept in result.concepts}
 
 
 def test_attention_architecture_summary_replaces_figure_caption_copy():
