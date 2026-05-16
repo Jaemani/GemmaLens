@@ -93,7 +93,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
             <GuideList title="Next steps" rows={guide.next_steps} />
           </div>
         </div>
-        <SynthesisPanel synthesis={synthesis} />
+        <SynthesisPanel synthesis={synthesis} complete={complete} />
         <div className="rounded-md border border-line bg-panel p-4">
           <button
             type="button"
@@ -152,15 +152,16 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
   );
 }
 
-function SynthesisPanel({ synthesis }: { synthesis: NonNullable<PaperMap["synthesis"]> }) {
+function SynthesisPanel({ synthesis, complete }: { synthesis: NonNullable<PaperMap["synthesis"]>; complete: boolean }) {
   const [showFullFlow, setShowFullFlow] = useState(false);
   const visibleFlow = showFullFlow ? synthesis.argument_flow : synthesis.argument_flow.slice(0, 6);
   const hiddenFlowCount = Math.max(0, synthesis.argument_flow.length - visibleFlow.length);
+  const title = complete ? "Complete paper learning guide" : "Whole-paper learning draft";
 
   return (
     <div className="rounded-md border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Whole-paper learning draft</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
         <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-neutral-500">{synthesis.status}</span>
       </div>
       <GuideList title="Argument flow" rows={visibleFlow} />
