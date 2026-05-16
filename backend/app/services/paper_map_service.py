@@ -60,7 +60,7 @@ class PaperMapService:
 
         top_concepts = self._rank(concepts, 10)
         top_terms = self._rank(terms, 12)
-        top_phrases = self._rank(phrases, 24)
+        top_phrases = self._rank(phrases, 40)
 
         return PaperMapResponse(
             document_id=document_id,
@@ -123,8 +123,16 @@ class PaperMapService:
             "these methods suggest that",
             "in contrast to",
             "concurrent with our work",
+            "on the contrary",
+            "in addition",
             "is shown to be more effective than",
             "reformulates the system as",
+            "with reference to",
+            "provide reasonable preconditioning",
+            "identity mapping is sufficient",
+            "only used when matching dimensions",
+            "applicable to convolutional layers",
+            "to provide instances for discussion",
         }
         demoted = {
             "deeper neural networks",
@@ -244,10 +252,11 @@ class PaperMapService:
 
         coverage_ratio = analyzed_count / total_sections if total_sections else 0
         status = "whole-paper draft" if total_sections and coverage_ratio >= 0.8 else "partial synthesis"
-        flow = self._argument_flow(summaries, limit=6)
+        flow_limit = 8
+        flow = self._argument_flow(summaries, limit=flow_limit)
         unique_summary_count = len({str(item.get("meaning") or "").strip().lower() for item in summaries if item.get("meaning")})
-        if unique_summary_count > 6:
-            flow.append(f"...{unique_summary_count - 6} more analyzed section summaries are folded into the lists below.")
+        if unique_summary_count > flow_limit:
+            flow.append(f"...{unique_summary_count - flow_limit} more analyzed section summaries are folded into the lists below.")
 
         priority_concepts = top_concepts[:5]
         priority_terms = top_terms[:8]
@@ -284,7 +293,7 @@ class PaperMapService:
                 seen.add(key)
                 selected.append(item)
 
-        for item in top_phrases[:4]:
+        for item in top_phrases[:3]:
             add(item)
         latest_section = max(analyzed_sections) if analyzed_sections else None
         if latest_section is not None:

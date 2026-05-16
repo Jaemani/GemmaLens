@@ -2,6 +2,12 @@
 
 ## 2026-05-15
 
+- Fixed a real ResNet PDF page-break failure where extracted text split `high- 2 / way networks` into two sections. Section splitting now merges dangling page-break fragments and normalizes page-number hyphen artifacts before analysis.
+- Added ResNet highway-transition guardrails after testing section 7. The app now recognizes the contrast between gated highway networks and ResNet's always-open identity shortcuts, and surfaces `On the contrary` / `In addition` as reusable academic expressions.
+- Fixed paper-map argument flow folding so seven or eight analyzed section summaries are shown directly instead of hiding the latest section behind a `...1 more` line.
+- Added ResNet identity-shortcut and architecture-section guardrails after testing sections 8 and 9. The app now rejects fragments such as `Shortcuts We`, `square matrix`, and `we describe two models`, while recovering identity shortcuts, linear projection, convolutional layers, feature maps, plain network, VGG nets, and dimension-matching expressions.
+- Increased paper-map expression retention so later architecture expressions such as `identity mapping is sufficient` and `only used when matching dimensions` are available to the whole-paper learning draft.
+- Verified staged analysis against a real ResNet upload through section 9. The ThinkPad remote Gemma server stayed reachable but needed roughly 100 seconds for two sections, with JSON retries on some atomic tasks; the bottleneck is slow remote inference plus JSON instability, not a missing backend route.
 - Long PDF analysis pages no longer auto-start full-document base analysis when no cached result exists. They now open directly into the section reading workspace with the original PDF on the left and section-study controls on the right, leaving full base analysis as an explicit user action.
 - Expanded the section lesson card from a thin summary into a reading guide: academic summary, focus notes, concept cards with source evidence, more terms/expressions, and hard-sentence source context are now visible in the main paper-reading loop.
 - Added PDF ligature cleanup for common extraction artifacts such as `ﬁ` and `ﬂ`, so phrases and source snippets display as normal learner-facing text (`difficult`, `benefit`) instead of broken PDF glyphs.

@@ -50,3 +50,21 @@ def test_document_section_service_skips_short_equation_fragments():
 
     assert "weighted sum 3" not in joined
     assert "Scaled Dot-Product Attention" in joined
+
+
+def test_document_section_service_merges_dangling_pdf_hyphen_page_breaks():
+    text = (
+        "[[GEMMALENS_PDF_PAGE:2]]\n"
+        "On the contrary, our formulation always learns residual functions; our identity shortcuts are never closed, "
+        "and all information is always passed through, with additional residual functions to be learned. In addition, high- 2 "
+        "[[GEMMALENS_PDF_PAGE:3]]\n"
+        "way networks have not demonstrated accuracy gains with extremely increased depth. "
+        "Residual Learning Let us consider H(x) as an underlying mapping to be fit by a few stacked layers."
+    )
+
+    sections = DocumentSectionService().split_with_labels(text)
+
+    assert len(sections) == 1
+    assert "highway networks" in sections[0].text
+    assert "high- 2" not in sections[0].text
+    assert sections[0].source_label == "PDF page 2"

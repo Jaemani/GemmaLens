@@ -273,6 +273,43 @@ def test_paper_map_argument_flow_groups_duplicates_and_trims_long_entries():
     assert len(paper_map.synthesis.argument_flow[1]) < 190
 
 
+def test_paper_map_argument_flow_does_not_hide_seventh_section():
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-flow",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [],
+            "phrases": [],
+            "concepts": [],
+            "sentences": [],
+            "summaries": {"one_line": "Section 1 explains the opening claim.", "simple": "Section 1.", "academic": "Section 1.", "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+    sections = [
+        (
+            index,
+            base.model_copy(
+                update={
+                    "summaries": base.summaries.model_copy(
+                        update={"one_line": f"Section {index + 2} explains a distinct learning step."}
+                    )
+                }
+            ),
+        )
+        for index in range(1, 7)
+    ]
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows(sections)).build(
+        "doc-flow", [f"section {index}" for index in range(7)]
+    )
+
+    assert len(paper_map.synthesis.argument_flow) == 7
+    assert paper_map.synthesis.argument_flow[-1].startswith("S7:")
+    assert not any("more analyzed section summaries" in item for item in paper_map.synthesis.argument_flow)
+
+
 def test_paper_map_ranks_core_methods_before_generic_descriptors():
     text = "We present a residual learning framework for deeper neural networks and learning residual functions."
     base = AnalysisResult.model_validate(
@@ -561,3 +598,80 @@ def test_paper_map_promotes_related_work_expressions():
 
     assert "These methods suggest that" in expressions
     assert "in contrast to" in expressions
+
+
+def test_paper_map_reusable_expressions_include_highway_transition_signals():
+    base_text = "Unexpectedly, such degradation is not caused by overfitting."
+    latest_text = (
+        "On the contrary, our formulation always learns residual functions. "
+        "In addition, highway networks have not demonstrated accuracy gains."
+    )
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-14",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [],
+            "phrases": [{"phrase": "not caused by overfitting", "function": "contrast", "explanation": "rejects a common explanation", "source_sentence": base_text}],
+            "concepts": [],
+            "sentences": [],
+            "summaries": {"one_line": "The early section frames the problem.", "simple": "The early section frames the problem.", "academic": "The early section frames the problem.", "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+    latest = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "phrases": [
+                {"phrase": "On the contrary", "function": "contrast", "explanation": "method contrast", "source_sentence": latest_text},
+                {"phrase": "In addition", "function": "general", "explanation": "adds support", "source_sentence": latest_text},
+                {"phrase": "Let us consider", "function": "general", "explanation": "opens formal setup", "source_sentence": "Let us consider H(x)."},
+            ],
+            "summaries": {**base.summaries.model_dump(), "one_line": "The latest section contrasts highway networks with ResNet shortcuts."},
+        }
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows([(6, latest)])).build(
+        "doc-14", ["one", "two", "three", "four", "five", "six", latest_text]
+    )
+    expressions = [item.text for item in paper_map.synthesis.reusable_expressions]
+
+    assert "On the contrary" in expressions
+    assert "In addition" in expressions
+
+
+def test_paper_map_reusable_expressions_include_architecture_transition_signals():
+    base_text = "Unexpectedly, such degradation is not caused by overfitting."
+    latest_text = "The identity mapping is sufficient and only used when matching dimensions. To provide instances for discussion, we describe models."
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-15",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [],
+            "phrases": [{"phrase": "not caused by overfitting", "function": "contrast", "explanation": "rejects a common explanation", "source_sentence": base_text}],
+            "concepts": [],
+            "sentences": [],
+            "summaries": {"one_line": "The early section frames the problem.", "simple": "The early section frames the problem.", "academic": "The early section frames the problem.", "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+    latest = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "phrases": [
+                {"phrase": "identity mapping is sufficient", "function": "result", "explanation": "identity shortcut is enough", "source_sentence": latest_text},
+                {"phrase": "only used when matching dimensions", "function": "method", "explanation": "limits projection shortcut", "source_sentence": latest_text},
+                {"phrase": "To provide instances for discussion", "function": "general", "explanation": "moves to architecture examples", "source_sentence": latest_text},
+            ],
+            "summaries": {**base.summaries.model_dump(), "one_line": "The latest section introduces network architecture choices."},
+        }
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows([(8, latest)])).build(
+        "doc-15", ["one", "two", "three", "four", "five", "six", "seven", "eight", latest_text]
+    )
+    expressions = [item.text for item in paper_map.synthesis.reusable_expressions]
+
+    assert "identity mapping is sufficient" in expressions
+    assert "only used when matching dimensions" in expressions

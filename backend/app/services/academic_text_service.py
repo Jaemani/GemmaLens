@@ -59,6 +59,7 @@ class AcademicTextService:
     def _normalize_for_model(self, text: str) -> str:
         text = normalize_pdf_ligatures(text)
         text = re.sub(r"\n(?=\d+\s+[A-Z][A-Za-z ]{2,}\n)", "\n\n", text)
+        text = re.sub(r"([A-Za-z]{2,})-\s+\d+\s+([a-z]{2,})", r"\1\2", text)
         text = re.sub(r"([A-Za-z]{2,})-\s+([a-z]{2,})", r"\1\2", text)
         text = re.sub(r"([A-Za-z]{2,})-\s*\n\s*([a-z]{2,})", r"\1\2", text)
         text = " ".join(text.split())

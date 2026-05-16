@@ -729,3 +729,101 @@ def test_resnet_related_work_section_separates_background_from_method():
     assert {"These methods suggest that", "Concurrent with our work", "in contrast to"}.issubset(phrases)
     assert result.summaries.one_line == "This related-work section connects ResNet to residual representations and shortcut-connection methods."
     assert result.sentences[0].core_structure == "These methods suggest that X can Y."
+
+
+def test_resnet_highway_transition_section_keeps_reader_oriented():
+    document = (
+        "On the contrary, our formulation always learns residual functions; our identity shortcuts are never closed, "
+        "and all information is always passed through, with additional residual functions to be learned. "
+        "In addition, highway networks have not demonstrated accuracy gains with extremely increased depth. "
+        "Residual Learning. Let us consider H(x) as an underlying mapping to be fit by a few stacked layers. "
+        "If one hypothesizes that multiple nonlinear layers can asymptotically approximate complicated functions, "
+        "then it is equivalent to hypothesize that they can asymptotically approximate the residual functions."
+    )
+    payload = {
+        "terms": [{"term": "residual functions", "meaning": "functions learned relative to an identity reference"}],
+        "concepts": [{"concept": "residual functions", "explanation": "core residual-learning target"}],
+        "phrases": [],
+        "summaries": {
+            "one_line": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+            "simple": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+            "academic": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+        },
+        "sentences": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-highway-transition", document)
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert result.summaries.one_line == "This section contrasts ResNet with highway networks and then begins the residual-learning formulation."
+    assert {"On the contrary", "In addition", "Let us consider"}.issubset(phrases)
+    assert result.sentences[0].core_structure == "On the contrary, our A always does B; C are never D, and all E is passed through."
+    assert "highway networks" in {term.term for term in result.terms}
+
+
+def test_resnet_identity_shortcut_block_section_recovers_preconditioning_role():
+    document = (
+        "If the optimal function is closer to an identity mapping than to a zero mapping, it should be easier for the solver "
+        "to find the perturbations with reference to an identity mapping, than to learn the function as a new one. "
+        "We show by experiments that the learned residual functions in general have small responses, suggesting that identity mappings "
+        "provide reasonable preconditioning. Identity Mapping by Shortcuts. We adopt residual learning to every few stacked layers. "
+        "The shortcut connections in Eqn.(1) introduce neither extra parameter nor computation complexity. "
+        "If this is not the case, we can perform a linear projection by the shortcut connections to match the dimensions."
+    )
+    payload = {
+        "terms": [{"term": "Shortcuts We", "meaning": "heading glue artifact"}],
+        "concepts": [{"concept": "Shortcuts We", "explanation": "heading glue artifact"}],
+        "phrases": [],
+        "summaries": {"one_line": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize."},
+        "sentences": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-identity-shortcuts", document)
+    terms = {term.term for term in result.terms}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "Shortcuts We" not in terms
+    assert "Shortcuts We" not in {concept.concept for concept in result.concepts}
+    assert {"identity mapping", "residual functions", "shortcut connections", "linear projection"}.issubset(terms)
+    assert {"with reference to", "provide reasonable preconditioning", "neither extra parameter nor computation complexity"}.issubset(phrases)
+    assert result.summaries.one_line == "This section explains why identity shortcuts help and defines the residual block computation."
+    assert result.sentences[0].core_structure.startswith("If A is closer to B")
+
+
+def test_resnet_network_architecture_section_separates_shortcut_options_from_baseline_design():
+    document = (
+        "But we will show by experiments that the identity mapping is sufficient for addressing the degradation problem and is economical, "
+        "and thus Ws is only used when matching dimensions. The projection shortcut in Eqn.(2) is used to match dimensions. "
+        "The form of the residual function F is flexible. "
+        "We also note that although the above notations are about fully-connected layers for simplicity, they are applicable to convolutional layers. "
+        "The element-wise addition is performed on two feature maps, channel by channel. Network Architectures. "
+        "We have tested various plain/residual nets, and have observed consistent phenomena. To provide instances for discussion, "
+        "we describe two models for ImageNet as follows. Plain Network. Our plain baselines are mainly inspired by the philosophy of VGG nets."
+    )
+    payload = {
+        "terms": [
+            {"term": "square matrix", "meaning": "too local"},
+            {"term": "we describe two models", "meaning": "sentence fragment"},
+        ],
+        "concepts": [{"concept": "we describe two models", "explanation": "sentence fragment"}],
+        "phrases": [{"phrase": "identity mapping is sufficient", "function": "result", "explanation": "identity is enough"}],
+        "summaries": {
+            "one_line": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+            "simple": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+            "academic": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+        },
+        "sentences": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-architecture", document)
+    terms = {term.term for term in result.terms}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "square matrix" not in terms
+    assert "we describe two models" not in terms
+    assert "we describe two models" not in {concept.concept for concept in result.concepts}
+    assert {"projection shortcut", "convolutional layers", "feature maps", "plain network", "VGG nets"}.issubset(terms)
+    assert {"projection shortcut", "feature maps", "plain network", "VGG nets"}.issubset({concept.concept for concept in result.concepts})
+    assert {"identity mapping is sufficient", "only used when matching dimensions", "To provide instances for discussion"}.issubset(phrases)
+    assert result.summaries.one_line == "This section explains dimension matching and then introduces the ImageNet plain/residual network designs."
+    assert result.sentences[0].core_structure == "We show that A is sufficient for B and economical; C is only used when D."

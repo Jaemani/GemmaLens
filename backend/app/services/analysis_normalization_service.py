@@ -672,6 +672,48 @@ class AnalysisNormalizationService:
                     "This is the exact related-work contrast against highway-network gates.",
                 ),
                 (
+                    "linear projection",
+                    "A learned shortcut transformation used when input and output dimensions do not match.",
+                    "field_term",
+                    "hard",
+                    "It explains how residual blocks handle dimension changes.",
+                ),
+                (
+                    "projection shortcut",
+                    "A shortcut path that uses a learned projection, often a 1x1 convolution, to match feature-map dimensions.",
+                    "field_term",
+                    "hard",
+                    "It is the alternative to pure identity shortcuts when dimensions increase.",
+                ),
+                (
+                    "convolutional layers",
+                    "Neural-network layers that apply learned filters over feature maps.",
+                    "field_term",
+                    "medium",
+                    "They are the concrete layer type used in the ImageNet architectures.",
+                ),
+                (
+                    "feature maps",
+                    "Spatial activation tensors produced by convolutional layers.",
+                    "field_term",
+                    "medium",
+                    "Dimension matching in ResNet is described in terms of feature maps and channels.",
+                ),
+                (
+                    "plain network",
+                    "The non-residual baseline architecture used for comparison against residual networks.",
+                    "field_term",
+                    "medium",
+                    "It anchors the architecture comparison before shortcuts are inserted.",
+                ),
+                (
+                    "VGG nets",
+                    "A prior convolutional architecture family that inspires the plain ResNet baseline design.",
+                    "useful",
+                    "medium",
+                    "It explains where the baseline design philosophy comes from.",
+                ),
+                (
                     "ImageNet",
                     "A large image recognition benchmark used to evaluate the paper's models.",
                     "useful",
@@ -853,6 +895,16 @@ class AnalysisNormalizationService:
                 ("easier to optimize", "result", "States the optimization benefit of residual mapping."),
                 ("skipping one or more layers", "general", "Defines shortcut connections in plain architectural terms."),
                 ("neither extra parameter nor computational complexity", "result", "States that identity shortcuts are cheap to add."),
+                ("neither extra parameter nor computation complexity", "result", "States that identity shortcuts are cheap to add."),
+                ("with reference to", "method", "Explains the reference point used for residual perturbations."),
+                ("provide reasonable preconditioning", "claim", "Explains why identity mappings can make optimization easier."),
+                ("identity mapping is sufficient", "result", "Reports that the cheap identity shortcut is enough in the tested setting."),
+                ("only used when matching dimensions", "method", "Limits when the projection shortcut is needed."),
+                ("is flexible", "claim", "States that the residual function can use different layer depths."),
+                ("applicable to convolutional layers", "method", "Extends the notation from fully connected layers to convolutional networks."),
+                ("To provide instances for discussion", "general", "Introduces concrete model instances after the formulation."),
+                ("as follows", "general", "Signals that a structured list or description follows."),
+                ("is worth noticing", "claim", "Flags an observation the authors want the reader to notice."),
                 ("trained end-to-end", "method", "Signals that the whole network remains trainable as one model."),
                 ("We show that", "result", "Introduces a list of empirical claims."),
                 ("easy to optimize", "result", "States the optimization benefit of residual networks."),
@@ -874,6 +926,8 @@ class AnalysisNormalizationService:
                 ("Practices and theories that lead to", "claim", "Introduces a related-work lineage."),
                 ("Concurrent with our work", "general", "Signals contemporaneous related work."),
                 ("in contrast to", "contrast", "Marks the difference between related work and the authors' method."),
+                ("On the contrary", "contrast", "Rejects the related-work behavior and introduces the authors' different formulation."),
+                ("In addition", "general", "Adds a second contrast or supporting point after the first distinction."),
                 ("represent non-residual functions", "contrast", "Explains a limitation or difference of gated shortcuts."),
                 ("to ease the training of", "method", "States the purpose of the proposed residual learning framework."),
                 ("substantially deeper than", "claim", "Signals the scale of the architecture compared with previous models."),
@@ -1113,6 +1167,36 @@ class AnalysisNormalizationService:
                     "This is the intuition behind why shortcut connections can help optimization.",
                 ),
                 (
+                    "linear projection",
+                    "A learned transformation used on a shortcut path when feature dimensions do not match.",
+                    "This explains the exception to pure identity shortcuts.",
+                ),
+                (
+                    "projection shortcut",
+                    "A shortcut path with a learned projection, used to match dimensions in residual networks.",
+                    "This is the dimension-matching alternative to the default identity shortcut.",
+                ),
+                (
+                    "convolutional layers",
+                    "The layer type used to implement the residual function in image-recognition networks.",
+                    "This connects the residual-block formula to the actual CNN architecture.",
+                ),
+                (
+                    "feature maps",
+                    "The channel-wise tensors that residual shortcuts add together in convolutional networks.",
+                    "This explains what dimension matching means in the architecture.",
+                ),
+                (
+                    "plain network",
+                    "The non-residual VGG-style baseline used for comparison.",
+                    "This helps the learner separate the baseline architecture from the residual version.",
+                ),
+                (
+                    "VGG nets",
+                    "The prior architecture family that inspires the plain baseline design.",
+                    "This is related architecture context for the ImageNet experiments.",
+                ),
+                (
                     "shortcut connections",
                     "Architectural links that pass activations across layers and make residual blocks possible.",
                     "This is the mechanism that turns the residual-learning idea into a network architecture.",
@@ -1300,6 +1384,13 @@ class AnalysisNormalizationService:
                     "The sentence is short but conceptually dense because it introduces the residual-block formula.",
                 ),
                 (
+                    "If the optimal function is closer to an identity mapping",
+                    "If A is closer to B than C, it should be easier to find D with reference to B than to learn A as new.",
+                    "The authors explain the intuition behind residual learning: learning a small perturbation around identity can be easier.",
+                    "'closer to'와 'with reference to'는 residual 학습의 기준점을 설명하는 표현입니다.",
+                    "The sentence is conceptually dense because it turns an optimization intuition into a conditional comparison.",
+                ),
+                (
                     "Shortcut connections are those",
                     "Shortcut connections are those doing X.",
                     "The authors define shortcut connections as links that skip one or more layers.",
@@ -1333,6 +1424,34 @@ class AnalysisNormalizationService:
                     "The authors distinguish highway networks' learned gates from ResNet's parameter-free identity shortcuts.",
                     "'in contrast to'는 관련 연구와 자기 방법의 차이를 선명하게 만드는 표현입니다.",
                     "The sentence is important because it prevents the reader from treating all shortcut connections as the same.",
+                ),
+                (
+                    "On the contrary",
+                    "On the contrary, our A always does B; C are never D, and all E is passed through.",
+                    "The authors contrast ResNet with highway networks: ResNet shortcuts keep information flowing and always learn residual functions.",
+                    "'On the contrary'는 앞선 관련 연구와 자기 방법이 반대로 동작한다는 강한 대조 신호입니다.",
+                    "The sentence is important because it separates gated highway shortcuts from ResNet's ungated identity shortcuts.",
+                ),
+                (
+                    "In addition, highway networks",
+                    "In addition, A have not demonstrated B with C.",
+                    "The authors add an empirical limitation of highway networks before moving into the residual-learning formulation.",
+                    "'In addition'은 첫 번째 차이점 뒤에 추가 근거를 붙이는 표현입니다.",
+                    "The sentence links a method comparison to an evidence claim about very deep networks.",
+                ),
+                (
+                    "the identity mapping is sufficient",
+                    "We show that A is sufficient for B and economical; C is only used when D.",
+                    "The authors justify using identity shortcuts by default and projection shortcuts only for dimension matching.",
+                    "'is sufficient for'는 더 복잡한 방법 없이도 목적을 달성한다는 논문식 표현입니다.",
+                    "The sentence is important because it separates the main shortcut design from the fallback projection case.",
+                ),
+                (
+                    "To provide instances for discussion",
+                    "To provide instances for discussion, we describe A as follows.",
+                    "The authors move from formulation to concrete ImageNet model designs.",
+                    "'To provide instances for discussion'은 추상적인 방법 설명 뒤에 예시 모델을 제시하겠다는 신호입니다.",
+                    "The phrase changes the reading mode from theory/formula to architecture description.",
                 ),
                 (
                     "We present a residual learning framework",
@@ -1502,6 +1621,57 @@ class AnalysisNormalizationService:
                 ],
             }
         if self._is_resnet_text(document_text):
+            if "identity mapping is sufficient" in compact_lower and "network architectures" in compact_lower:
+                return {
+                    "one_line": "This section explains dimension matching and then introduces the ImageNet plain/residual network designs.",
+                    "simple": (
+                        "The authors say identity shortcuts are usually enough, while projection shortcuts are used when dimensions must match. "
+                        "Then they move from the residual-block formula to concrete ImageNet architectures inspired by VGG."
+                    ),
+                    "academic": (
+                        "The section clarifies shortcut choices for residual blocks, extends the notation to convolutional feature maps, and begins "
+                        "the architecture comparison between plain VGG-style baselines and residual counterparts."
+                    ),
+                    "study_notes": [
+                        "Separate shortcut options: identity shortcut is the default; projection shortcut handles dimension changes.",
+                        "Treat 'Network Architectures' as a mode shift from formula to implementation details.",
+                        "Save plain network and projection shortcut as architecture concepts, not general vocabulary.",
+                    ],
+                }
+            if "reasonable preconditioning" in compact_lower and "shortcut connection" in compact_lower:
+                return {
+                    "one_line": "This section explains why identity shortcuts help and defines the residual block computation.",
+                    "simple": (
+                        "If the desired function is close to identity, it is easier to learn a small residual change than a whole new mapping. "
+                        "The block computes F(x)+x with shortcut connections and keeps the parameter cost comparable to plain networks."
+                    ),
+                    "academic": (
+                        "The section motivates identity shortcuts as preconditioning, then formalizes residual blocks with element-wise addition, "
+                        "dimension constraints, and optional projection shortcuts for mismatched channels."
+                    ),
+                    "study_notes": [
+                        "Read F(x)+x as the block computation: residual branch plus shortcut branch.",
+                        "Notice the fairness claim: identity shortcuts add no extra parameters or computation.",
+                        "Projection shortcuts are an exception for dimension matching, not the core ResNet idea.",
+                    ],
+                }
+            if "highway networks have not demonstrated accuracy gains" in compact_lower and "underlying mapping" in compact_lower:
+                return {
+                    "one_line": "This section contrasts ResNet with highway networks and then begins the residual-learning formulation.",
+                    "simple": (
+                        "The authors say ResNet shortcuts are different from highway-network gates because ResNet always passes information through "
+                        "and learns residual functions. Then they start the formal setup: define an underlying mapping H(x) and ask the stacked layers to learn it."
+                    ),
+                    "academic": (
+                        "The section closes the related-work contrast by distinguishing ungated identity shortcuts from gated highway networks, then transitions "
+                        "into the formal residual-learning argument based on underlying mappings and identity references."
+                    ),
+                    "study_notes": [
+                        "Read the first sentences as method contrast: highway gates can close; ResNet identity shortcuts stay open.",
+                        "Then switch reading mode: H(x) marks the start of the mathematical formulation.",
+                        "Save highway networks as related-work context, not as the paper's main method.",
+                    ],
+                }
             if "encoding residual vectors" in compact_lower and "highway networks" in compact_lower:
                 return {
                     "one_line": "This related-work section connects ResNet to residual representations and shortcut-connection methods.",
@@ -1761,6 +1931,10 @@ class AnalysisNormalizationService:
             and ("figure 1" in summary_signal or "model architecture" in summary_signal)
         ):
             return True
+        if "network architectures" in compact_lower and "degradation problem" in summary_signal:
+            return True
+        if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
+            return True
         if any(len(value) > 240 for value in values[:2]):
             return True
         if len(set(values)) == 1:
@@ -1886,6 +2060,10 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"networks", "of networks", "ease the training", "to ease the training"}:
             return ""
+        if lowered in {"shortcuts we", "we describe two models", "square matrix"}:
+            return ""
+        if lowered.startswith(("we describe ", "we also note ", "we can also use ")):
+            return ""
         if lowered in {"reveals that network", "has higher training", "higher training", "deeper network"}:
             return ""
         if lowered in {
@@ -1962,6 +2140,9 @@ class AnalysisNormalizationService:
             or ("top-5 error" in lowered and "imagenet" in lowered)
             or ("encoding residual vectors" in lowered and "shortcut connections" in lowered)
             or ("highway networks" in lowered and "gating functions" in lowered)
+            or ("highway networks have not demonstrated accuracy gains" in lowered and "residual functions" in lowered)
+            or ("reasonable preconditioning" in lowered and "shortcut connection" in lowered)
+            or ("identity mapping is sufficient" in lowered and "network architectures" in lowered)
         )
 
     def _score(self, value: Any, default: int) -> int:
