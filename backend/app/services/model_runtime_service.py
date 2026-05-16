@@ -147,9 +147,12 @@ class ModelRuntimeService:
                 config.update({k: v for k, v in persisted.items() if v is not None})
             except json.JSONDecodeError:
                 pass
-        if config["provider"] == "mlx" and (
-            "OptiQ" in config["mlx_model_path"] or "4bit" in config["mlx_model_path"] or "4-bit" in config["mlx_model_path"]
-        ):
+        mlx_model_path = str(config["mlx_model_path"]).lower()
+        if config["provider"] == "mlx" and "e4b" in mlx_model_path:
+            config.update(self._preset_config("gemma4-e4b-mlx"))
+        elif config["provider"] == "mlx" and "e2b" in mlx_model_path:
+            config.update(self._preset_config("gemma4-e2b-mlx"))
+        elif config["provider"] == "mlx" and ("optiq" in mlx_model_path or "4bit" in mlx_model_path or "4-bit" in mlx_model_path):
             config.update(self._preset_config("gemma4-e4b-mlx"))
         elif config["provider"] == "mock" and not self.settings.app_demo_mode:
             config.update(self._preset_config("gemma4-e2b-mlx"))
