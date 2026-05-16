@@ -1367,3 +1367,49 @@ def test_resnet_detection_evaluation_section_recovers_pascal_coco_metrics():
     assert {"improves the mAP by", "solely because of", "standard COCO metric", "relative improvement", "improve both recognition and localization"}.issubset(phrases)
     assert result.summaries.one_line == "This appendix section evaluates ResNet-101 detection gains on PASCAL VOC and MS COCO."
     assert result.sentences[0].core_structure == "This gain is solely because of A."
+
+
+def test_resnet_detection_improvements_section_recovers_method_recipe():
+    document = (
+        "Our box refinement partially follows the iterative localization in prior work. "
+        "In Faster R-CNN, the final output is a regressed box that is different from its proposal box. "
+        "Non-maximum suppression (NMS) is applied on the union set of predicted boxes using an IoU threshold of 0.3, followed by box voting. "
+        "Global context. We combine global context in the Fast R-CNN step. "
+        "Given the full-image conv feature map, global Spatial Pyramid Pooling can be implemented as RoI pooling using the entire image's bounding box as the RoI. "
+        "This global feature is concatenated with the original per-region feature, followed by the sibling classification and box regression layers. "
+        "This new structure is trained end-to-end. "
+        "Multi-scale testing. We have not performed multi-scale training because of limited time."
+    )
+    payload = {
+        "terms": [
+            {"term": "feature maps", "meaning": "generic"},
+            {"term": "mAP", "meaning": "wrong section emphasis"},
+            {"term": "RPN step", "meaning": "not the main step"},
+            {"term": "Global Spatial Pyramid Pooling", "meaning": "implementation detail"},
+        ],
+        "concepts": [
+            {"concept": "feature maps", "explanation": "generic"},
+            {"concept": "regressed box", "explanation": "too narrow"},
+            {"concept": "Non-maximum suppression (NMS)", "explanation": "too narrow"},
+            {"concept": "Global Spatial Pyramid Pooling", "explanation": "too narrow"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "Our box refinement partially follows the iterative localization in prior work."},
+        "sentences": [{"sentence": "Our box refinement partially follows the iterative localization in prior work.", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:0", "analysis_mode:atomic_remote"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-detection-improvements", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert not {"feature maps", "mAP", "RPN step", "Global Spatial Pyramid Pooling"} & terms
+    assert "feature maps" not in concepts
+    assert {"box refinement", "regressed box", "Non-maximum suppression (NMS)", "box voting", "global context", "RoI pooling", "multi-scale testing"}.issubset(terms)
+    assert {"box refinement pipeline", "global context feature", "multi-scale testing limitation"}.issubset(concepts)
+    assert {"partially follows", "followed by", "is concatenated with", "trained end-to-end", "because of limited time"}.issubset(phrases)
+    assert result.summaries.one_line == "This appendix section describes three detector improvements: box refinement, global context, and multi-scale testing."
+    assert result.sentences[0].core_structure == "A is applied on B, followed by C."
+    assert "analysis_mode:atomic_remote" in result.quality_warnings
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings

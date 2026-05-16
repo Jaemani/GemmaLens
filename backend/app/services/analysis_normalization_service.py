@@ -39,6 +39,8 @@ class AnalysisNormalizationService:
             terms = self._filter_resnet_detection_baseline_noise(terms, "term")
         if self._is_resnet_detection_evaluation_section(document_text):
             terms = self._filter_resnet_detection_evaluation_noise(terms, "term")
+        if self._is_resnet_detection_improvements_section(document_text):
+            terms = self._filter_resnet_detection_improvements_noise(terms, "term")
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -48,7 +50,7 @@ class AnalysisNormalizationService:
             "concepts": self._concepts(payload.get("concepts"), document_text, terms),
             "sentences": self._sentences(payload.get("sentences") or payload.get("sentence_structures") or payload.get("sentence_decomposition"), document_text),
             "summaries": self._summaries(payload.get("summaries"), document_text),
-            "quality_warnings": list(payload.get("quality_warnings") or []),
+            "quality_warnings": self._fresh_quality_warnings(payload.get("quality_warnings")),
         }
         normalized["concepts"] = self._merge_learning_rows(
             self._heuristic_concepts(document_text),
@@ -80,6 +82,9 @@ class AnalysisNormalizationService:
         if self._is_resnet_detection_evaluation_section(document_text):
             normalized["concepts"] = self._prefer_resnet_detection_evaluation_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_resnet_detection_evaluation_noise(normalized["phrases"], "phrase")
+        if self._is_resnet_detection_improvements_section(document_text):
+            normalized["concepts"] = self._prefer_resnet_detection_improvements_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_resnet_detection_improvements_noise(normalized["phrases"], "phrase")
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -1184,6 +1189,55 @@ class AnalysisNormalizationService:
                     "hard",
                     "This is the second Faster R-CNN training stage described for COCO.",
                 ),
+                (
+                    "box refinement",
+                    "An inference-time improvement that re-pools features from regressed boxes to refine predictions.",
+                    "field_term",
+                    "hard",
+                    "This is the first detection improvement described in the appendix.",
+                ),
+                (
+                    "regressed box",
+                    "A predicted bounding box after the detector adjusts the original proposal box.",
+                    "field_term",
+                    "hard",
+                    "The section contrasts proposal boxes with refined regressed boxes.",
+                ),
+                (
+                    "Non-maximum suppression (NMS)",
+                    "A post-processing step that removes overlapping detection boxes using an IoU threshold.",
+                    "field_term",
+                    "hard",
+                    "This explains how combined predictions are filtered after box refinement.",
+                ),
+                (
+                    "box voting",
+                    "A detection post-processing method applied after NMS to refine final boxes.",
+                    "field_term",
+                    "hard",
+                    "It is part of the appendix's competition-improvement recipe.",
+                ),
+                (
+                    "global context",
+                    "Full-image information added to each region-level detection decision.",
+                    "field_term",
+                    "hard",
+                    "This is the second detection improvement described in the appendix.",
+                ),
+                (
+                    "RoI pooling",
+                    "Region-of-interest pooling that extracts fixed-size features from a feature map.",
+                    "field_term",
+                    "hard",
+                    "The section uses RoI pooling both for regions and for full-image context.",
+                ),
+                (
+                    "multi-scale testing",
+                    "Running detection at multiple image scales at inference time.",
+                    "field_term",
+                    "hard",
+                    "This is the third improvement and is explicitly limited to testing in this implementation.",
+                ),
             ]
         else:
             known = [
@@ -1449,6 +1503,13 @@ class AnalysisNormalizationService:
                 ("relative improvement", "result", "Expresses the COCO mAP gain relative to the VGG baseline."),
                 ("nearly as big as", "result", "Compares localization-sensitive and recognition-focused gains."),
                 ("improve both recognition and localization", "result", "States the interpretation of the two metric gains."),
+                ("partially follows", "method", "Signals that the improvement adapts an existing localization method."),
+                ("followed by", "method", "Shows the order of post-processing steps."),
+                ("Given the full-image", "method", "Introduces the input used to build global context."),
+                ("is concatenated with", "method", "Explains how global context is combined with per-region features."),
+                ("trained end-to-end", "method", "States that the added structure is optimized together."),
+                ("single-scale training/testing", "contrast", "Names the baseline inference setting before multi-scale testing."),
+                ("because of limited time", "limitation", "Explains an implementation limitation rather than a scientific claim."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
                 ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
@@ -1973,6 +2034,21 @@ class AnalysisNormalizationService:
                     "recognition and localization improvement",
                     "The interpretation that deeper networks improve both category recognition and box localization.",
                     "This is the main takeaway from the COCO metric comparison.",
+                ),
+                (
+                    "box refinement pipeline",
+                    "The inference-time process of re-pooling features from regressed boxes, combining predictions, applying NMS, and box voting.",
+                    "This teaches the ordered recipe behind the appendix improvement.",
+                ),
+                (
+                    "global context feature",
+                    "A full-image pooled feature concatenated with each region feature before classification and box regression.",
+                    "This explains how the detector adds scene-level information to region-level decisions.",
+                ),
+                (
+                    "multi-scale testing limitation",
+                    "The competition-time choice to perform multi-scale testing only at inference and only for the Fast R-CNN step.",
+                    "This helps the reader separate implemented improvements from untried extensions.",
                 ),
                 (
                     "zero-padding shortcuts",
@@ -2526,6 +2602,27 @@ class AnalysisNormalizationService:
                     "This sentence converts metric comparison into the section's learning point.",
                 ),
                 (
+                    "followed by",
+                    "A is applied on B, followed by C.",
+                    "The authors describe the ordered detection post-processing pipeline.",
+                    "'followed by'는 앞 단계 다음에 이어지는 절차를 말합니다.",
+                    "This is useful for reading method recipes where several operations happen in sequence.",
+                ),
+                (
+                    "is concatenated with",
+                    "A is concatenated with B, followed by C.",
+                    "The authors explain how global context and per-region features are combined.",
+                    "'concatenated with'는 두 feature를 이어 붙인다는 뜻입니다.",
+                    "The sentence packs feature construction and downstream prediction layers together.",
+                ),
+                (
+                    "because of limited time",
+                    "We have not performed A because of B.",
+                    "The authors disclose an implementation limitation in the multi-scale experiments.",
+                    "'because of'는 명사구로 원인을 제시합니다.",
+                    "This is a limitation sentence, not the main experimental result.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -2982,6 +3079,23 @@ class AnalysisNormalizationService:
                         "The key interpretation is improved recognition and localization from better features.",
                     ],
                 }
+            if self._is_resnet_detection_improvements_section(document_text):
+                return {
+                    "one_line": "This appendix section describes three detector improvements: box refinement, global context, and multi-scale testing.",
+                    "simple": (
+                        "The authors refine predicted boxes, add full-image context features, and test at multiple scales. "
+                        "These are competition-oriented detector improvements, not new residual-learning theory."
+                    ),
+                    "academic": (
+                        "The section details detection-system enhancements: iterative box refinement with NMS and box voting, "
+                        "global context features concatenated with per-region features, and limited multi-scale testing for the Fast R-CNN stage."
+                    ),
+                    "study_notes": [
+                        "Read this as an engineering recipe for improving object detection results.",
+                        "Track the sequence words: re-pool, combine predictions, apply NMS, then box voting.",
+                        "Separate the limitation: multi-scale training was not performed because of limited time.",
+                    ],
+                }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
                 return {
                     "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
@@ -3265,6 +3379,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_resnet_detection_evaluation_section(document_text):
             return True
+        if self._is_resnet_detection_improvements_section(document_text):
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -3499,6 +3615,7 @@ class AnalysisNormalizationService:
             or self._is_resnet_detection_transfer_section(document_text)
             or self._is_resnet_detection_baseline_section(document_text)
             or self._is_resnet_detection_evaluation_section(document_text)
+            or self._is_resnet_detection_improvements_section(document_text)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
@@ -3532,6 +3649,10 @@ class AnalysisNormalizationService:
     def _is_resnet_detection_evaluation_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "pascal voc" in lowered and "ms coco" in lowered and "improve both recognition and localization" in lowered
+
+    def _is_resnet_detection_improvements_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "box refinement" in lowered and "global context" in lowered and "multi-scale testing" in lowered
 
     def _prefer_resnet_deep_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         blocked = {"feature maps", "resnet", "model", "we combine six models"}
@@ -3920,6 +4041,68 @@ class AnalysisNormalizationService:
     def _filter_resnet_detection_evaluation_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {"mini-batch", "learning rate", "pascal voc following", "ms coco the ms"}
         return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_detection_improvements_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"feature maps", "regressed box", "non-maximum suppression (nms)", "global spatial pyramid pooling"}
+        preferred = {
+            "box refinement pipeline": (
+                "The inference-time sequence of re-pooling features from regressed boxes, combining predictions, applying NMS, and box voting.",
+                "This is a method recipe; the order of operations matters for understanding the section.",
+            ),
+            "global context feature": (
+                "A full-image pooled feature concatenated with each per-region feature before classification and box regression.",
+                "This explains how image-level information is added to local object predictions.",
+            ),
+            "multi-scale testing limitation": (
+                "The authors test at multiple scales but do not perform multi-scale training, and only apply it to the Fast R-CNN step.",
+                "This keeps the reader from mistaking a partial competition tweak for a complete training method.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = "box refinement" if "box refinement" in lowered else "global context" if "global" in lowered else "multi-scale testing"
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_resnet_detection_improvements_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {"feature maps", "global spatial pyramid pooling", "map", "rpn step"}
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _fresh_quality_warnings(self, warnings: Any) -> list[str]:
+        stale_prefixes = (
+            "term_count_out_of_range:",
+            "phrase_count_out_of_range:",
+            "duplicate_term:",
+            "empty_term_meaning:",
+            "source_sentence_not_in_document:",
+            "term_not_in_source_sentence:",
+            "empty_phrase_explanation:",
+            "phrase_source_sentence_not_in_document:",
+            "phrase_not_in_source_sentence:",
+        )
+        return [warning for warning in self._string_list(warnings) if not warning.startswith(stale_prefixes)]
 
     def _score(self, value: Any, default: int) -> int:
         try:
