@@ -2435,3 +2435,91 @@ def test_bert_glue_section_recovers_benchmark_setup_and_table_reading():
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
     assert "term_count_out_of_range:2" not in result.quality_warnings
     assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)
+
+
+def test_bert_glue_result_section_recovers_protocol_and_result_reading():
+    document = (
+        "F1 scores are reported for QQP and MRPC, Spearman correlations are reported for STS-B, and accuracy scores are reported for the other tasks. "
+        "We exclude entries that use BERT as one of their components. "
+        "We use a batch size of 32 and fine-tune for 3 epochs over the data for all GLUE tasks. "
+        "For each task, we selected the best fine-tuning learning rate among 5e-5, 4e-5, 3e-5, and 2e-5 on the Dev set. "
+        "Additionally, for BERTLARGE we found that finetuning was sometimes unstable on small datasets, so we ran several random restarts and selected the best model on the Dev set. "
+        "With random restarts, we use the same pre-trained checkpoint but perform different fine-tuning data shuffling and classifier layer initialization. "
+        "Both BERTBASE and BERTLARGE outperform all systems on all tasks by a substantial margin, obtaining 4.5% and 7.0% respective average accuracy improvement over the prior state of the art. "
+        "Note that BERTBASE and OpenAI GPT are nearly identical in terms of model architecture apart from the attention masking. "
+        "For the largest and most widely reported GLUE task, MNLI, BERT obtains a 4.6% absolute accuracy improvement. "
+        "On the official GLUE leaderboard, BERTLARGE obtains a score of 80.5, compared to OpenAI GPT, which obtains 72.8 as of the date of writing. "
+        "We find that BERTLARGE significantly outperforms BERTBASE across all tasks, especially those with very little training data. "
+        "The effect of model size is explored more thoroughly in Section 5.2."
+    )
+    payload = {
+        "terms": [
+            {"term": "learning rate", "meaning": "too broad alone"},
+            {"term": "F1 scores", "meaning": "metric"},
+            {"term": "fine-tune", "meaning": "generic"},
+            {"term": "pre-trained checkpoint", "meaning": "generic"},
+        ],
+        "concepts": [
+            {"concept": "learning rate", "explanation": "too broad alone"},
+            {"concept": "F1 scores", "explanation": "term duplicated as concept"},
+            {"concept": "fine-tune", "explanation": "generic"},
+            {"concept": "pre-trained checkpoint", "explanation": "generic"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "8 BERT and OpenAI GPT are singlemodel, single task."},
+        "sentences": [{"sentence": "8 BERT and OpenAI GPT are singlemodel, single task.", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:0"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-glue-results", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "F1 scores",
+        "Spearman correlations",
+        "accuracy scores",
+        "Dev set",
+        "fine-tuning learning rate",
+        "random restarts",
+        "fine-tuning data shuffling",
+        "classifier layer initialization",
+        "prior state of the art",
+        "absolute accuracy improvement",
+        "official GLUE leaderboard",
+        "model size effect",
+    }.issubset(terms)
+    assert "learning rate" not in terms
+    assert "fine-tune" not in terms
+    assert "pre-trained checkpoint" not in terms
+    assert {
+        "GLUE metric conventions",
+        "uniform fine-tuning protocol",
+        "dev-set hyperparameter selection",
+        "BERTLARGE small-dataset instability",
+        "random-restart variation",
+        "substantial GLUE improvement",
+        "controlled GPT comparison",
+        "model-size effect",
+    }.issubset(concepts)
+    assert "learning rate" not in concepts
+    assert "F1 scores" not in concepts
+    assert "fine-tune" not in concepts
+    assert {
+        "are reported for",
+        "We exclude entries that use",
+        "fine-tune for",
+        "selected the best fine-tuning learning rate",
+        "sometimes unstable on small datasets",
+        "ran several random restarts",
+        "selected the best model on the Dev set",
+        "perform different fine-tuning data shuffling",
+        "outperform all systems",
+        "by a substantial margin",
+        "nearly identical in terms of",
+        "apart from",
+    }.issubset(phrases)
+    assert result.summaries.one_line == "This section explains GLUE metric conventions, fine-tuning protocol, random restarts, and BERT's result advantage."
+    assert result.sentences[0].core_structure == "Both A and B outperform C by D, obtaining E."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings

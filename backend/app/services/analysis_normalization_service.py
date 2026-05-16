@@ -44,6 +44,9 @@ class AnalysisNormalizationService:
         if self._is_bert_glue_setup_results_section(document_text):
             terms = self._prefer_bert_glue_setup_results_terms(terms, document_text)
             phrases = self._filter_bert_glue_setup_results_phrases(phrases)
+        if self._is_bert_glue_result_interpretation_section(document_text):
+            terms = self._prefer_bert_glue_result_interpretation_terms(terms, document_text)
+            phrases = self._filter_bert_glue_result_interpretation_phrases(phrases)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -119,6 +122,9 @@ class AnalysisNormalizationService:
             normalized["phrases"] = self._filter_bert_finetuning_unification_phrases(normalized["phrases"])
         if self._is_bert_glue_setup_results_section(document_text):
             normalized["concepts"] = self._prefer_bert_glue_setup_results_concepts(normalized["concepts"], document_text)
+        if self._is_bert_glue_result_interpretation_section(document_text):
+            normalized["concepts"] = self._prefer_bert_glue_result_interpretation_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_bert_glue_result_interpretation_phrases(normalized["phrases"])
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -1856,6 +1862,21 @@ class AnalysisNormalizationService:
                 ("scored by the evaluation server", "result", "Explains how benchmark results are evaluated."),
                 ("The number below each task denotes", "general", "Explains how to read the table header."),
                 ("is slightly different than", "contrast", "Warns that a reported average differs from the official score."),
+                ("are reported for", "general", "Explains metric conventions across benchmark tasks."),
+                ("We exclude entries that use", "method", "Defines a comparison-filtering rule."),
+                ("fine-tune for", "method", "States a training duration or protocol."),
+                ("selected the best fine-tuning learning rate", "method", "Explains dev-set hyperparameter selection."),
+                ("sometimes unstable on small datasets", "limitation", "Marks an instability caveat for small training sets."),
+                ("ran several random restarts", "method", "Describes a robustness procedure for unstable fine-tuning."),
+                ("selected the best model on the Dev set", "method", "Explains how the restart result was chosen."),
+                ("perform different fine-tuning data shuffling", "method", "Explains what differs across random restarts."),
+                ("outperform all systems", "result", "States the main benchmark result."),
+                ("by a substantial margin", "result", "Signals the size of an improvement."),
+                ("nearly identical in terms of", "contrast", "Controls for architecture similarity in a comparison."),
+                ("apart from", "contrast", "Introduces the one exception in a comparison."),
+                ("as of the date of writing", "general", "Qualifies a time-sensitive leaderboard claim."),
+                ("significantly outperforms", "result", "States a stronger comparative result."),
+                ("is explored more thoroughly in", "general", "Points forward to a later analysis section."),
             ]
         elif self._is_attention_text(document_text):
             phrase_specs = [
@@ -2860,6 +2881,17 @@ class AnalysisNormalizationService:
                         "simplified_version": "For GLUE tasks, BERT uses the final [CLS] vector C as the classifier's aggregate representation.",
                         "korean_explanation": "'To fine-tune on'은 특정 벤치마크에 맞춘 실험 절차를 소개하고, 'as'는 C의 역할을 설명합니다.",
                         "difficulty_reason": "The sentence combines benchmark setup, prior input-format reference, vector notation, and representation role.",
+                    }
+                ]
+            if self._is_bert_glue_result_interpretation_section(document_text):
+                sentence = self._source_sentence(None, "Both BERTBASE and BERTLARGE outperform", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "Both A and B outperform C by D, obtaining E.",
+                        "simplified_version": "Both BERT model sizes beat previous GLUE systems, with BERTLARGE showing the larger average improvement.",
+                        "korean_explanation": "'Both A and B'는 두 모델을 함께 비교하고, 'by a substantial margin'은 결과 차이가 크다는 평가 표현입니다.",
+                        "difficulty_reason": "The sentence combines model comparison, benchmark claim, margin language, and two percentage improvements.",
                     }
                 ]
             specs = [
@@ -4522,6 +4554,23 @@ class AnalysisNormalizationService:
                         "The table-reading point is BERTBASE/BERTLARGE improvement over prior systems, not every score.",
                     ],
                 }
+            if self._is_bert_glue_result_interpretation_section(document_text):
+                return {
+                    "one_line": "This section explains GLUE metric conventions, fine-tuning protocol, random restarts, and BERT's result advantage.",
+                    "simple": (
+                        "The authors explain how GLUE scores are reported, how they fine-tune BERT for each task, why BERTLARGE needs random restarts on small datasets, "
+                        "and how BERTBASE/BERTLARGE outperform earlier systems and OpenAI GPT."
+                    ),
+                    "academic": (
+                        "The section interprets GLUE results by specifying task-specific metrics, a uniform three-epoch fine-tuning protocol, dev-set learning-rate selection, "
+                        "restart-based stabilization for BERTLARGE, substantial average improvements over prior state of the art, and a model-size effect favoring BERTLARGE."
+                    ),
+                    "study_notes": [
+                        "Do not memorize the score row first; identify what each metric type means.",
+                        "Separate experimental protocol from result interpretation.",
+                        "The random-restart detail is a caveat about small datasets and BERTLARGE stability.",
+                    ],
+                }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
                 return {
                     "one_line": "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning.",
@@ -5671,6 +5720,129 @@ class AnalysisNormalizationService:
         blocked = {"for example", "during fine-tuning"}
         return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
 
+    def _prefer_bert_glue_result_interpretation_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"learning rate", "fine-tune", "pre-trained checkpoint", "bert", "bert fine-tuning"}
+        preferred = [
+            ("F1 scores", "A metric reported for QQP and MRPC in the GLUE results.", "useful", "medium", "This teaches how to read task-specific score columns."),
+            ("Spearman correlations", "A correlation metric reported for STS-B.", "field_term", "hard", "This explains why not every GLUE column is accuracy."),
+            ("accuracy scores", "The metric reported for the other GLUE tasks.", "useful", "medium", "This distinguishes task metrics before comparing rows."),
+            ("Dev set", "The validation split used to select learning rates and restart results.", "field_term", "medium", "This explains how model selection is performed."),
+            ("fine-tuning learning rate", "The learning-rate hyperparameter selected from 5e-5, 4e-5, 3e-5, and 2e-5.", "field_term", "medium", "This is part of the experimental protocol."),
+            ("random restarts", "Multiple fine-tuning runs used to stabilize BERTLARGE on small datasets.", "field_term", "hard", "This is the key caveat for unstable small-dataset fine-tuning."),
+            ("fine-tuning data shuffling", "One source of variation across random restarts.", "field_term", "hard", "This explains what changes between runs."),
+            ("classifier layer initialization", "Another source of variation across random restarts.", "field_term", "hard", "This explains how the classifier can start differently."),
+            ("prior state of the art", "The previous best systems used as the comparison target.", "useful", "medium", "This helps read result claims like average improvement."),
+            ("absolute accuracy improvement", "A direct percentage-point gain over a baseline.", "field_term", "medium", "This clarifies the MNLI result claim."),
+            ("official GLUE leaderboard", "The public benchmark leaderboard used for result comparison.", "useful", "medium", "This grounds the OpenAI GPT comparison."),
+            ("model size effect", "The observed advantage of BERTLARGE over BERTBASE, especially on small datasets.", "field_term", "medium", "This previews the later Section 5.2 analysis."),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            target = {
+                "fine-tuning learning rate": "selected the best fine-tuning learning rate",
+                "absolute accuracy improvement": "absolute accuracy improvement",
+                "official GLUE leaderboard": "official GLUE leaderboard",
+                "model size effect": "effect of model size",
+            }.get(term, term)
+            row = keyed.get(term.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "term": term,
+                    "meaning": row.get("meaning") or meaning,
+                    "domain_relevance": row.get("domain_relevance") or ("high" if priority == "field_term" else "medium"),
+                    "difficulty": row.get("difficulty") or difficulty,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "should_save": bool(row.get("should_save", True)),
+                    "learning_priority": row.get("learning_priority") or priority,
+                    "reason": row.get("reason") or reason,
+                    "context_meaning": row.get("context_meaning") or meaning,
+                    "general_meaning": row.get("general_meaning") or meaning,
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}
+        ]
+        return [*promoted, *rest][:14]
+
+    def _prefer_bert_glue_result_interpretation_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"learning rate", "f1 scores", "fine-tune", "pre-trained checkpoint", "bert", "bertbase", "bertlarge"}
+        preferred = {
+            "GLUE metric conventions": (
+                "Different GLUE tasks report different metrics: F1, Spearman correlation, or accuracy.",
+                "This keeps the reader from comparing every column as if it were the same score type.",
+                "F1 scores are reported",
+            ),
+            "uniform fine-tuning protocol": (
+                "The authors use batch size 32 and fine-tune for three epochs across GLUE tasks.",
+                "This separates the training recipe from the model architecture.",
+                "batch size of 32",
+            ),
+            "dev-set hyperparameter selection": (
+                "The best fine-tuning learning rate is selected on the Dev set for each task.",
+                "This explains how reported runs are chosen without memorizing the learning-rate list.",
+                "selected the best fine-tuning learning rate",
+            ),
+            "BERTLARGE small-dataset instability": (
+                "BERTLARGE can be unstable on small datasets, so the authors use several random restarts.",
+                "This is a practical caveat and an important experimental detail.",
+                "sometimes unstable on small datasets",
+            ),
+            "random-restart variation": (
+                "Random restarts keep the same pre-trained checkpoint but change data shuffling and classifier initialization.",
+                "This explains what is and is not changing across repeated runs.",
+                "perform different fine-tuning data shuffling",
+            ),
+            "substantial GLUE improvement": (
+                "Both BERTBASE and BERTLARGE outperform prior systems by large average margins.",
+                "This is the main result claim of the section.",
+                "outperform all systems",
+            ),
+            "controlled GPT comparison": (
+                "BERTBASE and OpenAI GPT are architecturally similar except for attention masking.",
+                "This makes the comparison support the bidirectionality argument.",
+                "apart from the attention masking",
+            ),
+            "model-size effect": (
+                "BERTLARGE significantly outperforms BERTBASE, especially where training data is limited.",
+                "This previews the paper's later analysis of scale.",
+                "effect of model size",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            row = keyed.get(concept.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "concept": concept,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "related_terms": row.get("related_terms") or [concept],
+                    "why_it_matters": row.get("why_it_matters") or why_it_matters,
+                    "references": row.get("references") or self._references_near("", document_text),
+                    "learning_priority": row.get("learning_priority") or "field_term",
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_bert_glue_result_interpretation_phrases(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        blocked = {"during fine-tuning", "we present bert fine-tuning results on", "is a collection of"}
+        return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -5706,6 +5878,7 @@ class AnalysisNormalizationService:
             or self._is_bert_nsp_procedure_section(document_text)
             or self._is_bert_finetuning_unification_section(document_text)
             or self._is_bert_glue_setup_results_section(document_text)
+            or self._is_bert_glue_result_interpretation_section(document_text)
         )
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
@@ -5730,6 +5903,8 @@ class AnalysisNormalizationService:
         if self._is_bert_finetuning_unification_section(document_text):
             return True
         if self._is_bert_glue_setup_results_section(document_text):
+            return True
+        if self._is_bert_glue_result_interpretation_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -6001,6 +6176,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_glue_setup_results_section(document_text):
             return True
+        if self._is_bert_glue_result_interpretation_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -6049,6 +6226,15 @@ class AnalysisNormalizationService:
             and "general language understanding evaluation" in lowered
             and "classification layer weights" in lowered
             and "glue test results" in lowered
+        )
+
+    def _is_bert_glue_result_interpretation_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "f1 scores are reported" in lowered
+            and "random restarts" in lowered
+            and "outperform all systems" in lowered
+            and "official glue leaderboard" in lowered
         )
 
     def _is_attention_text(self, document_text: str) -> bool:
