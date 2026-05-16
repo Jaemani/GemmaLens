@@ -39,6 +39,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const [requestedPdfPage, setRequestedPdfPage] = useState<number | null>(null);
   const [sectionLesson, setSectionLesson] = useState<{ analysis: AnalysisResult; sectionNumber: number } | null>(null);
   const [showDetailedOutput, setShowDetailedOutput] = useState(false);
+  const [analysisMissing, setAnalysisMissing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,8 +61,9 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           }
           return;
         }
+        let loadedDocument: DocumentRead | null = null;
         try {
-          const loadedDocument = await api.getDocument(documentId);
+          loadedDocument = await api.getDocument(documentId);
           if (!cancelled) setDocument(loadedDocument);
         } catch {
           if (!cancelled) setDocument(null);
@@ -70,15 +72,24 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           const existing = await api.getAnalysis(documentId);
           if (!cancelled) {
             setAnalysis(existing);
+            setAnalysisMissing(false);
             setStep(4);
           }
           return;
         } catch {
+          if (loadedDocument && shouldOpenSectionWorkspaceWithoutBaseAnalysis(loadedDocument)) {
+            if (!cancelled) {
+              setAnalysisMissing(true);
+              setStep(4);
+            }
+            return;
+          }
           if (!cancelled) setStep(2);
         }
         const created = await api.analyzeDocument(documentId);
         if (!cancelled) {
           setAnalysis(created);
+          setAnalysisMissing(false);
           setStep(4);
         }
       } catch (err) {
@@ -140,23 +151,77 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
     };
   }, [analysis, config.saveMode]);
 
-  if (error) return <ErrorState message={error} />;
-  if (!analysis) return <AnalysisProgress step={step} elapsed={elapsed} />;
-
-  async function rerunAnalysis() {
+  async function runBaseAnalysis() {
     setRerunning(true);
     setError(null);
     setStep(2);
     try {
       const created = await api.analyzeDocument(documentId);
       setAnalysis(created);
+      setAnalysisMissing(false);
       setStep(4);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not re-analyze this document.");
+      setError(err instanceof Error ? err.message : "Could not analyze this document.");
     } finally {
       setRerunning(false);
     }
   }
+
+  if (error) return <ErrorState message={error} />;
+  if (!analysis && analysisMissing && document) {
+    const isVideoSource = document.source_type === "transcript" || document.source_type === "video_segment";
+    const isDocumentSource = documentId !== DEMO_DOCUMENT_ID && !isVideoSource;
+    const hasPdfViewer = Boolean(document.source_type === "pdf" && document.has_original_file);
+    const workspaceContent = (
+      <div className="min-w-0 space-y-6">
+        {isDocumentSource ? (
+          <DocumentPageReader
+            documentId={documentId}
+            onSectionAnalyzed={() => setPaperMapRefreshKey((value) => value + 1)}
+            onSectionLesson={setSectionLesson}
+            onSourcePageChange={setRequestedPdfPage}
+            requestedSourcePage={requestedPdfPage}
+            hideInlineLesson
+          />
+        ) : null}
+        {sectionLesson ? <SectionLessonCard analysis={sectionLesson.analysis} sectionNumber={sectionLesson.sectionNumber} isAnalyzingNext={false} /> : null}
+        {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
+      </div>
+    );
+    return (
+      <div className="space-y-6">
+        <section className="rounded-lg border border-line bg-panel px-4 py-3 text-sm leading-6 text-neutral-700 shadow-material">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold text-ink">Section workspace ready</p>
+              <p className="mt-1">
+                This long document has no base analysis yet. Start with a section lesson; run full-document base analysis only when you need it.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={runBaseAnalysis}
+              disabled={rerunning}
+              className="rounded-md border border-line bg-panel px-4 py-2 text-sm font-semibold text-ink shadow-material hover:bg-surface disabled:text-neutral-500"
+            >
+              {rerunning ? "Analyzing..." : "Run base analysis"}
+            </button>
+          </div>
+        </section>
+        {hasPdfViewer ? (
+          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
+            <div className="min-w-0 xl:sticky xl:top-4">
+              <PdfSourcePane document={document} requestedPage={requestedPdfPage} onPageChange={setRequestedPdfPage} />
+            </div>
+            {workspaceContent}
+          </div>
+        ) : (
+          workspaceContent
+        )}
+      </div>
+    );
+  }
+  if (!analysis) return <AnalysisProgress step={step} elapsed={elapsed} />;
 
   const learningObjects = <TermTable analysis={analysis} config={config} />;
   const summaries = <LayeredSummaryPanel analysis={analysis} />;
@@ -249,7 +314,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
         <div className="flex justify-end">
           <button
             type="button"
-            onClick={rerunAnalysis}
+            onClick={runBaseAnalysis}
             disabled={rerunning}
             className="rounded-md border border-line bg-panel px-4 py-2 text-sm font-semibold text-ink shadow-material hover:bg-surface disabled:text-neutral-500"
           >
@@ -274,4 +339,9 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       </div>
     </div>
   );
+}
+
+function shouldOpenSectionWorkspaceWithoutBaseAnalysis(document: DocumentRead) {
+  if (document.source_type === "pdf") return true;
+  return document.content.length > 5000;
 }

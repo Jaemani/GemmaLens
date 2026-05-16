@@ -68,6 +68,7 @@ Local demo records currently include:
 - Generic discourse fragments such as `the best performing models` are filtered out of the section lesson expression list. They may explain the argument, but they are not useful as primary save targets.
 - A ResNet smoke test exposed the same weak-output pattern on a different domain: the model returned `to ease the training` and `of networks` as learning objects and copied the first sentence as summary. ResNet-specific guardrails now promote residual learning concepts and reject those fragments.
 - Paper-map ranking now promotes core methods over generic descriptors. In the ResNet smoke test, `residual learning framework` and `residual functions` are prioritized above `deeper neural networks`.
+- Fresh long PDF uploads no longer auto-run full base analysis just because the user opens the analysis URL. They open as a section workspace first, with a clear `Run base analysis` escape hatch. A ResNet copy (`746cf42c-fb6e-4e49-9efb-9f744c4222e1`) was opened in the browser and `GET /documents/{id}/analysis` remained `404`, confirming no hidden model job was launched.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
 - Added real-paper normalization fixtures for BatchNorm and BERT snippets so generic fragments and PDF split artifacts are rejected in tests.
 - Added an Attention/Transformer fixture so `the best performing models` is handled as a discourse signal rather than a saveable term/concept, while Transformer, self-attention, sequence transduction, and parallelization remain learnable.
@@ -78,6 +79,7 @@ Local demo records currently include:
 
 - PDF page navigation and extracted section navigation are partially aligned for new uploads. Section-to-PDF and PDF-to-section movement both work when source labels are available.
 - Full-paper staged analysis is partly automated. The user can trigger `Auto-study next 3`, and the backend analyzes the next unstudied sections sequentially, but there is no durable background job queue or full-paper final merge.
+- Long documents now avoid accidental full base analysis on page open, but the explicit full-analysis path still needs stronger progress recovery, cancellation, and final merge semantics.
 - The lower analysis page still contains large report-style blocks. It is usable, but it is not yet a polished reading companion.
 - The right-side section lesson is more useful than before, but it still needs better prioritization between concepts, terms, expressions, sentence patterns, translation, and quiz actions.
 - The paper-map guide and whole-paper learning draft are deterministic and source-grounded, but still light synthesis. They do not yet perform model-backed final argument reconstruction across all analyzed sections.

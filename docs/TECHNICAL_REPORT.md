@@ -262,6 +262,7 @@ Current mitigation:
 - Reduced generation token budget.
 - No silent mock fallback.
 - Result warns when analysis is section-level.
+- Long PDF analysis pages do not automatically trigger full-document base analysis when no cached analysis exists. They open into the section workspace first, and full base analysis is an explicit action. This prevents surprise multi-minute jobs and fits the edge-device principle that long papers should be processed in visible, restartable chunks.
 
 Required next step:
 
