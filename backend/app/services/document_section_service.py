@@ -37,6 +37,9 @@ class DocumentSectionService:
         return self._merge_short_orphan_sections(self._merge_dangling_sections(sections))
 
     def _split_plain(self, cleaned: str) -> list[str]:
+        structured = self._split_structured(cleaned)
+        if len(structured) > 1:
+            return structured
         sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", cleaned) if part.strip() and self._is_learning_section(part)]
         sections: list[str] = []
         current = ""
@@ -59,6 +62,7 @@ class DocumentSectionService:
     def _clean(self, text: str) -> str:
         text = normalize_pdf_ligatures(text)
         text = text.replace("\r\n", "\n")
+        text = self._restore_inline_headings(text)
         text = re.sub(r"([A-Za-z]{2,})-\s+\d+\s+([a-z]{2,})", r"\1\2", text)
         text = re.sub(r"([A-Za-z]{2,})-\s+([a-z]{2,})", r"\1\2", text)
         text = re.sub(r"([A-Za-z]{2,})-\s*\n\s*([a-z]{2,})", r"\1\2", text)
@@ -70,6 +74,116 @@ class DocumentSectionService:
         )
         text = re.sub(r"[ \t]+", " ", text)
         return text.strip()
+
+    def _restore_inline_headings(self, text: str) -> str:
+        text = re.sub(r"\b(\d+(?:\.\d+)+)\s+([A-Z][A-Za-z][A-Za-z0-9 ,:/()'’-]{2,80}?)(?=\s+[A-Z][a-z])", r"\n\1 \2\n", text)
+        heading_tail = (
+            r"(?:problems?|problem|form|sets?|functions?|constraints?|duality|algorithms?|methods?|examples?|applications?|"
+            r"theory|geometry|optimality|conditions)"
+        )
+        text = re.sub(
+            rf"\b([A-Z][A-Za-z-]*(?:\s+(?:of|and|for|in|with|[A-Za-z-]+)){{1,7}}\s+{heading_tail})\s+(?=[A-Z][a-z])",
+            r"\n\1\n",
+            text,
+        )
+        text = re.sub(
+            rf"\b(Abstract\s+form\s+convex\s+optimization\s+problem)\s+(?=[A-Z][a-z])",
+            r"\n\1\n",
+            text,
+            flags=re.IGNORECASE,
+        )
+        return text
+
+    def _split_structured(self, cleaned: str) -> list[str]:
+        lines = [line.strip() for line in cleaned.splitlines()]
+        if sum(1 for line in lines if line) < 2:
+            return []
+        blocks: list[str] = []
+        current = ""
+        current_label = ""
+        for line in lines:
+            if not line:
+                if current:
+                    blocks.append(current.strip())
+                    current = ""
+                    current_label = ""
+                continue
+            if self._is_heading_line(line):
+                if current:
+                    blocks.append(current.strip())
+                current = line
+                current_label = line
+                continue
+            if current_label and len(current) < 220:
+                current = f"{current} {line}".strip()
+                continue
+            if current and len(current) + len(line) > self.section_chars:
+                blocks.append(current.strip())
+                current = line
+                current_label = ""
+            else:
+                current = f"{current} {line}".strip()
+        if current:
+            blocks.append(current.strip())
+        blocks = [block for block in blocks if self._is_learning_section(block)]
+        return self._pack_blocks(blocks)
+
+    def _pack_blocks(self, blocks: list[str]) -> list[str]:
+        sections: list[str] = []
+        current = ""
+        for block in blocks:
+            if not current:
+                current = block
+                continue
+            starts_new_topic = self._block_starts_with_heading(block)
+            if starts_new_topic or len(current) + len(block) > self.section_chars:
+                sections.append(current.strip())
+                current = block
+            else:
+                current = f"{current} {block}".strip()
+        if current:
+            sections.append(current.strip())
+        return sections
+
+    def _block_starts_with_heading(self, block: str) -> bool:
+        words = block.split()
+        for count in range(min(9, len(words)), 1, -1):
+            candidate = " ".join(words[:count])
+            if self._is_heading_line(candidate):
+                return True
+        return False
+
+    def _is_heading_line(self, line: str) -> bool:
+        normalized = " ".join(line.split()).strip(" .")
+        if not normalized or len(normalized) > 110:
+            return False
+        if re.match(r"^\d+(?:\.\d+)+\s+[A-Z]", normalized):
+            return True
+        words = normalized.split()
+        if len(words) < 2 or len(words) > 9:
+            return False
+        if normalized.endswith((".", ";", ",")):
+            return False
+        heading_markers = {
+            "problem",
+            "problems",
+            "form",
+            "sets",
+            "functions",
+            "constraints",
+            "duality",
+            "algorithm",
+            "algorithms",
+            "method",
+            "methods",
+            "examples",
+            "applications",
+            "conditions",
+        }
+        if words[-1].lower() not in heading_markers:
+            return False
+        capitalized = sum(1 for word in words if word[:1].isupper() or word.lower() in {"of", "and", "for", "in", "with"})
+        return capitalized >= max(1, len(words) - 2)
 
     def _merge_dangling_sections(self, sections: list[DocumentSection]) -> list[DocumentSection]:
         merged: list[DocumentSection] = []

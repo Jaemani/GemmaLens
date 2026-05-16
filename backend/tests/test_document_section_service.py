@@ -18,6 +18,24 @@ def test_document_section_service_preserves_pdf_page_labels():
     assert sections[1].text.startswith("The method estimates")
 
 
+def test_document_section_service_uses_inline_headings_as_boundaries():
+    text = (
+        "[[GEMMALENS_PDF_PAGE:151]]\n"
+        "4.2 Convex optimization The objective function must be convex. "
+        "Abstract form convex optimization problem It is important to note a subtlety in our definition of convex optimization problem. "
+        "This problem is not a convex optimization problem in standard form since the equality constraint is not affine. "
+        "Concave maximization problems With a slight abuse of notation, we also refer to concave maximization problems."
+    )
+
+    sections = DocumentSectionService().split_with_labels(text)
+
+    assert len(sections) >= 3
+    assert sections[0].text.startswith("4.2 Convex optimization")
+    assert any(section.text.startswith("Abstract form convex optimization problem") for section in sections)
+    assert any(section.text.startswith("Concave maximization problems") for section in sections)
+    assert all(section.source_label == "PDF page 151" for section in sections)
+
+
 def test_document_section_service_skips_pdf_attribution_sections():
     text = (
         "[[GEMMALENS_PDF_PAGE:1]]\n"

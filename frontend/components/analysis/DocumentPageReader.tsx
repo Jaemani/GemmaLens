@@ -64,7 +64,9 @@ export function DocumentPageReader({
       ? sectionAnalysis.summaries.one_line
       : currentSection?.analyzed
         ? "Loading this section summary..."
-        : currentSection?.preview;
+        : isBatchAnalyzing
+          ? "GemmaLens is preparing this document in order. The lesson summary appears here once this section is ready."
+          : "Analyze this section to build its summary, terms, expressions, and sentence patterns.";
 
   useEffect(() => {
     let cancelled = false;
@@ -273,7 +275,7 @@ export function DocumentPageReader({
   }
 
   async function autoStudySections(sectionCount: number) {
-    const plannedIndices = nextUnanalyzedSectionIndices(sections, pageIndex, sectionCount);
+    const plannedIndices = nextUnanalyzedSectionIndices(sections, sectionCount);
     if (!plannedIndices.length || isBatchAnalyzing) return;
     setIsBatchAnalyzing(true);
     setBatchStatus("");
@@ -934,16 +936,12 @@ function usefulSupportMeaning(value: string | undefined) {
   return normalized;
 }
 
-function nextUnanalyzedSectionIndices(sections: DocumentSection[], currentIndex: number, limit: number) {
-  const afterCurrent = sections
+function nextUnanalyzedSectionIndices(sections: DocumentSection[], limit: number) {
+  return sections
     .map((section, index) => ({ section, index }))
-    .filter(({ section, index }) => index >= currentIndex && !section.analyzed)
-    .map(({ index }) => index);
-  const beforeCurrent = sections
-    .map((section, index) => ({ section, index }))
-    .filter(({ section, index }) => index < currentIndex && !section.analyzed)
-    .map(({ index }) => index);
-  return [...afterCurrent, ...beforeCurrent].slice(0, limit);
+    .filter(({ section }) => !section.analyzed)
+    .map(({ index }) => index)
+    .slice(0, limit);
 }
 
 type AutoStudyProgress = {

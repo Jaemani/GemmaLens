@@ -4152,6 +4152,23 @@ class AnalysisNormalizationService:
         if self._is_batchnorm_learning_section(document_text):
             profile = self._batchnorm_profile(document_text) or {}
             return profile["summaries"]
+        if "convex optimization problem" in compact_lower and "affine" in compact_lower:
+            return {
+                "one_line": "This section clarifies what counts as a standard-form convex optimization problem.",
+                "simple": (
+                    "The text points out a subtle definition issue: a problem can have a convex feasible set but still fail to be a standard-form "
+                    "convex optimization problem if its equality constraint is not affine."
+                ),
+                "academic": (
+                    "The section distinguishes geometric convexity of the feasible set from the stricter standard-form requirements on objective, "
+                    "inequality constraints, and affine equality constraints."
+                ),
+                "study_notes": [
+                    "Separate feasible-set convexity from standard-form convex optimization.",
+                    "Track why affine equality constraints matter in the definition.",
+                    "Use this section as a definition caveat, not as a new algorithm.",
+                ],
+            }
         if "batch normalization" in lower and "internal covariate shift" in lower:
             return {
                 "one_line": "The paper proposes Batch Normalization to make deep neural network training faster and more stable.",
@@ -8005,7 +8022,15 @@ class AnalysisNormalizationService:
         if len(set(values)) == 1:
             return True
         first_sentence = self._sentences_from_text(document_text)[0] if document_text.strip() else ""
-        return bool(first_sentence and any(value == first_sentence for value in values[:2]))
+        if not first_sentence:
+            return False
+        first_normalized = " ".join(first_sentence.split()).lower()
+        return any(
+            value == first_sentence
+            or SequenceMatcher(None, " ".join(value.split()).lower(), first_normalized).ratio() > 0.86
+            or first_normalized.startswith(" ".join(value.split()).lower()[:90])
+            for value in values[:2]
+        )
 
     def _sentences(self, value: Any, document_text: str) -> list[dict[str, str]]:
         rows = value if isinstance(value, list) else []

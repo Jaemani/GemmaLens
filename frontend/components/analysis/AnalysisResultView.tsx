@@ -453,8 +453,7 @@ function SectionPreparationPanel({
           <p className="text-xs font-semibold uppercase tracking-wide text-accent">Section preparation</p>
           <h2 className="mt-1 text-lg font-semibold text-ink">{status.message}</h2>
           <p className="mt-1 text-sm font-medium text-neutral-700">
-            {status.ready} / {status.total} ready
-            {status.running ? ", currently running" : ""}
+            {status.running ? `${status.ready} sections ready so far` : `${status.ready} / ${status.total} ready`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
