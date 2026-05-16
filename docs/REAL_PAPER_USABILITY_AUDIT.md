@@ -157,6 +157,7 @@ Local demo records currently include:
 - Real Transformer sections 20-23 exposed reference/appendix failures: references needed to stay citation-navigation lessons, while attention visualization pages copied repeated sample sentences and promoted weak words such as `application`, `encoder`, and `exhibit behaviour`. Appendix profiles now teach what each figure demonstrates: long-distance dependency tracking, anaphora resolution, and attention-head specialization.
 - Completed Transformer 23/23 section audit against the live API. The final audit checks every section for non-section quality warnings and minimum lesson density; no section currently fails the audit rule.
 - Corpus-level audit exposed a history UX problem: duplicate PDFs can coexist with different analysis coverage, such as one complete ResNet record and one 1/28 partial ResNet record. Document list responses now include analyzed/total section counts, and Dashboard/Documents surface progress badges so users can avoid opening partial duplicates during demos.
+- Real BatchNorm sections 2-4 exposed early-paper failures: SGD/minibatch setup, sub-network equations, and sigmoid saturation were copied as first sentences or reduced to duplicated terms/concepts. BatchNorm profiles now teach the argument chain from minibatch SGD to internal covariate shift and the problem-to-method transition into Batch Normalization.
 
 ## Still Weak
 

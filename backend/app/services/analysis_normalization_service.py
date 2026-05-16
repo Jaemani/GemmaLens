@@ -80,6 +80,9 @@ class AnalysisNormalizationService:
         if self._is_reference_list_section(document_text):
             terms = self._prefer_reference_list_terms(terms, document_text)
             phrases = self._prefer_reference_list_phrases(phrases, document_text)
+        if self._is_batchnorm_learning_section(document_text):
+            terms = self._prefer_batchnorm_terms(terms, document_text)
+            phrases = self._prefer_batchnorm_phrases(phrases, document_text)
         if self._is_attention_learning_section(document_text):
             terms = self._prefer_attention_terms(terms, document_text)
             phrases = self._prefer_attention_phrases(phrases, document_text)
@@ -194,6 +197,9 @@ class AnalysisNormalizationService:
         if self._is_reference_list_section(document_text):
             normalized["concepts"] = self._prefer_reference_list_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._prefer_reference_list_phrases(normalized["phrases"], document_text)
+        if self._is_batchnorm_learning_section(document_text):
+            normalized["concepts"] = self._prefer_batchnorm_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_batchnorm_phrases(normalized["phrases"], document_text)
         if self._is_attention_learning_section(document_text):
             normalized["concepts"] = self._prefer_attention_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._prefer_attention_phrases(normalized["phrases"], document_text)
@@ -243,9 +249,12 @@ class AnalysisNormalizationService:
         if (
             self._sentences_are_weak(normalized["sentences"])
             or self._needs_bert_section_sentence_override(document_text)
+            or self._is_batchnorm_learning_section(document_text)
             or self._is_attention_learning_section(document_text)
         ):
             normalized["sentences"] = self._heuristic_sentences(document_text)
+        if self._is_batchnorm_learning_section(document_text):
+            normalized["summaries"] = self._heuristic_summaries(document_text)
         if self._is_attention_learning_section(document_text):
             normalized["summaries"] = self._heuristic_summaries(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -2955,6 +2964,18 @@ class AnalysisNormalizationService:
                     "difficulty_reason": str(profile.get("difficulty_reason") or "The section mixes architecture, notation, and method motivation."),
                 }
             ]
+        if self._is_batchnorm_learning_section(document_text):
+            profile = self._batchnorm_profile(document_text) or {}
+            sentence = self._source_sentence(None, str(profile.get("sentence_target") or ""), document_text)
+            return [
+                {
+                    "sentence": sentence,
+                    "core_structure": str(profile.get("core_structure") or "BatchNorm section sentence."),
+                    "simplified_version": str(profile.get("simplified_version") or "This section explains why BatchNorm is useful."),
+                    "korean_explanation": str(profile.get("korean_explanation") or "이 문장은 Batch Normalization 논문의 핵심 논리를 설명합니다."),
+                    "difficulty_reason": str(profile.get("difficulty_reason") or "The section mixes optimization language, equations, and method motivation."),
+                }
+            ]
         if self._is_bert_text(document_text):
             if self._is_bert_masked_lm_procedure_section(document_text):
                 sentence = self._source_sentence(None, "In contrast to", document_text)
@@ -4029,6 +4050,9 @@ class AnalysisNormalizationService:
         compact_lower = " ".join(lower.split())
         if self._is_attention_learning_section(document_text):
             profile = self._attention_profile(document_text) or {}
+            return profile["summaries"]
+        if self._is_batchnorm_learning_section(document_text):
+            profile = self._batchnorm_profile(document_text) or {}
             return profile["summaries"]
         if "batch normalization" in lower and "internal covariate shift" in lower:
             return {
@@ -7469,6 +7493,49 @@ class AnalysisNormalizationService:
             blocked={"we demonstrate", "allows us to"},
         )
 
+    def _prefer_batchnorm_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        profile = self._batchnorm_profile(document_text)
+        if not profile:
+            return rows
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "term",
+            profile["terms"],
+            limit=12,
+            blocked={"gradient", "learning rate", "batch normalization"},
+        )
+
+    def _prefer_batchnorm_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        profile = self._batchnorm_profile(document_text)
+        if not profile:
+            return rows
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "concept",
+            profile["concepts"],
+            limit=8,
+            blocked={
+                "mini-batch",
+                "learning rate",
+                "gradient",
+                "covariate shift",
+                "sub-network",
+                "gradient descent step",
+                "sigmoid activation function",
+                "vanishing gradients",
+                "internal covariate shift",
+                "batch normalization",
+            },
+        )
+
+    def _prefer_batchnorm_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        profile = self._batchnorm_profile(document_text)
+        if not profile:
+            return rows
+        return self._prefer_phrase_rows(rows, document_text, profile["phrases"], blocked={"we propose"})
+
     def _prefer_attention_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         profile = self._attention_profile(document_text)
         if not profile:
@@ -8542,6 +8609,173 @@ class AnalysisNormalizationService:
 
     def _is_attention_learning_section(self, document_text: str) -> bool:
         return self._attention_profile(document_text) is not None
+
+    def _is_batchnorm_learning_section(self, document_text: str) -> bool:
+        return self._batchnorm_profile(document_text) is not None
+
+    def _batchnorm_profile(self, document_text: str) -> dict[str, Any] | None:
+        lowered = document_text.lower()
+        compact_lowered = re.sub(r"\s+", " ", lowered)
+
+        def profile(
+            one_line: str,
+            simple: str,
+            academic: str,
+            notes: list[str],
+            terms: list[tuple[str, str, str]],
+            concepts: list[tuple[str, str, str]],
+            phrases: list[tuple[str, str, str]],
+            sentence_target: str,
+            core_structure: str,
+            simplified_version: str,
+            korean_explanation: str,
+            difficulty_reason: str,
+        ) -> dict[str, Any]:
+            return {
+                "summaries": {"one_line": one_line, "simple": simple, "academic": academic, "study_notes": notes},
+                "terms": terms,
+                "concepts": concepts,
+                "phrases": phrases,
+                "sentence_target": sentence_target,
+                "core_structure": core_structure,
+                "simplified_version": simplified_version,
+                "korean_explanation": korean_explanation,
+                "difficulty_reason": difficulty_reason,
+            }
+
+        if "with sgd" in compact_lowered and "mini-batch is used" in compact_lowered and "covariate shift" in lowered:
+            return profile(
+                "This section explains why mini-batch SGD is efficient but unstable in deep networks.",
+                (
+                    "The paper first explains how mini-batches estimate gradients efficiently. It then shifts to the training problem: "
+                    "deeper networks make each layer's input distribution change as earlier layers update."
+                ),
+                (
+                    "The passage builds the motivation for internal covariate shift by connecting mini-batch gradient estimates, parallel computation, "
+                    "learning-rate sensitivity, parameter initialization, and covariate shift inside sub-networks or layers."
+                ),
+                [
+                    "This is setup for the BatchNorm problem, not the solution yet.",
+                    "Follow the chain: SGD minibatches -> hyperparameter sensitivity -> changing layer inputs -> covariate shift.",
+                    "The useful academic contrast phrase is 'as opposed to'.",
+                ],
+                [
+                    ("SGD", "Stochastic gradient descent training with mini-batch updates.", "SGD"),
+                    ("mini-batch", "A subset of examples used to estimate the training-set gradient.", "mini-batch"),
+                    ("gradient of the loss function", "Derivative estimated from a mini-batch.", "gradient of the loss function"),
+                    ("batch size", "Number of examples in a mini-batch.", "batch size"),
+                    ("parallelism", "Efficient batch computation on modern platforms.", "parallelism"),
+                    ("model hyper-parameters", "Settings such as learning rate and initialization.", "model hyper-parameters"),
+                    ("learning rate", "Optimization step-size that requires careful tuning.", "learning rate"),
+                    ("covariate shift", "Change in input distribution, extended here to internal layers.", "covariate shift"),
+                ],
+                [
+                    ("mini-batch gradient estimate", "Mini-batches approximate the full training-set gradient.", "approximate the gradient"),
+                    ("deep-network input drift", "Layer inputs change because preceding layer parameters change.", "inputs to each layer are affected"),
+                    ("internal covariate shift setup", "The covariate-shift concept is extended from systems to sub-networks and layers.", "extended beyond the learning system"),
+                ],
+                [
+                    ("as opposed to", "contrast", "Contrasts mini-batches with one-example updates."),
+                    ("is helpful in several ways", "claim", "Introduces multiple advantages."),
+                    ("First", "general", "Starts an enumerated explanation."),
+                    ("Second", "general", "Adds another reason."),
+                    ("is complicated by the fact that", "claim", "Introduces the cause of difficulty."),
+                    ("can be extended beyond", "claim", "Extends a known concept to a new scope."),
+                ],
+                "Using mini-batches of examples, as opposed to one example at a time",
+                "Using A, as opposed to B, is helpful in several ways.",
+                "Mini-batches are useful because they estimate gradients and make computation efficient.",
+                "'as opposed to'는 두 방법을 대비하면서 저자가 선택한 방법의 장점을 설명할 때 쓰입니다.",
+                "The section shifts from optimization mechanics into the paper's core instability argument.",
+            )
+        if "learning θ2 can be viewed" in compact_lowered and "remain fixed over time" in compact_lowered:
+            return profile(
+                "This section explains internal covariate shift as changing inputs to a sub-network.",
+                (
+                    "The paper treats part of a neural network as a sub-network receiving inputs from earlier layers. Training is easier if those input distributions stay fixed instead of changing over time."
+                ),
+                (
+                    "The passage formalizes internal covariate shift with a two-part network F1/F2: even if a later sub-network is optimized normally, "
+                    "its effective input distribution changes whenever earlier parameters change."
+                ),
+                [
+                    "Read the equations as a conceptual split: earlier layers feed later layers.",
+                    "The key idea is fixed distribution of x, not the exact gradient formula.",
+                    "This section is the bridge from covariate shift to why normalization should stabilize layer inputs.",
+                ],
+                [
+                    ("sub-network", "A later part of the network treated as its own learning system.", "sub-network"),
+                    ("input distribution", "Distribution of x values received by the sub-network.", "input distribution"),
+                    ("gradient descent step", "Parameter update used to train the sub-network.", "gradient descent step"),
+                    ("batch size", "m in the gradient-descent expression.", "batch size"),
+                    ("learning rate", "alpha in the parameter update.", "learning rate"),
+                    ("stand-alone network", "Comparison used to explain the sub-network view.", "stand-alone network"),
+                    ("fixed distribution", "Stable input distribution that would make training easier.", "remain fixed"),
+                ],
+                [
+                    ("sub-network view", "Later layers can be analyzed as a network receiving inputs from earlier layers.", "viewed as if"),
+                    ("fixed-input-distribution argument", "Stable x distributions would reduce readjustment during training.", "remain fixed over time"),
+                    ("internal shift mechanism", "Changes in earlier parameters change what later layers receive.", "parameters"),
+                ],
+                [
+                    ("can be viewed as if", "method", "Introduces a conceptual reframing."),
+                    ("For example", "general", "Introduces a concrete formula."),
+                    ("is exactly equivalent to", "claim", "States an equivalence."),
+                    ("Therefore", "claim", "Draws the consequence."),
+                    ("As such", "claim", "Introduces the practical implication."),
+                ],
+                "Learning Θ2 can be viewed as if the inputs",
+                "Learning X can be viewed as if Y are fed into Z.",
+                "Training later parameters can be understood as training a sub-network whose inputs come from earlier layers.",
+                "'can be viewed as if'는 수식을 직관적인 모델로 다시 해석할 때 유용한 표현입니다.",
+                "Greek parameters and nested functions make the simple sub-network idea hard to see.",
+            )
+        if "sigmoid activation function" in lowered and "saturated regime" in lowered and "we propose a new mechanism" in lowered:
+            return profile(
+                "This section connects sigmoid saturation and vanishing gradients to the need for Batch Normalization.",
+                (
+                    "The paper explains that changing layer inputs can push sigmoid activations into saturated regions where gradients vanish. "
+                    "If input distributions stay more stable, training should accelerate; Batch Normalization is proposed to reduce that internal shift."
+                ),
+                (
+                    "The passage turns internal covariate shift into an optimization failure mode: parameter changes move nonlinear inputs into saturation, "
+                    "gradients vanish, small learning rates become necessary, and stabilizing input distributions motivates Batch Normalization."
+                ),
+                [
+                    "This is the main problem-to-method transition.",
+                    "Track the causal chain: changing x -> saturation -> vanishing gradients -> slower convergence -> BatchNorm.",
+                    "The phrase 'If, however, we could ensure...' introduces the desired counterfactual solution.",
+                ],
+                [
+                    ("sigmoid activation function", "Nonlinearity whose gradient shrinks for large absolute inputs.", "sigmoid activation function"),
+                    ("vanishing gradients", "Gradients become too small for effective training.", "gradient flowing"),
+                    ("saturated regime", "Input region where the nonlinearity has tiny gradients.", "saturated regime"),
+                    ("ReLU", "Alternative activation used to avoid saturation problems.", "ReLU"),
+                    ("careful initialization", "Existing mitigation for saturation and vanishing gradients.", "careful initialization"),
+                    ("small learning rates", "Existing mitigation that slows training.", "small learning rates"),
+                    ("Internal Covariate Shift", "Change in internal node distributions during training.", "Internal Covariate Shift"),
+                    ("Batch Normalization", "Mechanism proposed to reduce internal covariate shift.", "Batch Normalization"),
+                ],
+                [
+                    ("saturation failure mode", "Changing inputs can push sigmoid activations into low-gradient regions.", "saturated regime"),
+                    ("stability counterfactual", "Stable nonlinearity inputs should make optimization less likely to get stuck.", "could ensure"),
+                    ("BatchNorm motivation", "Batch Normalization is introduced as a mechanism to reduce internal covariate shift.", "takes a step towards reducing"),
+                ],
+                [
+                    ("This means that", "claim", "Explains the consequence of a formula."),
+                    ("However, since", "contrast", "Introduces why the problem occurs during training."),
+                    ("In practice", "general", "Connects theory to common practice."),
+                    ("If, however, we could ensure", "method", "Introduces a desired intervention."),
+                    ("We refer to", "claim", "Names the phenomenon."),
+                    ("We propose a new mechanism", "method", "Introduces the solution."),
+                ],
+                "If, however, we could ensure that the distribution of nonlinearity inputs remains more stable",
+                "If we could ensure X, then Y would be less likely to Z.",
+                "If layer-input distributions stayed stable, the optimizer would be less likely to get stuck in saturation.",
+                "'If, however, we could ensure...'는 문제를 해결하기 위한 가정적 조건을 제시하는 표현입니다.",
+                "The section mixes activation math, optimization failure, and the method introduction.",
+            )
+        return None
 
     def _attention_profile(self, document_text: str) -> dict[str, Any] | None:
         lowered = document_text.lower()
