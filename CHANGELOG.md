@@ -28,6 +28,7 @@
 - Collapsed the legacy detailed generated output by default on analysis pages, keeping the PDF workspace centered on source reading, section study, and the paper-level learning draft.
 - Fixed paper-map coverage when both a base analysis and later section caches exist. The paper map now includes section 1 alongside later analyzed sections instead of silently dropping it.
 - Filtered PDF attribution/conference-note sections from document sectioning and paper-map synthesis, preventing author-contribution text from appearing as a learning section in Attention Is All You Need.
+- Deduplicated and shortened whole-paper argument flow entries. Repeated section summaries are now grouped, e.g. `S1, 3, 4`, instead of appearing as separate duplicate flow items.
 - Added an Attention Is All You Need smoke-test record to the real-paper audit and updated stale scope copy to describe current staged analysis and paper-map draft behavior.
 - Added cached section-lesson retrieval. Selecting an already analyzed section now loads its saved lesson instead of requiring the user to run analysis again.
 - Simplified analysis-column card grids to one readable column in the PDF workspace, avoiding cramped concept/term/expression cards on normal desktop widths.

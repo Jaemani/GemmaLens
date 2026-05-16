@@ -52,6 +52,7 @@ Local demo records currently include:
 - Paper-map coverage now includes the base first-section analysis even when later section caches exist. This fixes a real BERT smoke-test mismatch where the reader showed section 1 analyzed but the paper map only summarized section 3.
 - Attention Is All You Need smoke test now produces useful first-section anchors: Transformer, self-attention, attention mechanism, sequence transduction, recurrent/convolutional baselines, and BLEU. Raw signal lists remain collapsed by default.
 - Attention staged analysis exposed a real extraction problem: author-contribution and conference-note text was treated as section 2. Section splitting and paper-map synthesis now filter those attribution sections.
+- Attention staged analysis also exposed duplicate argument-flow entries. The paper map now groups repeated summaries, e.g. `S1, 3, 4`, and trims long flow text so the draft reads like a sequence instead of a repeated report.
 - Updated stale scope copy so the analysis page explains the current staged section-analysis and paper-map draft behavior instead of implying full-paper staged analysis is still absent.
 - Already analyzed sections now load their cached lesson when selected, so the green analyzed state leads back to usable learning content rather than only acting as a status marker.
 - Analysis-column learning cards now stay single-column in the PDF workspace. The previous multi-column layout made concept and term cards too narrow on normal desktop widths.

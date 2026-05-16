@@ -182,9 +182,10 @@ class PaperMapService:
 
         coverage_ratio = analyzed_count / total_sections if total_sections else 0
         status = "whole-paper draft" if total_sections and coverage_ratio >= 0.8 else "partial synthesis"
-        flow = [f"S{item['sections'][0]}: {item['meaning']}" for item in summaries[:6] if item.get("meaning")]
-        if len(summaries) > 6:
-            flow.append(f"...{len(summaries) - 6} more analyzed section summaries are folded into the lists below.")
+        flow = self._argument_flow(summaries, limit=6)
+        unique_summary_count = len({str(item.get("meaning") or "").strip().lower() for item in summaries if item.get("meaning")})
+        if unique_summary_count > 6:
+            flow.append(f"...{unique_summary_count - 6} more analyzed section summaries are folded into the lists below.")
 
         repeated_concepts = [item for item in top_concepts if int(item.get("count") or 0) > 1]
         priority_concepts = repeated_concepts[:5] or top_concepts[:5]
@@ -209,3 +210,33 @@ class PaperMapService:
             reusable_expressions=reusable_expressions,
             review_plan=review_plan[:5],
         )
+
+    def _argument_flow(self, summaries: list[dict[str, Any]], limit: int) -> list[str]:
+        grouped: OrderedDict[str, dict[str, Any]] = OrderedDict()
+        for item in summaries:
+            meaning = " ".join(str(item.get("meaning") or "").split())
+            if not meaning:
+                continue
+            key = meaning.lower()
+            if key not in grouped:
+                grouped[key] = {"meaning": meaning, "sections": []}
+            grouped[key]["sections"].extend(int(section) for section in item.get("sections") or [])
+        flow: list[str] = []
+        for item in list(grouped.values())[:limit]:
+            sections = sorted(set(item["sections"]))
+            label = self._section_label(sections)
+            flow.append(f"{label}: {self._trim_flow_text(item['meaning'])}")
+        return flow
+
+    def _section_label(self, sections: list[int]) -> str:
+        if not sections:
+            return "S?"
+        if len(sections) == 1:
+            return f"S{sections[0]}"
+        return f"S{', '.join(str(section) for section in sections[:4])}{', ...' if len(sections) > 4 else ''}"
+
+    def _trim_flow_text(self, text: str, limit: int = 180) -> str:
+        text = " ".join(text.split())
+        if len(text) <= limit:
+            return text
+        return f"{text[: limit - 1].rsplit(' ', 1)[0]}..."
