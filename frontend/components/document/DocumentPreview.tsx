@@ -40,7 +40,10 @@ export function DocumentPreview({ documents }: { documents: DocumentListItem[] }
             <Link href={`/analysis/${document.id}`} className="min-w-0">
               <div className="flex items-center justify-between gap-3">
                 <p className="truncate font-medium">{document.title}</p>
-                <span className="shrink-0 text-xs uppercase text-neutral-500">{document.source_type}</span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <AnalysisProgressBadge document={document} />
+                  <span className="text-xs uppercase text-neutral-500">{document.source_type}</span>
+                </div>
               </div>
               <p className="mt-2 line-clamp-2 text-sm text-neutral-600">{document.preview}</p>
             </Link>
@@ -59,4 +62,23 @@ export function DocumentPreview({ documents }: { documents: DocumentListItem[] }
       </div>
     </section>
   );
+}
+
+function AnalysisProgressBadge({ document }: { document: DocumentListItem }) {
+  const total = document.total_sections ?? 0;
+  const analyzed = document.analyzed_sections ?? 0;
+  if (total <= 1) {
+    return analyzed > 0 ? <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Ready</span> : null;
+  }
+  if (analyzed >= total) {
+    return <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Complete</span>;
+  }
+  if (analyzed > 0) {
+    return (
+      <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">
+        {analyzed}/{total} studied
+      </span>
+    );
+  }
+  return <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-600">Not studied</span>;
 }

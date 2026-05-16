@@ -156,6 +156,7 @@ Local demo records currently include:
 - Real Transformer sections 17-19 exposed parsing/conclusion failures: the parsing setup copied the heading, Table 4 fell back to a generic Transformer summary, and the conclusion had no phrases while references leaked into the source text. Profiles now separate parsing generalization setup, parsing result-table interpretation, and final future-work language.
 - Real Transformer sections 20-23 exposed reference/appendix failures: references needed to stay citation-navigation lessons, while attention visualization pages copied repeated sample sentences and promoted weak words such as `application`, `encoder`, and `exhibit behaviour`. Appendix profiles now teach what each figure demonstrates: long-distance dependency tracking, anaphora resolution, and attention-head specialization.
 - Completed Transformer 23/23 section audit against the live API. The final audit checks every section for non-section quality warnings and minimum lesson density; no section currently fails the audit rule.
+- Corpus-level audit exposed a history UX problem: duplicate PDFs can coexist with different analysis coverage, such as one complete ResNet record and one 1/28 partial ResNet record. Document list responses now include analyzed/total section counts, and Dashboard/Documents surface progress badges so users can avoid opening partial duplicates during demos.
 
 ## Still Weak
 

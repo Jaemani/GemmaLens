@@ -14,6 +14,8 @@ export type DocumentListItem = {
   source_type: string;
   preview: string;
   created_at: string;
+  total_sections?: number;
+  analyzed_sections?: number;
 };
 
 export type DocumentSection = {

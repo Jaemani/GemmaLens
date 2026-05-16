@@ -57,7 +57,10 @@ export default async function DashboardPage() {
             <div className="mt-3 divide-y divide-line">
               {recentDocuments.slice(0, 5).map((document) => (
                 <Link key={document.id} href={`/analysis/${document.id}`} className="block rounded-md py-3 text-sm hover:bg-surface">
-                  <span className="block font-semibold text-ink">{document.title}</span>
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="min-w-0 truncate font-semibold text-ink">{document.title}</span>
+                    <DocumentProgressLabel document={document} />
+                  </span>
                   <span className="mt-1 line-clamp-1 block text-neutral-600">{document.preview}</span>
                 </Link>
               ))}
@@ -91,6 +94,15 @@ export default async function DashboardPage() {
 
 function isVideoSource(sourceType: string) {
   return sourceType === "transcript" || sourceType === "video_segment";
+}
+
+function DocumentProgressLabel({ document }: { document: DocumentListItem }) {
+  const total = document.total_sections ?? 0;
+  const analyzed = document.analyzed_sections ?? 0;
+  if (total <= 1) return analyzed > 0 ? <span className="shrink-0 text-xs font-semibold text-emerald-700">Ready</span> : null;
+  if (analyzed >= total) return <span className="shrink-0 text-xs font-semibold text-emerald-700">Complete</span>;
+  if (analyzed > 0) return <span className="shrink-0 text-xs font-semibold text-amber-700">{analyzed}/{total}</span>;
+  return <span className="shrink-0 text-xs font-semibold text-neutral-500">Not studied</span>;
 }
 
 function Signal({ icon, label }: { icon: React.ReactNode; label: string }) {

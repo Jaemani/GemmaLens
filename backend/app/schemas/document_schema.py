@@ -30,6 +30,8 @@ class DocumentListItem(BaseModel):
     source_type: str
     preview: str
     created_at: datetime
+    total_sections: int = 0
+    analyzed_sections: int = 0
 
 
 class DocumentSectionRead(BaseModel):

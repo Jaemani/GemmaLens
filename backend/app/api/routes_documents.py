@@ -58,16 +58,22 @@ async def attach_document_file(document_id: str, file: UploadFile = File(...), d
 @router.get("", response_model=list[DocumentListItem])
 def list_documents(db: Session = Depends(get_db)):
     documents = DocumentRepository(db).list()
-    return [
-        DocumentListItem(
-            id=document.id,
-            title=document.title,
-            source_type=document.source_type,
-            preview=document.content[:220],
-            created_at=document.created_at,
+    items: list[DocumentListItem] = []
+    for document in documents:
+        sections = _document_sections(document.content)
+        analyzed_indices = _analyzed_section_indices(document.id, db)
+        items.append(
+            DocumentListItem(
+                id=document.id,
+                title=document.title,
+                source_type=document.source_type,
+                preview=document.content[:220],
+                created_at=document.created_at,
+                total_sections=len(sections),
+                analyzed_sections=len(analyzed_indices),
+            )
         )
-        for document in documents
-    ]
+    return items
 
 
 @router.get("/{document_id}/file")
