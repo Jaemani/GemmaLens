@@ -23,6 +23,8 @@ class AnalysisNormalizationService:
         if self._is_bert_text(document_text):
             terms = self._filter_bert_learning_rows(terms, "term")
             phrases = self._filter_bert_learning_rows(phrases, "phrase")
+        if self._is_resnet_shortcut_option_section(document_text):
+            terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -42,6 +44,8 @@ class AnalysisNormalizationService:
         )
         if self._is_bert_text(document_text):
             normalized["concepts"] = self._filter_bert_learning_rows(normalized["concepts"], "concept")
+        if self._is_resnet_shortcut_option_section(document_text):
+            normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -136,6 +140,7 @@ class AnalysisNormalizationService:
                 "scaled dot-product attention",
                 "very deep models",
                 "shortcut connections",
+                "residual network",
             }:
                 continue
             if not self._appears_in_text(phrase, document_text):
@@ -672,6 +677,48 @@ class AnalysisNormalizationService:
                     "This is the exact related-work contrast against highway-network gates.",
                 ),
                 (
+                    "residual network",
+                    "The residual version of the plain baseline after shortcut connections are inserted.",
+                    "field_term",
+                    "medium",
+                    "It is the architecture created from the plain network in this section.",
+                ),
+                (
+                    "dimension matching",
+                    "Adjusting shortcut paths so tensors with different channel dimensions can be added.",
+                    "field_term",
+                    "hard",
+                    "This is why projection shortcuts or zero padding are discussed.",
+                ),
+                (
+                    "dimensions increase",
+                    "The condition where feature-map dimensions change and shortcut paths need special handling.",
+                    "field_term",
+                    "medium",
+                    "This introduces why the paper lists two shortcut options.",
+                ),
+                (
+                    "zero padding",
+                    "Adding extra zero entries so an identity shortcut can match increased dimensions without new parameters.",
+                    "useful",
+                    "medium",
+                    "It is option A for handling dimension increases.",
+                ),
+                (
+                    "zero entries padded",
+                    "The source phrase for padding identity shortcuts with zeros when dimensions increase.",
+                    "useful",
+                    "medium",
+                    "This is the no-extra-parameter shortcut option.",
+                ),
+                (
+                    "1x1 convolutions",
+                    "Projection layers used to match feature-map dimensions in shortcut paths.",
+                    "field_term",
+                    "hard",
+                    "This is option B for dimension matching.",
+                ),
+                (
                     "linear projection",
                     "A learned shortcut transformation used when input and output dimensions do not match.",
                     "field_term",
@@ -900,6 +947,13 @@ class AnalysisNormalizationService:
                 ("provide reasonable preconditioning", "claim", "Explains why identity mappings can make optimization easier."),
                 ("identity mapping is sufficient", "result", "Reports that the cheap identity shortcut is enough in the tested setting."),
                 ("only used when matching dimensions", "method", "Limits when the projection shortcut is needed."),
+                ("Based on the above plain network", "method", "Moves from the plain baseline to its residual counterpart."),
+                ("we insert shortcut connections", "method", "States how the plain network is converted into a residual network."),
+                ("turn the network into", "method", "Signals an architecture transformation."),
+                ("can be directly used", "method", "Explains when identity shortcuts apply without modification."),
+                ("When the dimensions increase", "general", "Introduces the condition that requires shortcut options."),
+                ("we consider two options", "general", "Signals that alternatives will be listed."),
+                ("introduces no extra parameter", "result", "Explains the cost advantage of the identity/zero-padding option."),
                 ("is flexible", "claim", "States that the residual function can use different layer depths."),
                 ("applicable to convolutional layers", "method", "Extends the notation from fully connected layers to convolutional networks."),
                 ("To provide instances for discussion", "general", "Introduces concrete model instances after the formulation."),
@@ -1192,6 +1246,36 @@ class AnalysisNormalizationService:
                     "This helps the learner separate the baseline architecture from the residual version.",
                 ),
                 (
+                    "residual network",
+                    "The residual counterpart created by inserting shortcut connections into the plain baseline.",
+                    "This is the architecture transformation the section explains.",
+                ),
+                (
+                    "dimension matching",
+                    "The problem of making shortcut outputs compatible when feature-map dimensions increase.",
+                    "This explains why the paper lists identity padding and projection shortcut options.",
+                ),
+                (
+                    "dimensions increase",
+                    "The condition that forces the paper to discuss shortcut alternatives.",
+                    "This marks the shift from ordinary identity shortcuts to dimension-handling options.",
+                ),
+                (
+                    "zero padding",
+                    "A no-parameter way to extend identity shortcuts when dimensions increase.",
+                    "This is option A in the shortcut-design discussion.",
+                ),
+                (
+                    "zero entries padded",
+                    "The source-grounded wording for adding zeros to identity shortcuts.",
+                    "This keeps option A tied to the original sentence.",
+                ),
+                (
+                    "1x1 convolutions",
+                    "Projection shortcut layers used to match dimensions.",
+                    "This is option B in the shortcut-design discussion.",
+                ),
+                (
                     "VGG nets",
                     "The prior architecture family that inspires the plain baseline design.",
                     "This is related architecture context for the ImageNet experiments.",
@@ -1447,6 +1531,20 @@ class AnalysisNormalizationService:
                     "The sentence is important because it separates the main shortcut design from the fallback projection case.",
                 ),
                 (
+                    "Based on the above plain network",
+                    "Based on A, we insert B, which turn C into D.",
+                    "The authors convert the plain baseline into a residual network by adding shortcut connections.",
+                    "'Based on the above'는 바로 앞에서 정의한 baseline을 출발점으로 삼는다는 신호입니다.",
+                    "The sentence is useful because it explains the architecture change rather than only naming components.",
+                ),
+                (
+                    "When the dimensions increase",
+                    "When A happens, we consider two options: option A and option B.",
+                    "The authors explain how shortcut connections handle feature-map dimension changes.",
+                    "'When' 절은 특정 조건을 열고, 'two options'는 뒤에 선택지가 나올 것을 알려줍니다.",
+                    "The sentence is dense because it mixes tensor-shape conditions with architectural alternatives.",
+                ),
+                (
                     "To provide instances for discussion",
                     "To provide instances for discussion, we describe A as follows.",
                     "The authors move from formulation to concrete ImageNet model designs.",
@@ -1621,6 +1719,23 @@ class AnalysisNormalizationService:
                 ],
             }
         if self._is_resnet_text(document_text):
+            if "based on the above plain network" in compact_lower and "we insert shortcut connections" in compact_lower:
+                return {
+                    "one_line": "This section shows how the plain ImageNet baseline is converted into a residual network.",
+                    "simple": (
+                        "The authors start from a plain VGG-style network and insert shortcut connections to make the residual version. "
+                        "Identity shortcuts work when dimensions match; when dimensions increase, the paper compares zero-padding identity shortcuts and projection shortcuts."
+                    ),
+                    "academic": (
+                        "The section defines the residual counterpart of the plain ImageNet architecture, specifying when identity shortcuts apply directly "
+                        "and how dimension increases are handled by zero padding or 1x1 projection shortcuts."
+                    ),
+                    "study_notes": [
+                        "Track the architecture transformation: plain network -> insert shortcut connections -> residual network.",
+                        "Separate the two shortcut cases: same dimensions versus increased dimensions.",
+                        "Do not treat implementation hyperparameters as the main language-learning targets in this section.",
+                    ],
+                }
             if "identity mapping is sufficient" in compact_lower and "network architectures" in compact_lower:
                 return {
                     "one_line": "This section explains dimension matching and then introduces the ImageNet plain/residual network designs.",
@@ -1886,6 +2001,20 @@ class AnalysisNormalizationService:
             filtered.append(row)
         return filtered
 
+    def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {
+            "batch normalization",
+            "mini-batch",
+            "learning rate",
+            "sgd",
+            "weight decay",
+            "momentum",
+            "dropout",
+            "example network",
+            "example network architectures",
+        }
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
     def _sentences_are_weak(self, sentences: list[dict[str, str]]) -> bool:
         if not sentences:
             return True
@@ -1895,6 +2024,7 @@ class AnalysisNormalizationService:
             "Model did not return sentence decomposition.",
             "Main claim + explanation.",
             "Subject (degradation) + Verb (indicates) + Object (that clause)",
+            "Subject (shortcuts) + Verb (increase) + Object (dimensions).",
         }
         return any(sentence.get("core_structure") in weak_markers or sentence.get("korean_explanation") in weak_markers for sentence in sentences)
 
@@ -1929,6 +2059,10 @@ class AnalysisNormalizationService:
             "transformer" in compact_lower
             and ("model architecture" in compact_lower or "encoder and decoder stacks" in compact_lower)
             and ("figure 1" in summary_signal or "model architecture" in summary_signal)
+        ):
+            return True
+        if self._is_resnet_shortcut_option_section(document_text) and (
+            "example network architectures" in summary_signal or "batch normalization" in summary_signal
         ):
             return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
@@ -2062,6 +2196,8 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"shortcuts we", "we describe two models", "square matrix"}:
             return ""
+        if lowered in {"example network", "example network architectures"}:
+            return ""
         if lowered.startswith(("we describe ", "we also note ", "we can also use ")):
             return ""
         if lowered in {"reveals that network", "has higher training", "higher training", "deeper network"}:
@@ -2143,7 +2279,12 @@ class AnalysisNormalizationService:
             or ("highway networks have not demonstrated accuracy gains" in lowered and "residual functions" in lowered)
             or ("reasonable preconditioning" in lowered and "shortcut connection" in lowered)
             or ("identity mapping is sufficient" in lowered and "network architectures" in lowered)
+            or self._is_resnet_shortcut_option_section(document_text)
         )
+
+    def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "based on the above plain network" in lowered and "we insert shortcut connections" in lowered
 
     def _score(self, value: Any, default: int) -> int:
         try:

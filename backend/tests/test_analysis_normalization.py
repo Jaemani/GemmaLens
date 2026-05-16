@@ -827,3 +827,55 @@ def test_resnet_network_architecture_section_separates_shortcut_options_from_bas
     assert {"identity mapping is sufficient", "only used when matching dimensions", "To provide instances for discussion"}.issubset(phrases)
     assert result.summaries.one_line == "This section explains dimension matching and then introduces the ImageNet plain/residual network designs."
     assert result.sentences[0].core_structure == "We show that A is sufficient for B and economical; C is only used when D."
+
+
+def test_resnet_shortcut_option_section_filters_training_hyperparameter_noise():
+    document = (
+        "Example network architectures for ImageNet. Left: the VGG-19 model as a reference. "
+        "Middle: a plain network with 34 parameter layers. Right: a residual network with 34 parameter layers. "
+        "The dotted shortcuts increase dimensions. Residual Network. Based on the above plain network, we insert shortcut connections "
+        "which turn the network into its counterpart residual version. The identity shortcuts can be directly used when the input and output "
+        "are of the same dimensions. When the dimensions increase, we consider two options: (A) The shortcut still performs identity mapping, "
+        "with extra zero entries padded for increasing dimensions. This option introduces no extra parameter; "
+        "(B) The projection shortcut is used to match dimensions, done by 1x1 convolutions. We adopt batch normalization right after each convolution. "
+        "We use SGD with a mini-batch size of 256. The learning rate starts from 0.1."
+    )
+    payload = {
+        "terms": [
+            {"term": "Batch Normalization", "meaning": "training detail"},
+            {"term": "mini-batch", "meaning": "training detail"},
+            {"term": "learning rate", "meaning": "training detail"},
+            {"term": "example network", "meaning": "caption fragment"},
+            {"term": "Residual Network", "meaning": "residual counterpart"},
+        ],
+        "concepts": [
+            {"concept": "Batch Normalization", "explanation": "training detail"},
+            {"concept": "example network", "explanation": "caption fragment"},
+            {"concept": "plain network", "explanation": "baseline architecture"},
+        ],
+        "phrases": [{"phrase": "residual network", "function": "general", "explanation": "too noun-like"}],
+        "summaries": {
+            "one_line": "Example network architectures for ImageNet.",
+            "simple": "Example network architectures for ImageNet.",
+            "academic": "Example network architectures for ImageNet.",
+        },
+        "sentences": [{"sentence": "The dotted shortcuts increase dimensions.", "core_structure": "Subject (shortcuts) + Verb (increase) + Object (dimensions)."}],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-shortcut-options", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "Batch Normalization" not in terms
+    assert "mini-batch" not in terms
+    assert "learning rate" not in terms
+    assert "example network" not in terms
+    assert "Batch Normalization" not in concepts
+    assert "example network" not in concepts
+    assert {"residual network", "dimensions increase", "zero entries padded", "projection shortcut", "1x1 convolutions"}.issubset(terms)
+    assert {"residual network", "dimensions increase", "zero entries padded", "1x1 convolutions"}.issubset(concepts)
+    assert {"Based on the above plain network", "When the dimensions increase", "introduces no extra parameter"}.issubset(phrases)
+    assert "residual network" not in phrases
+    assert result.summaries.one_line == "This section shows how the plain ImageNet baseline is converted into a residual network."
+    assert result.sentences[0].core_structure == "Based on A, we insert B, which turn C into D."

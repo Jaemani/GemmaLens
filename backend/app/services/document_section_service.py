@@ -19,8 +19,10 @@ class DocumentSectionService:
 
     def split_with_labels(self, text: str) -> list[DocumentSection]:
         if not self.page_marker_pattern.search(text):
-            return self._merge_dangling_sections(
-                [DocumentSection(section) for section in self._split_plain(self._clean(text)) if self._is_learning_section(section)]
+            return self._merge_short_orphan_sections(
+                self._merge_dangling_sections(
+                    [DocumentSection(section) for section in self._split_plain(self._clean(text)) if self._is_learning_section(section)]
+                )
             )
 
         sections: list[DocumentSection] = []
@@ -32,7 +34,7 @@ class DocumentSectionService:
             page_text = parts[index + 1] if index + 1 < len(parts) else ""
             label = f"PDF page {page_number}"
             sections.extend(DocumentSection(section, label) for section in self._split_plain(self._clean(page_text)) if self._is_learning_section(section))
-        return self._merge_dangling_sections(sections)
+        return self._merge_short_orphan_sections(self._merge_dangling_sections(sections))
 
     def _split_plain(self, cleaned: str) -> list[str]:
         sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", cleaned) if part.strip() and self._is_learning_section(part)]
@@ -89,11 +91,36 @@ class DocumentSectionService:
             return False
         return bool(re.search(r"[A-Za-z]{2,}-\s*\d*$", normalized))
 
+    def _merge_short_orphan_sections(self, sections: list[DocumentSection]) -> list[DocumentSection]:
+        merged: list[DocumentSection] = []
+        for section in sections:
+            if merged and self._is_short_orphan_section(section.text):
+                previous = merged[-1]
+                merged[-1] = DocumentSection(
+                    self._clean(f"{previous.text} {section.text}"),
+                    previous.source_label or section.source_label,
+                )
+                continue
+            merged.append(section)
+        return merged
+
+    def _is_short_orphan_section(self, text: str) -> bool:
+        normalized = " ".join(text.split())
+        if len(normalized) > 260:
+            return False
+        return bool(re.search(r"\b\d+\s*$", normalized)) and not re.search(
+            r"\b(?:abstract|introduction|conclusion|experiments?|method|results?)\b",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+
     def _is_learning_section(self, text: str) -> bool:
         lowered = " ".join(text.lower().split())
         if not lowered:
             return False
         if len(lowered) < 80 and self._is_short_artifact(lowered):
+            return False
+        if self._is_table_like_artifact(lowered):
             return False
         non_content_markers = [
             "work performed while",
@@ -106,6 +133,18 @@ class DocumentSectionService:
         if any(marker in lowered for marker in non_content_markers):
             return False
         return True
+
+    def _is_table_like_artifact(self, lowered: str) -> bool:
+        if "layer nameoutput size" in lowered and "architectures for imagenet" in lowered:
+            return True
+        if "architectures for imagenet" in lowered and "flops" in lowered and lowered.count("×") >= 10:
+            return True
+        if len(lowered) < 500:
+            return False
+        conv_count = lowered.count("conv")
+        stride_count = lowered.count("/2")
+        pool_count = lowered.count("pool")
+        return conv_count >= 15 and stride_count >= 4 and pool_count >= 3
 
     def _is_short_artifact(self, lowered: str) -> bool:
         artifact_markers = [
