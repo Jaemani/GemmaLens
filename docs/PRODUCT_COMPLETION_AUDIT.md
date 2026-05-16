@@ -32,7 +32,7 @@ Evaluate GemmaLens as a real user reading famous academic PDFs end to end. The a
 | Video has usable empty/progress state | Video page empty/fetch/parse states verified by screenshot and build | Met for empty state; full transcript interaction still lightly tested |
 | Dictionary is a review queue | Dictionary shows type counts and review-focus filters | Partly met; no spaced repetition or quiz integration yet |
 | Guide matches current product | Guide rewritten around PDF source, section study, paper map, current limits | Met |
-| Responsive layout | Playwright desktop/mobile audit on Dashboard, Documents, Translate, Video, Dictionary, Settings, Guide, Quiz, and Analysis showed no console errors, no horizontal overflow, no visible PDF markers, and no Experiments nav leakage | Met for inspected routes |
+| Responsive layout | Latest Playwright desktop/mobile audit on Dashboard, Documents, Translate, Video, Dictionary, Settings, Guide, Quiz, and Analysis showed no console errors, no horizontal overflow, no visible PDF markers, and no Experiments nav leakage | Met for inspected routes |
 | Build/test health | `npm --prefix frontend run build`, `pytest backend/tests`, `ruff check backend` passed | Met |
 
 ## Remaining Weak Points
