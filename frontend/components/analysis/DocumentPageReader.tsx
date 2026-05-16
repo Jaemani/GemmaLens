@@ -15,7 +15,7 @@ export function DocumentPageReader({
 }: {
   documentId: string;
   onSectionAnalyzed?: () => void;
-  onSectionLesson?: (lesson: { analysis: AnalysisResult; sectionNumber: number }) => void;
+  onSectionLesson?: (lesson: SectionLessonSelection) => void;
   onSourcePageChange?: (page: number | null) => void;
   requestedSourcePage?: number | null;
   hideInlineLesson?: boolean;
@@ -78,7 +78,7 @@ export function DocumentPageReader({
         if (cancelled) return;
         setSectionAnalysis(cached);
         setSectionAnalysisIndex(currentSection.index);
-        onSectionLesson?.({ analysis: cached, sectionNumber: pageIndex + 1 });
+        onSectionLesson?.(buildSectionLessonSelection(cached, sections, pageIndex));
       })
       .catch(() => {
         if (!cancelled) {
@@ -119,7 +119,7 @@ export function DocumentPageReader({
       const created = await api.analyzeDocumentSection(document.id, section.index);
       setSectionAnalysis(created);
       setSectionAnalysisIndex(section.index);
-      onSectionLesson?.({ analysis: created, sectionNumber: index + 1 });
+      onSectionLesson?.(buildSectionLessonSelection(created, sections, index));
       setSections((current) =>
         current.map((currentSection) => (currentSection.index === section.index ? { ...currentSection, analyzed: true } : currentSection))
       );
@@ -231,12 +231,12 @@ export function DocumentPageReader({
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line p-5">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section study</p>
-          <h2 className="mt-1 text-lg font-semibold">Move through PDF pages and text sections</h2>
+          <h2 className="mt-1 text-lg font-semibold">Move through PDF pages and page sections</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">
             PDF pages are the visual source on the left. Sections are backend-cleaned text chunks sent to the model; one PDF page can contain several sections.
           </p>
           <p className="mt-1 text-xs leading-5 text-neutral-600">
-            Page groups below show PDF page boundaries. Buttons inside each group are the text sections on that PDF page.
+            Page groups below show PDF boundaries. Inside each group, S1, S2, and S3 mean sections within that PDF page, not global document sections.
           </p>
           <p className="mt-2 text-xs font-semibold text-neutral-600">
             {analyzedCount} / {sections.length || 1} sections analyzed
@@ -338,7 +338,7 @@ export function DocumentPageReader({
                           ? "border-green-200 bg-green-50 text-green-700"
                           : "border-line bg-panel text-neutral-500 hover:bg-white"
                     }`}
-                    title={`${group.label}, section ${localNumber} on this page, document section ${section.section_number}${
+                    title={`${group.label} / S${localNumber} on page / document section ${section.section_number}${
                       section.analyzed ? " analyzed" : " not analyzed"
                     }`}
                   >
@@ -367,7 +367,7 @@ export function DocumentPageReader({
           </p>
           <p className="text-xs font-semibold text-neutral-600">
             {currentPdfPage ? `PDF page ${currentPdfPage}` : "PDF page unknown"}
-            {currentPageSectionNumber ? ` · section P${currentPdfPage ?? "?"}-S${currentPageSectionNumber} on this page` : ""}
+            {currentPageSectionNumber ? ` · S${currentPageSectionNumber} on this page` : ""}
           </p>
           <p className="text-xs text-neutral-500">{(currentSection?.char_count ?? page.length).toLocaleString()} chars from backend-cleaned text</p>
           {currentSection?.analyzed ? <p className="text-xs font-semibold text-green-700">Analyzed</p> : null}
@@ -410,6 +410,7 @@ export function DocumentPageReader({
         <SectionLessonCard
           analysis={sectionAnalysis}
           sectionNumber={pageIndex + 1}
+          sectionLabel={formatSectionLabel(currentSection, currentPdfPage, currentPageSectionNumber)}
           onAnalyzeNext={targetUnanalyzedIndex >= 0 ? () => analyzeSectionAt(targetUnanalyzedIndex) : undefined}
           isAnalyzingNext={isAnalyzing}
           embedded
@@ -422,12 +423,14 @@ export function DocumentPageReader({
 export function SectionLessonCard({
   analysis,
   sectionNumber,
+  sectionLabel,
   onAnalyzeNext,
   isAnalyzingNext,
   embedded = false
 }: {
   analysis: AnalysisResult;
   sectionNumber: number;
+  sectionLabel?: string;
   onAnalyzeNext?: () => void;
   isAnalyzingNext: boolean;
   embedded?: boolean;
@@ -461,6 +464,7 @@ export function SectionLessonCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section {sectionNumber} lesson</p>
+          {sectionLabel ? <p className="mt-1 text-xs font-semibold text-neutral-600">{sectionLabel}</p> : null}
           <h3 className="mt-1 text-lg font-semibold">{analysis.summaries.one_line}</h3>
         </div>
         <p className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-accent">
@@ -584,6 +588,12 @@ type LessonSaveItem = {
   source_sentence?: string;
 };
 
+export type SectionLessonSelection = {
+  analysis: AnalysisResult;
+  sectionNumber: number;
+  sectionLabel?: string;
+};
+
 function MiniList({
   title,
   rows,
@@ -689,6 +699,26 @@ function sectionNumberWithinPdfPage(sections: DocumentSection[], index: number) 
     }
   }
   return localNumber || null;
+}
+
+function buildSectionLessonSelection(analysis: AnalysisResult, sections: DocumentSection[], index: number): SectionLessonSelection {
+  const section = sections[index];
+  const pdfPage = pdfPageFromLabel(section?.source_label ?? null);
+  const localSection = sectionNumberWithinPdfPage(sections, index);
+  return {
+    analysis,
+    sectionNumber: section?.section_number ?? index + 1,
+    sectionLabel: formatSectionLabel(section, pdfPage, localSection)
+  };
+}
+
+function formatSectionLabel(section: DocumentSection | undefined, pdfPage: number | null, localSection: number | null) {
+  const global = section?.section_number ?? null;
+  const total = section?.total_sections ?? null;
+  const pageLabel = pdfPage ? `PDF page ${pdfPage}` : "PDF page unknown";
+  const localLabel = localSection ? `S${localSection} on this page` : "section on page unknown";
+  const globalLabel = global && total ? `document section ${global} / ${total}` : "document section unknown";
+  return `${pageLabel} · ${localLabel} · ${globalLabel}`;
 }
 
 function nextUnanalyzedSectionIndices(sections: DocumentSection[], currentIndex: number, limit: number) {

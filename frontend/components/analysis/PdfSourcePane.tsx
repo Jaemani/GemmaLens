@@ -27,8 +27,9 @@ export function PdfSourcePane({
   const fileUrl = api.documentFileUrl(document.id);
 
   useEffect(() => {
-    if (!requestedPage || requestedPage <= 0) return;
-    setPageNumber((current) => (current === requestedPage ? current : requestedPage));
+    if (!requestedPage || requestedPage <= 0 || !Number.isFinite(requestedPage)) return;
+    const nextPage = Math.max(1, Math.floor(requestedPage));
+    setPageNumber((current) => (current === nextPage ? current : nextPage));
   }, [requestedPage]);
 
   useEffect(() => {

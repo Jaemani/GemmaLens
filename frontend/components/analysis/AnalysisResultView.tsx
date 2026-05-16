@@ -20,7 +20,7 @@ import { SentenceDecompositionCard } from "./SentenceDecompositionCard";
 import { buildRows, TermTable } from "./TermTable";
 import { AnalysisProgress } from "./AnalysisProgress";
 import { ConceptMapPanel } from "./ConceptMapPanel";
-import { DocumentPageReader, SectionLessonCard } from "./DocumentPageReader";
+import { DocumentPageReader, SectionLessonCard, type SectionLessonSelection } from "./DocumentPageReader";
 import { ExperimentSwitchPanel } from "./ExperimentSwitchPanel";
 import { PaperMapProgressPanel } from "./PaperMapProgressPanel";
 import { PdfSourcePane } from "./PdfSourcePane";
@@ -37,7 +37,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const [rerunning, setRerunning] = useState(false);
   const [paperMapRefreshKey, setPaperMapRefreshKey] = useState(0);
   const [requestedPdfPage, setRequestedPdfPage] = useState<number | null>(null);
-  const [sectionLesson, setSectionLesson] = useState<{ analysis: AnalysisResult; sectionNumber: number } | null>(null);
+  const [sectionLesson, setSectionLesson] = useState<SectionLessonSelection | null>(null);
   const [showDetailedOutput, setShowDetailedOutput] = useState(false);
   const [analysisMissing, setAnalysisMissing] = useState(false);
 
@@ -184,7 +184,14 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
             hideInlineLesson
           />
         ) : null}
-        {sectionLesson ? <SectionLessonCard analysis={sectionLesson.analysis} sectionNumber={sectionLesson.sectionNumber} isAnalyzingNext={false} /> : null}
+        {sectionLesson ? (
+          <SectionLessonCard
+            analysis={sectionLesson.analysis}
+            sectionNumber={sectionLesson.sectionNumber}
+            sectionLabel={sectionLesson.sectionLabel}
+            isAnalyzingNext={false}
+          />
+        ) : null}
         {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
       </div>
     );
@@ -265,7 +272,14 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
         />
       ) : null}
       {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
-      {sectionLesson ? <SectionLessonCard analysis={sectionLesson.analysis} sectionNumber={sectionLesson.sectionNumber} isAnalyzingNext={false} /> : null}
+      {sectionLesson ? (
+        <SectionLessonCard
+          analysis={sectionLesson.analysis}
+          sectionNumber={sectionLesson.sectionNumber}
+          sectionLabel={sectionLesson.sectionLabel}
+          isAnalyzingNext={false}
+        />
+      ) : null}
       {isVideoSource ? (
         <>
           <ConceptMapPanel analysis={analysis} sourceKind="video" />
