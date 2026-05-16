@@ -1,17 +1,66 @@
+import { BookOpen, BookmarkPlus, FileText, Languages, Map, PanelsTopLeft, ScanText } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 
-const levels = [
-  { label: "B1", detail: "Can follow main ideas but needs support for academic phrases and dense grammar." },
-  { label: "B2", detail: "Can read general academic text with help for domain words and long sentences." },
-  { label: "C1", detail: "Can read research-style writing but benefits from structure, nuance, and reusable expression notes." },
-  { label: "C2", detail: "Near-native academic reading. Focus is precision, rhetoric, and field-specific phrasing." },
-  { label: "Domain-heavy", detail: "Difficulty comes less from grammar and more from specialist vocabulary or concepts." }
+const workflow = [
+  {
+    icon: FileText,
+    title: "Upload or paste",
+    detail: "PDF, DOCX, markdown, text, or transcript becomes a source document. PDFs keep the original file when available."
+  },
+  {
+    icon: PanelsTopLeft,
+    title: "Read beside the source",
+    detail: "For PDFs, the left pane shows the original page while the right pane shows backend-cleaned text sections."
+  },
+  {
+    icon: ScanText,
+    title: "Study section by section",
+    detail: "One PDF page can contain several text sections. Analyze a section, then continue through the paper."
+  },
+  {
+    icon: Map,
+    title: "Build the paper map",
+    detail: "The whole-paper guide grows from analyzed sections: argument flow, priority concepts, terms, and expressions."
+  },
+  {
+    icon: BookmarkPlus,
+    title: "Save what matters",
+    detail: "Save concepts, terms, expressions, and hard sentence patterns separately so review can stay targeted."
+  }
 ];
 
-const scores = [
-  { label: "Lexical", detail: "Vocabulary load: rare terms, academic words, multi-word expressions, and field-specific meanings." },
-  { label: "Syntax", detail: "Sentence structure load: clauses, passive constructions, embedded questions, references, and long noun phrases." },
-  { label: "Domain", detail: "Background knowledge load: how much subject knowledge is needed before the language makes sense." }
+const learningObjects = [
+  {
+    title: "Concept anchors",
+    detail: "Ideas needed to follow the paper's argument, such as the method, objective, ablation, or benchmark setup."
+  },
+  {
+    title: "Terms",
+    detail: "Source-grounded vocabulary and domain terms worth saving only if they are unfamiliar or repeated."
+  },
+  {
+    title: "Reusable expressions",
+    detail: "Academic moves such as contrast, limitation, method setup, result claims, and conclusion language."
+  },
+  {
+    title: "Sentence patterns",
+    detail: "Dense structures are simplified and explained so the learner can read similar sentences later."
+  }
+];
+
+const expectations = [
+  "The PDF pane is the visual source. The section text is extracted text that the model can read, so equations and columns may be imperfect.",
+  "A complete paper guide is built from section lessons, not from one huge summary call.",
+  "Translation is a support tool for short passages. Full-paper learning should stay in the document reader.",
+  "Video learning uses transcripts as timestamped text sections; it is useful only when captions or subtitles are available."
+];
+
+const levels = [
+  { label: "B1", detail: "Needs help with main ideas, academic phrases, and dense grammar." },
+  { label: "B2", detail: "Can read general academic text with support for domain words and long sentences." },
+  { label: "C1", detail: "Can read research writing but benefits from structure, nuance, and reusable expression notes." },
+  { label: "C2", detail: "Focuses on precision, rhetoric, field-specific phrasing, and paper-level argument flow." },
+  { label: "Domain-heavy", detail: "Difficulty comes mainly from specialist concepts rather than grammar." }
 ];
 
 export default function GuidePage() {
@@ -19,66 +68,83 @@ export default function GuidePage() {
     <AppShell>
       <div className="mb-6">
         <p className="text-sm font-semibold uppercase text-accent">User guide</p>
-        <h1 className="mt-2 text-3xl font-semibold text-ink">How GemmaLens works</h1>
+        <h1 className="mt-2 text-3xl font-semibold text-ink">How to use GemmaLens</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-700">
-          GemmaLens turns academic or technical documents into language-learning material. It is a prototype, so details may change, but this page explains the current behavior and intended product direction.
+          GemmaLens is for reading difficult academic material while learning the language around it. It should help you understand this paper and read the next one with less support.
         </p>
       </div>
 
       <div className="space-y-6">
         <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
-          <h2 className="text-xl font-semibold">Current flow</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-5">
-            {["Input", "Chunk", "Analyze", "Structure", "Save"].map((item, index) => (
-              <div key={item} className="rounded-lg bg-surface p-4">
-                <p className="text-xs font-semibold text-accent">Step {index + 1}</p>
-                <p className="mt-2 font-semibold">{item}</p>
-              </div>
-            ))}
+          <div className="flex items-start gap-3">
+            <div className="rounded-md bg-blue-50 p-2 text-accent">
+              <BookOpen size={18} />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">Paper reading workflow</h2>
+              <p className="mt-1 text-sm leading-6 text-neutral-600">
+                Start from the document page. For long PDFs, work section by section; the paper map becomes useful after several sections and complete after the whole document is studied.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 lg:grid-cols-5">
+            {workflow.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.title} className="rounded-md border border-line bg-surface p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <Icon size={18} className="text-accent" />
+                    <span className="text-xs font-semibold text-neutral-500">Step {index + 1}</span>
+                  </div>
+                  <p className="mt-3 font-semibold text-ink">{item.title}</p>
+                  <p className="mt-2 text-xs leading-5 text-neutral-600">{item.detail}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="rounded-lg border border-line bg-panel p-6 shadow-material">
+            <h2 className="text-xl font-semibold">What the analysis separates</h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-600">
+              GemmaLens should not treat every interesting phrase as vocabulary. Concepts, terms, expressions, and sentence patterns have different jobs.
+            </p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {learningObjects.map((item) => (
+                <GuideItem key={item.title} title={item.title} detail={item.detail} />
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-line bg-panel p-6 shadow-material">
+            <h2 className="text-xl font-semibold">Where translation fits</h2>
+            <div className="mt-4 rounded-md bg-surface p-4">
+              <Languages size={18} className="text-accent" />
+              <p className="mt-3 text-sm leading-6 text-neutral-700">
+                Use Translate for quick sentence support. Use Documents for papers, because the document reader preserves source context, repeated terms, and the paper map.
+              </p>
+            </div>
           </div>
         </section>
 
         <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
-          <h2 className="text-xl font-semibold">Learning levels</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <h2 className="text-xl font-semibold">Reading levels</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             {levels.map((level) => (
-              <div key={level.label} className="rounded-lg border border-line p-4">
-                <p className="font-semibold text-accent">{level.label}</p>
-                <p className="mt-2 text-sm leading-6 text-neutral-700">{level.detail}</p>
-              </div>
+              <GuideItem key={level.label} title={level.label} detail={level.detail} accent />
             ))}
           </div>
         </section>
 
         <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
-          <h2 className="text-xl font-semibold">Difficulty scores</h2>
-          <p className="mt-2 text-sm text-neutral-700">Scores use a 0-10 scale. They are learning-priority signals, not official exam grades.</p>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {scores.map((score) => (
-              <div key={score.label} className="rounded-lg bg-surface p-4">
-                <p className="font-semibold">{score.label}</p>
-                <p className="mt-2 text-sm leading-6 text-neutral-700">{score.detail}</p>
+          <h2 className="text-xl font-semibold">Current limits</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {expectations.map((item) => (
+              <div key={item} className="rounded-md border border-line bg-surface p-4 text-sm leading-6 text-neutral-700">
+                {item}
               </div>
             ))}
-          </div>
-        </section>
-
-        <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
-          <h2 className="text-xl font-semibold">Language direction</h2>
-          <p className="mt-2 text-sm leading-6 text-neutral-700">
-            The prototype began with Korean learners reading English papers, but the interface now supports searchable language selection for broad Gemma-family multilingual coverage.
-          </p>
-          <p className="mt-4 text-sm leading-6 text-neutral-700">
-            The core stays model-driven: prompts can request explanations, translations, sentence decomposition, and study notes in the selected support language while analyzing the selected learning language. Actual quality must be tested per language pair.
-          </p>
-        </section>
-
-        <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
-          <h2 className="text-xl font-semibold">What is saved</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <GuideItem title="Terms" detail="Important vocabulary, domain terms, and multi-word technical expressions." />
-            <GuideItem title="Phrases" detail="Academic expressions like claims, contrast, limitations, methods, and results." />
-            <GuideItem title="Sentences" detail="Difficult structures with simplified versions and support-language explanations." />
           </div>
         </section>
       </div>
@@ -86,10 +152,10 @@ export default function GuidePage() {
   );
 }
 
-function GuideItem({ title, detail }: { title: string; detail: string }) {
+function GuideItem({ title, detail, accent = false }: { title: string; detail: string; accent?: boolean }) {
   return (
-    <div className="rounded-lg border border-line p-4">
-      <p className="font-semibold">{title}</p>
+    <div className="rounded-md border border-line p-4">
+      <p className={`font-semibold ${accent ? "text-accent" : "text-ink"}`}>{title}</p>
       <p className="mt-2 text-sm leading-6 text-neutral-700">{detail}</p>
     </div>
   );

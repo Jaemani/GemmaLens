@@ -181,6 +181,7 @@ Local demo records currently include:
 - Translate page audit exposed a blank-output problem: the result panel looked like an empty card until translation finished. The page now has a purposeful empty state, a clearer local-model loading state, a copied state for the copy action, and labels model notes as learner notes.
 - Video page audit exposed a weak empty state and unclear transcript-fetch feedback. The page now explains the timeline-learning flow before captions are loaded, makes the player placeholder describe caption-to-segment behavior, and shows explicit fetch/parse progress labels.
 - Cross-page Playwright audit exposed that PDF extraction markers could still leak into visible analysis excerpts. Section lesson source snippets now strip `GEMMALENS_PDF_PAGE` markers before rendering.
+- Guide page audit exposed outdated generic copy: it described a vague input/chunk/analyze/save pipeline instead of the current PDF source pane, page-local section study, paper map, and concept/term/expression separation. The guide now documents the actual paper-reading workflow, translation's support role, and current product limits.
 
 ## Still Weak
 
