@@ -284,7 +284,7 @@ Recommended reading UX:
 - Start with a whole-paper map so the learner knows what the paper is trying to do.
 - Let the learner open one page or section at a time.
 - The current UI includes a section reader with previous/next controls and an "Analyze this section" action placed beside the PDF. This is now the primary paper-reading loop, while the paper map shows how much cumulative coverage exists.
-- Each page should show: concept anchors, must-know terms, reusable academic phrases, hard sentence structures, and a short Korean/support-language guide.
+- Each section lesson now shows: concept anchors with source evidence, must-know terms, reusable academic phrases, hard sentence structures, academic/simple summaries, and focus notes. This keeps the product centered on language learning rather than acting like a generic summarizer.
 - Save concepts separately from words. A concept such as "internal covariate shift" may have related terms, cited references, and repeated mentions across the paper.
 - Track repeated concepts and references so the learner sees which ideas are central instead of memorizing every extracted phrase.
 

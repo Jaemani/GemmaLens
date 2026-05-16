@@ -385,9 +385,10 @@ export function SectionLessonCard({
 }) {
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState<string | null>(null);
-  const concepts = (analysis.concepts ?? []).slice(0, 5);
-  const terms = analysis.terms.slice(0, 6);
-  const phrases = analysis.phrases.filter((phrase) => isUsefulExpression(phrase.phrase)).slice(0, 5);
+  const concepts = (analysis.concepts ?? []).slice(0, 6);
+  const terms = analysis.terms.slice(0, 8);
+  const phrases = analysis.phrases.filter((phrase) => isUsefulExpression(phrase.phrase)).slice(0, 6);
+  const studyNotes = analysis.summaries.study_notes.slice(0, 4);
   const className = embedded
     ? "border-t border-line p-5"
     : "rounded-lg border border-line bg-panel p-5 shadow-material";
@@ -418,32 +419,56 @@ export function SectionLessonCard({
         </p>
       </div>
       <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.summaries.simple}</p>
+      <div className="mt-4 rounded-md border border-line bg-surface p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">How to read this section</p>
+        <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.summaries.academic}</p>
+        {studyNotes.length ? (
+          <ul className="mt-3 space-y-2">
+            {studyNotes.map((note) => (
+              <li key={note} className="text-sm leading-6 text-neutral-700">
+                <span className="mr-2 font-semibold text-accent">Focus</span>
+                {note}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
       {concepts.length ? (
         <div className="mt-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Concept anchors</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 grid gap-3">
             {concepts.map((concept) => {
               const key = `concept:${concept.concept}`;
               const isSaved = saved.has(key);
               return (
-                <button
-                  key={concept.concept}
-                  type="button"
-                  onClick={() =>
-                    saveItem({
-                      item_type: "concept",
-                      text: concept.concept,
-                      meaning: concept.explanation || concept.why_it_matters,
-                      source_sentence: concept.source_sentence
-                    })
-                  }
-                  disabled={isSaved || saving === key}
-                  className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-accent hover:bg-blue-100 disabled:text-green-700"
-                  title={isSaved ? "Saved to dictionary" : "Save concept"}
-                >
-                  {isSaved ? <CheckCircle2 size={12} /> : <BookmarkPlus size={12} />}
-                  {concept.concept}
-                </button>
+                <div key={concept.concept} className="rounded-md border border-line bg-surface p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-ink">{concept.concept}</p>
+                      <p className="mt-1 text-sm leading-6 text-neutral-700">{concept.explanation || concept.why_it_matters}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        saveItem({
+                          item_type: "concept",
+                          text: concept.concept,
+                          meaning: concept.explanation || concept.why_it_matters,
+                          source_sentence: concept.source_sentence
+                        })
+                      }
+                      disabled={isSaved || saving === key}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line bg-panel px-2.5 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:text-green-700"
+                      title={isSaved ? "Saved to dictionary" : "Save concept"}
+                    >
+                      {isSaved ? <CheckCircle2 size={13} /> : <BookmarkPlus size={13} />}
+                      {isSaved ? "Saved" : saving === key ? "Saving" : "Save"}
+                    </button>
+                  </div>
+                  {concept.source_sentence ? (
+                    <p className="mt-3 border-l-2 border-blue-200 pl-3 text-xs leading-5 text-neutral-600">{truncateText(concept.source_sentence, 260)}</p>
+                  ) : null}
+                </div>
               );
             })}
           </div>
@@ -479,7 +504,11 @@ export function SectionLessonCard({
         <div className="mt-5 rounded-md border border-line bg-surface p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Hard sentence pattern</p>
           <p className="mt-2 text-sm font-semibold text-ink">{analysis.sentences[0].core_structure}</p>
+          <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.sentences[0].simplified_version}</p>
           <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.sentences[0].korean_explanation}</p>
+          <p className="mt-3 border-l-2 border-blue-200 pl-3 text-xs leading-5 text-neutral-600">
+            {truncateText(analysis.sentences[0].sentence, 320)}
+          </p>
         </div>
       ) : null}
       {onAnalyzeNext ? (
@@ -532,6 +561,7 @@ function MiniList({
               <div>
                 <p className="text-sm font-semibold text-ink">{row.text}</p>
                 <p className="mt-1 text-xs leading-5 text-neutral-600">{row.meaning}</p>
+                {row.source_sentence ? <p className="mt-1 text-xs leading-5 text-neutral-500">{truncateText(row.source_sentence, 220)}</p> : null}
               </div>
               <button
                 type="button"
@@ -557,6 +587,12 @@ function isUsefulExpression(value: string) {
   const normalized = value.trim().toLowerCase();
   const blocked = new Set(["the best performing models", "best performing models", "performing models"]);
   return Boolean(normalized) && !blocked.has(normalized);
+}
+
+function truncateText(value: string, limit: number) {
+  const normalized = value.split(/\s+/).join(" ");
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, limit).trim()}...`;
 }
 
 function pdfPageFromLabel(label: string | null) {
