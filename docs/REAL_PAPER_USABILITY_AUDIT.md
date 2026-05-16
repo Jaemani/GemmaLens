@@ -163,6 +163,7 @@ Local demo records currently include:
 - A real UI crash exposed a source-sync loop between the PDF pane and section reader. The PDF pane now tracks the last notified page and avoids state updates when the requested page is already active.
 - Section navigation now labels items as page-local units such as `P3-S2`, and page groups show their local range. This makes it clearer that PDF pages and backend text sections are related but different units.
 - Real BatchNorm sections 11-13 exposed training/inference failures: the model duplicated terms as concepts, copied derivative equations into summaries, returned empty or useless phrases, and mixed training-time mini-batch normalization with inference-time fixed statistics. BatchNorm profiles now teach mini-batch coupling, differentiability, training-vs-inference split, population statistics, BN folding, and Algorithm 2 as separate learning concepts.
+- Real BatchNorm sections 14-16 exposed convolution and optimization-benefit failures: the model copied the first convolutional sentence, duplicated terms as concepts, and missed the distinction between BN placement, convolutional feature-map sharing, higher-learning-rate stability, scale invariance, gradient propagation, and regularization. BatchNorm profiles now split these into three section lessons with source-grounded terms and reusable academic phrases.
 
 ## Still Weak
 

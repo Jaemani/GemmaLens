@@ -7569,6 +7569,11 @@ class AnalysisNormalizationService:
                 "inference",
                 "activation",
                 "linear transform",
+                "affine transformation",
+                "nonlinearity",
+                "feature map",
+                "dropout",
+                "gaussian",
             },
         )
 
@@ -9218,6 +9223,143 @@ class AnalysisNormalizationService:
                 "Once mean and variance are frozen, BatchNorm becomes a fixed affine operation at inference time.",
                 "'Since X, Y is simply Z'는 조건이 고정되면 복잡한 절차가 단순화됨을 설명하는 구조입니다.",
                 "The section is difficult because Algorithm 2 mixes training-network notation, inference-network notation, and folded affine parameters.",
+            )
+        if "this formulation covers both fully-connected and convolutional layers" in lowered and "feature map across both the elements of a mini-batch and spatial locations" in lowered:
+            return profile(
+                "This section explains where BatchNorm is inserted and how it is adapted to convolutional feature maps.",
+                (
+                    "For a layer z = g(Wu + b), the paper normalizes Wu + b immediately before the nonlinearity. "
+                    "For convolutional layers, all activations in the same feature map are normalized together across mini-batch examples and spatial locations."
+                ),
+                (
+                    "The passage defines the convolutional BatchNorm placement rule: normalize the pre-activation rather than the previous layer output, ignore the bias because mean subtraction cancels it, "
+                    "and share normalization statistics and gamma/beta parameters across each feature map."
+                ),
+                [
+                    "This is an implementation section: where exactly does BN go in a layer?",
+                    "Read `Wu + b` as the pre-activation value before sigmoid/ReLU.",
+                    "For CNNs, the key is feature-map sharing across spatial positions, not one gamma/beta per pixel activation.",
+                ],
+                [
+                    ("affine transformation", "The linear part Wu + b before the nonlinearity.", "affine transformation"),
+                    ("element-wise nonlinearity", "Activation function such as sigmoid or ReLU.", "element-wise nonlinearity"),
+                    ("W u + b", "The pre-nonlinearity value normalized before applying g.", "W u + b"),
+                    ("bias b", "Layer bias whose effect is canceled by mean subtraction.", "bias b"),
+                    ("feature map", "Convolutional activation channel normalized consistently across locations.", "feature map"),
+                    ("spatial locations", "Positions inside a convolutional feature map.", "spatial locations"),
+                    ("effective mini-batch", "All feature-map values across examples and locations.", "effective mini-batch"),
+                    ("learned parameters γ, β", "Scale and shift parameters shared per dimension or feature map.", "learned parameters γ"),
+                ],
+                [
+                    ("pre-activation normalization", "BN is applied to Wu + b before the nonlinearity.", "immediately before the nonlinearity"),
+                    ("bias cancellation", "The bias can be ignored because mean subtraction cancels it.", "bias b can be ignored"),
+                    ("convolutional sharing rule", "CNN feature-map activations are normalized the same way across spatial locations.", "obey the convolutional property"),
+                ],
+                [
+                    ("This formulation covers", "claim", "States the scope of the method."),
+                    ("We add", "method", "Introduces an implementation step."),
+                    ("We could have also", "contrast", "Mentions an alternative and prepares a rejection."),
+                    ("In contrast", "contrast", "Explains why Wu + b is preferred."),
+                    ("Note that", "claim", "Highlights an implementation consequence."),
+                    ("To achieve this", "method", "Introduces the convolutional adaptation."),
+                ],
+                "We add the BN transform immediately before the nonlinearity",
+                "We add X immediately before Y, by doing Z.",
+                "The layer normalizes its pre-activation before the nonlinearity is applied.",
+                "'immediately before'는 모델 구조에서 연산의 위치를 정확히 지정하는 표현입니다.",
+                "The section is dense because it moves from fully connected layers to convolutional feature-map sharing in one paragraph.",
+            )
+        if "batch normalization enables higher learning rates" in lowered and "backpropagation through a layer is unaffected by the scale of its parameters" in lowered:
+            return profile(
+                "This section explains why BatchNorm lets networks use higher learning rates more safely.",
+                (
+                    "Without BatchNorm, too-large learning rates can explode or vanish gradients or push training into bad regions. "
+                    "BatchNorm makes activations and backpropagation less sensitive to parameter scale, which stabilizes larger updates."
+                ),
+                (
+                    "The passage argues that normalization dampens amplification through layers: parameter changes have less harmful effect on activations and gradients, "
+                    "the scale of W does not change the normalized output, and larger weights receive smaller gradients."
+                ),
+                [
+                    "This is a benefit-mechanism section, not just a hyperparameter claim.",
+                    "The key idea is scale invariance: BN(Wu) behaves like BN((aW)u).",
+                    "Connect this to demo learning: the phrase `helps address these issues` links a method to known optimization failures.",
+                ],
+                [
+                    ("higher learning rates", "Larger optimization step sizes enabled by BatchNorm.", "higher learning rates"),
+                    ("gradients explode or vanish", "Optimization failure from unstable gradient magnitudes.", "gradients that explode or vanish"),
+                    ("poor local minima", "Bad optimization regions that high learning rates can worsen.", "poor local minima"),
+                    ("parameter scale", "Magnitude of layer weights whose effect is reduced by BN.", "parameter scale"),
+                    ("model explosion", "Unstable growth caused by amplified gradients.", "model explosion"),
+                    ("layer Jacobian", "Derivative of a layer's output with respect to input.", "layer Jacobian"),
+                    ("gradient propagation", "How gradients move backward through layers.", "gradient propagation"),
+                    ("singular values", "Quantities used to describe how a Jacobian scales vectors.", "singular values"),
+                ],
+                [
+                    ("learning-rate stability", "BatchNorm makes larger learning rates less likely to destabilize training.", "higher learning rates"),
+                    ("scale-invariance argument", "Scaling W does not change BN(Wu) in the same harmful way.", "unaffected by the scale"),
+                    ("gradient-stabilization hypothesis", "BN may keep layer Jacobian singular values closer to 1.", "singular values close to 1"),
+                ],
+                [
+                    ("helps address these issues", "claim", "Links the method to known problems."),
+                    ("By normalizing", "method", "Explains the mechanism."),
+                    ("for instance", "general", "Introduces an example."),
+                    ("Normally", "general", "States the baseline behavior."),
+                    ("However, with", "contrast", "Contrasts the method behavior."),
+                    ("Indeed", "claim", "Introduces supporting math."),
+                    ("Moreover", "general", "Adds another mechanism."),
+                    ("We further conjecture", "claim", "Signals a hypothesis rather than a proven result."),
+                ],
+                "Batch Normalization helps address these issues",
+                "X helps address these issues by doing Y.",
+                "BatchNorm reduces the instability that normally limits high learning rates.",
+                "'helps address these issues'는 앞에서 나열한 문제와 새 방법의 효과를 연결하는 표현입니다.",
+                "The section mixes practical optimizer language with scale-invariance equations and a conjecture about Jacobians.",
+            )
+        if "all singular values of j are equal to 1" in lowered and "batch normalization regularizes the model" in lowered:
+            return profile(
+                "This section connects BatchNorm to better gradient propagation and regularization.",
+                (
+                    "Under simplifying Gaussian and linear assumptions, BatchNorm would preserve gradient magnitudes. "
+                    "The paper admits reality is messier, but expects better gradient behavior; it also notes that mini-batch dependence acts like regularization and can reduce the need for Dropout."
+                ),
+                (
+                    "The passage shifts from a theoretical gradient-propagation intuition to a regularization claim: normalized layers may keep Jacobian singular values near 1, "
+                    "and training examples become slightly stochastic because they are normalized with other mini-batch examples."
+                ),
+                [
+                    "Notice the hedging: `If we assume`, `In reality`, `nevertheless`, and `remains an area of further study`.",
+                    "This is not a formal proof; it is a motivation plus empirical expectation.",
+                    "The regularization mechanism is mini-batch context: the same example can produce different normalized values depending on its batch.",
+                ],
+                [
+                    ("unit covariances", "Normalized covariance assumption used in the gradient argument.", "unit covariances"),
+                    ("singular values", "Values equal to 1 in the idealized Jacobian argument.", "singular values"),
+                    ("gradient magnitudes", "Size of gradients during backpropagation.", "gradient magnitudes"),
+                    ("gradient propagation", "Backward flow of gradients through the network.", "gradient propagation"),
+                    ("regularizes the model", "Improves generalization by adding training-time stochasticity.", "regularizes the model"),
+                    ("deterministic values", "Fixed outputs for an example, which BN disrupts during training.", "deterministic values"),
+                    ("generalization", "Performance on unseen data.", "generalization"),
+                    ("Dropout", "Regularizer that may be removed or reduced when using BN.", "Dropout"),
+                ],
+                [
+                    ("idealized-gradient argument", "Under simplified assumptions, BN would preserve gradient magnitudes.", "singular values of J are equal to 1"),
+                    ("hedged-theory claim", "The paper says the exact gradient effect is still open.", "remains an area of further study"),
+                    ("mini-batch regularization", "An example is seen with other examples, adding stochasticity.", "seen in conjunction with other examples"),
+                ],
+                [
+                    ("If we assume", "claim", "Introduces a simplifying assumption."),
+                    ("Thus", "claim", "Draws the idealized conclusion."),
+                    ("In reality", "contrast", "Walks back the simplification."),
+                    ("nevertheless", "contrast", "Keeps the practical expectation despite limitations."),
+                    ("remains an area of further study", "limitation", "Marks an unresolved theoretical question."),
+                    ("Whereas", "contrast", "Contrasts Dropout with BatchNorm."),
+                ],
+                "In reality, the transformation is not linear",
+                "In reality, X is not Y, but we nevertheless expect Z.",
+                "The authors admit the assumptions are imperfect but still expect BatchNorm to improve gradient behavior.",
+                "'In reality ... nevertheless'는 이론적 단순화와 실제 기대를 함께 제시할 때 쓰는 구조입니다.",
+                "The section requires separating a mathematical intuition from a more practical regularization claim.",
             )
         return None
 
