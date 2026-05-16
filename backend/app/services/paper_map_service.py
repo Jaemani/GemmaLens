@@ -365,6 +365,8 @@ class PaperMapService:
             meaning = " ".join(str(item.get("meaning") or "").split())
             if not meaning:
                 continue
+            if self._is_reference_flow_artifact(meaning):
+                continue
             key = meaning.lower()
             if key not in grouped:
                 grouped[key] = {"meaning": meaning, "sections": []}
@@ -379,6 +381,19 @@ class PaperMapService:
             label = self._section_label(sections)
             flow.append(f"{label}: {self._trim_flow_text(item['meaning'])}")
         return flow
+
+    def _is_reference_flow_artifact(self, text: str) -> bool:
+        lowered = " ".join(text.lower().split())
+        reference_markers = [
+            "starts the references",
+            "starts references",
+            "ends the references",
+            "ends references",
+            "reference-list section",
+            "bibliography",
+            "citation metadata",
+        ]
+        return any(marker in lowered for marker in reference_markers)
 
     def _section_label(self, sections: list[int]) -> str:
         if not sections:

@@ -117,6 +117,25 @@ def test_complete_paper_map_keeps_all_section_summaries_and_complete_copy():
     assert not any("more analyzed section summaries" in item for item in paper_map.synthesis.argument_flow)
 
 
+def test_paper_map_argument_flow_skips_reference_boundary_artifacts():
+    section_texts = [
+        "The paper introduces a useful training method.",
+        "This section closes the conclusion, then starts the references.",
+        "This appendix explains the implementation details.",
+    ]
+    base = _paper_result("The paper introduces a useful training method.", "training method")
+    rows = [
+        (1, _paper_result("This is a reference-list section, so it should be skimmed for cited sources rather than studied as prose.", "references")),
+        (2, _paper_result("This appendix explains the implementation details.", "implementation details")),
+    ]
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows(rows)).build("doc-complete", section_texts)
+    flow_text = " ".join(paper_map.synthesis.argument_flow).lower()
+
+    assert "reference-list section" not in flow_text
+    assert "implementation details" in flow_text
+
+
 def test_paper_map_guide_separates_partial_coverage_from_whole_paper_claim():
     text = (
         "We propose a new simple network architecture, the Transformer, based solely on attention mechanisms. "
