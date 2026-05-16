@@ -171,6 +171,8 @@ Local demo records currently include:
 - Real BatchNorm sections 26-28 exposed conclusion/reference boundary failures: future-work prose and bibliography entries were mixed, and reference pages were analyzed as normal learning sections. BatchNorm profiles now teach the future-work roadmap while reference-only sections become skim-oriented citation-navigation lessons. Reference-list sections no longer trigger term/phrase count warnings.
 - Real BatchNorm sections 29-31 exposed appendix/table failures: the final reference-to-appendix boundary, Inception architecture bullets, and Figure 5 architecture table were treated as ordinary prose or empty sections. BatchNorm profiles now teach appendix navigation, architecture-change checklists, cost/depth/pooling/separable-convolution tradeoffs, and table-column navigation for Figure 5.
 - Completed BatchNorm 31/31 live API audit. Every section is analyzed, non-section quality warnings are empty, and non-reference sections pass a minimum learning-density check.
+- Paper-map completion audit exposed another whole-paper UX issue: valid learning sections with short `table` or `figure` summaries were filtered out of the cumulative guide. The map now keeps architecture tables, model-variation ablation tables, and attention-head appendix figures when their summaries are explicitly learning-oriented.
+- Completed cross-paper live API audit for the four complete demo PDFs: ResNet 28/28, Transformer 23/23, BatchNorm 31/31, and BERT 37/37 all report complete section-level paper maps.
 
 ## Still Weak
 

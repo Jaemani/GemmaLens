@@ -168,6 +168,8 @@ class PaperMapService:
         lowered = " ".join(text.lower().split())
         if not lowered:
             return False
+        if "architecture table" in lowered or "model-variation ablations" in lowered or "attention heads involved" in lowered:
+            return True
         if len(lowered) < 80 and self._is_short_artifact(lowered):
             return False
         non_content_markers = [
