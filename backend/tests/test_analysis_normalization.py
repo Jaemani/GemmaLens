@@ -1880,3 +1880,76 @@ def test_bert_elmo_to_finetuning_transition_becomes_comparison_map():
     assert result.summaries.one_line == "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning."
     assert result.sentences[0].core_structure == "When integrating A with B, C advances the state of the art for D."
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
+
+
+def test_bert_pretraining_finetuning_figure_becomes_workflow_lesson():
+    document = (
+        "TokM Masked Sentence A Masked Sentence B Pre-training Fine-Tuning NSP Mask LM Mask LM Unlabeled Sentence A and B Pair "
+        "SQuAD Question Answer Pair NERMNLI Figure 1: Overall pre-training and fine-tuning procedures for BERT. "
+        "Apart from output layers, the same architectures are used in both pre-training and fine-tuning. "
+        "The same pre-trained model parameters are used to initialize models for different downstream tasks. "
+        "During fine-tuning, all parameters are fine-tuned. "
+        "[CLS] is a special symbol added in front of every input example, and [SEP] is a special separator token. "
+        "2. 3 Transfer Learning from Supervised Data There has also been work showing effective transfer from supervised tasks with large datasets."
+    )
+    payload = {
+        "terms": [
+            {"term": "pre-training", "meaning": "first stage"},
+            {"term": "fine-tuning", "meaning": "second stage"},
+            {"term": "[CLS]", "meaning": "special token"},
+        ],
+        "concepts": [
+            {"concept": "pre-training", "explanation": "term duplicated as concept"},
+            {"concept": "fine-tuning", "explanation": "term duplicated as concept"},
+            {"concept": "[CLS]", "explanation": "term duplicated as concept"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "TokM Masked Sentence A Masked Sentence B Pre-training Fine-Tuning NSP Mask LM Mask LM."},
+        "sentences": [
+            {
+                "sentence": "TokM Masked Sentence A Masked Sentence B Pre-training Fine-Tuning NSP Mask LM Mask LM.",
+                "core_structure": "Main claim + explanation.",
+            }
+        ],
+        "quality_warnings": ["phrase_count_out_of_range:0"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-workflow-figure", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "pre-training",
+        "fine-tuning",
+        "output layers",
+        "pre-trained model parameters",
+        "[CLS]",
+        "[SEP]",
+        "supervised transfer",
+    }.issubset(terms)
+    assert "BERT" not in terms
+    assert {
+        "shared pre-training/fine-tuning architecture",
+        "parameter initialization for downstream tasks",
+        "full-model fine-tuning",
+        "BERT input formatting",
+        "supervised transfer background",
+    }.issubset(concepts)
+    assert "pre-training" not in concepts
+    assert "fine-tuning" not in concepts
+    assert "[CLS]" not in concepts
+    assert "BERT" not in concepts
+    assert {
+        "Apart from output layers",
+        "are used to initialize",
+        "During fine-tuning",
+        "is a special symbol added",
+        "is a special separator token",
+        "There has also been work showing",
+        "effective transfer from",
+    }.issubset(phrases)
+    assert "We introduce" not in phrases
+    assert result.summaries.one_line == "This section explains BERT's pre-training to fine-tuning workflow and input-format tokens."
+    assert result.sentences[0].core_structure == "Apart from A, the same B are used in C and D."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings

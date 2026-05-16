@@ -25,6 +25,9 @@ class AnalysisNormalizationService:
             phrases = self._filter_bert_learning_rows(phrases, "phrase")
         if self._is_bert_elmo_finetuning_transition_section(document_text):
             terms = self._prefer_bert_elmo_finetuning_transition_terms(terms, document_text)
+        if self._is_bert_pretraining_finetuning_procedure_section(document_text):
+            terms = self._prefer_bert_pretraining_finetuning_procedure_terms(terms, document_text)
+            phrases = self._filter_bert_pretraining_finetuning_procedure_phrases(phrases)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -82,6 +85,9 @@ class AnalysisNormalizationService:
             normalized["concepts"] = self._prefer_bert_feature_related_work_concepts(normalized["concepts"], document_text)
         if self._is_bert_elmo_finetuning_transition_section(document_text):
             normalized["concepts"] = self._prefer_bert_elmo_finetuning_transition_concepts(normalized["concepts"], document_text)
+        if self._is_bert_pretraining_finetuning_procedure_section(document_text):
+            normalized["concepts"] = self._prefer_bert_pretraining_finetuning_procedure_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_bert_pretraining_finetuning_procedure_phrases(normalized["phrases"])
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -1753,6 +1759,13 @@ class AnalysisNormalizationService:
                 ("As with the feature-based approaches", "contrast", "Links the next related-work category back to the previous one."),
                 ("fine-tuned for a supervised downstream task", "method", "Describes the pre-train then adapt workflow."),
                 ("few parameters need to be learned from scratch", "result", "Explains the practical advantage of fine-tuning."),
+                ("Apart from output layers", "contrast", "Separates the task-specific part from the shared BERT architecture."),
+                ("are used to initialize", "method", "Explains how pre-trained parameters become the starting point for downstream models."),
+                ("During fine-tuning", "method", "Marks what changes in the adaptation stage."),
+                ("is a special symbol added", "general", "Defines an input-format token used by BERT."),
+                ("is a special separator token", "general", "Defines the token that separates text segments."),
+                ("There has also been work showing", "claim", "Introduces another related-work branch."),
+                ("effective transfer from", "result", "States the source of transfer learning evidence."),
             ]
         elif self._is_attention_text(document_text):
             phrase_specs = [
@@ -2813,6 +2826,27 @@ class AnalysisNormalizationService:
                     "The authors explain why fine-tuning is practically useful.",
                     "'The advantage of these approaches is that'는 방법의 장점을 명시하는 문헌리뷰 표현입니다.",
                     "The key content is in the that-clause after the evaluation phrase.",
+                ),
+                (
+                    "Apart from output layers",
+                    "Apart from A, the same B are used in C and D.",
+                    "The authors explain that BERT keeps the same base architecture and only changes task output layers.",
+                    "'Apart from'은 예외를 먼저 말한 뒤 나머지는 같다고 설명하는 표현입니다.",
+                    "The figure caption is dense because it describes architecture reuse, parameter initialization, and fine-tuning in compressed form.",
+                ),
+                (
+                    "are used to initialize",
+                    "The same pre-trained parameters are used to initialize models for different downstream tasks.",
+                    "The authors describe transfer learning as starting each task model from the same pre-trained BERT parameters.",
+                    "'are used to initialize'는 사전학습된 파라미터가 새 모델의 시작점으로 쓰인다는 뜻입니다.",
+                    "Passive voice hides the agent; focus on what is reused and where.",
+                ),
+                (
+                    "During fine-tuning",
+                    "During fine-tuning, all parameters are fine-tuned.",
+                    "The authors clarify that fine-tuning updates the full model, not only the output layer.",
+                    "'During fine-tuning'은 적용 단계에서 실제로 일어나는 일을 설명하는 시간/단계 신호입니다.",
+                    "The repeated word 'fine-tuning/fine-tuned' is normal technical wording, not a typo.",
                 ),
             ]
         elif self._is_attention_text(document_text):
@@ -4123,6 +4157,23 @@ class AnalysisNormalizationService:
                         "ELMo matters here because it is contextual and bidirectional, but still feature-based.",
                     ],
                 }
+            if self._is_bert_pretraining_finetuning_procedure_section(document_text):
+                return {
+                    "one_line": "This section explains BERT's pre-training to fine-tuning workflow and input-format tokens.",
+                    "simple": (
+                        "The figure caption says BERT uses the same base architecture for pre-training and fine-tuning. "
+                        "The pre-trained parameters initialize downstream task models, all parameters are updated during fine-tuning, and [CLS]/[SEP] define the input format."
+                    ),
+                    "academic": (
+                        "The section describes BERT's transfer-learning procedure: shared pre-trained parameters initialize multiple downstream models, "
+                        "task-specific output layers are the main architectural exception, and special tokens structure single-sentence and text-pair inputs."
+                    ),
+                    "study_notes": [
+                        "Ignore the figure token dump at the start; read the caption sentences.",
+                        "Separate workflow concepts: pre-training, initialization, fine-tuning, and output layers.",
+                        "Treat [CLS] and [SEP] as input-format terms, not paper concepts.",
+                    ],
+                }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
                 return {
                     "one_line": "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning.",
@@ -4401,6 +4452,146 @@ class AnalysisNormalizationService:
         ]
         return [*promoted, *rest][:8]
 
+    def _prefer_bert_pretraining_finetuning_procedure_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"tokm", "masked sentence a", "masked sentence b", "nermnli", "bert"}
+        preferred = [
+            (
+                "pre-training",
+                "The stage where BERT learns general language representations before task-specific training.",
+                "field_term",
+                "medium",
+                "This is the first half of the BERT workflow.",
+            ),
+            (
+                "fine-tuning",
+                "The stage where the pre-trained BERT model is adapted to downstream tasks.",
+                "field_term",
+                "medium",
+                "This is the second half of the BERT workflow.",
+            ),
+            (
+                "output layers",
+                "Task-specific layers added on top of the shared BERT architecture.",
+                "field_term",
+                "medium",
+                "The caption says these are the main architectural exception across tasks.",
+            ),
+            (
+                "pre-trained model parameters",
+                "Weights learned during pre-training and reused to initialize downstream task models.",
+                "field_term",
+                "hard",
+                "This is the mechanism that transfers BERT knowledge to multiple tasks.",
+            ),
+            (
+                "[CLS]",
+                "A special token placed at the front of every BERT input example.",
+                "useful",
+                "medium",
+                "This is part of BERT's input formatting convention.",
+            ),
+            (
+                "[SEP]",
+                "A special separator token used between text segments such as question and answer.",
+                "useful",
+                "medium",
+                "This helps BERT represent sentence-pair inputs.",
+            ),
+            (
+                "supervised transfer",
+                "Reusing knowledge from labeled large-data tasks for other tasks.",
+                "useful",
+                "medium",
+                "The following related-work heading introduces supervised transfer as another background branch.",
+            ),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            lowered = term.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = "Transfer Learning from Supervised Data" if term == "supervised transfer" else term
+                promoted.append(
+                    {
+                        "term": term,
+                        "meaning": meaning,
+                        "domain_relevance": "high" if priority == "field_term" else "medium",
+                        "difficulty": difficulty,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "should_save": True,
+                        "learning_priority": priority,
+                        "reason": reason,
+                        "context_meaning": meaning,
+                        "general_meaning": meaning,
+                        "confidence": 0.88,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [row for row in rows if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}]
+        return [*promoted, *rest][:12]
+
+    def _prefer_bert_pretraining_finetuning_procedure_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"pre-training", "fine-tuning", "[cls]", "[sep]", "output layers", "bert"}
+        preferred = {
+            "shared pre-training/fine-tuning architecture": (
+                "BERT uses the same base architecture for pre-training and fine-tuning, apart from task-specific output layers.",
+                "This is the central workflow idea shown by the figure.",
+                "Apart from output layers",
+            ),
+            "parameter initialization for downstream tasks": (
+                "The same pre-trained parameters initialize models for different downstream tasks.",
+                "This explains how one offline model can become many task models.",
+                "are used to initialize",
+            ),
+            "full-model fine-tuning": (
+                "During fine-tuning, all BERT parameters are updated.",
+                "This prevents the user from thinking only the output layer is trained.",
+                "During fine-tuning",
+            ),
+            "BERT input formatting": (
+                "[CLS] starts an input example and [SEP] separates segments such as question and paragraph.",
+                "These tokens are mechanics for reading BERT examples, not high-level concepts to memorize alone.",
+                "[CLS]",
+            ),
+            "supervised transfer background": (
+                "The section begins a related-work branch about transfer from supervised tasks with large datasets.",
+                "This is background after the main BERT workflow figure.",
+                "Transfer Learning from Supervised Data",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            lowered = concept.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                promoted.append(
+                    {
+                        "concept": concept,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [concept],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.86,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_bert_pretraining_finetuning_procedure_phrases(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        blocked = {"we introduce"}
+        return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -4440,6 +4631,8 @@ class AnalysisNormalizationService:
         if "feature-based approaches" in lowered and "elmo" in lowered and "context-sensitive features" in lowered:
             return True
         if self._is_bert_elmo_finetuning_transition_section(document_text):
+            return True
+        if self._is_bert_pretraining_finetuning_procedure_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -4697,6 +4890,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_elmo_finetuning_transition_section(document_text):
             return True
+        if self._is_bert_pretraining_finetuning_procedure_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -4707,7 +4902,16 @@ class AnalysisNormalizationService:
 
     def _is_bert_elmo_finetuning_transition_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
-        return "contextual word embeddings" in lowered and "openai gpt" in lowered and "fine-tuning approaches" in lowered
+        return (
+            "contextual word embeddings" in lowered
+            and "openai gpt" in lowered
+            and "fine-tuning approaches" in lowered
+            and not self._is_bert_pretraining_finetuning_procedure_section(document_text)
+        )
+
+    def _is_bert_pretraining_finetuning_procedure_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "overall pre-training and fine-tuning procedures for bert" in lowered and "[cls]" in lowered and "[sep]" in lowered
 
     def _is_attention_text(self, document_text: str) -> bool:
         lowered = document_text.lower()

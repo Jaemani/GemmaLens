@@ -129,6 +129,7 @@ Local demo records currently include:
 - Real BERT section 4 exposed a related-work failure: the cached lesson promoted broad labels such as `embeddings`, `feature-based`, and `language modeling objectives` instead of explaining how the paper moves from static word embeddings to sentence/paragraph embeddings and ELMo. The normalizer now frames the section as a literature map, recovers reusable related-work expressions, and keeps concepts separate from vocabulary.
 - Source-grounding checks now normalize PDF whitespace before comparing snippets, so useful phrase evidence is not flagged only because the extracted PDF text wrapped a line.
 - Real BERT section 5 exposed a transition-section failure: the model copied the first ELMo benchmark sentence, returned no phrases, and duplicated terms as concepts. The normalizer now explains the section as a bridge from ELMo-style feature integration to GPT-style unsupervised fine-tuning, with separate concepts for shallow bidirectionality, cloze-style prediction, parameter-efficient transfer, and GPT as a fine-tuning baseline.
+- Real BERT section 6 exposed a figure-caption failure: the lesson copied a token dump from Figure 1 and treated `pre-training`, `fine-tuning`, and `[CLS]` as both terms and concepts. The normalizer now frames the section as BERT's workflow figure, keeps [CLS]/[SEP] as input-format vocabulary, and promotes workflow concepts such as shared architecture, parameter initialization, and full-model fine-tuning.
 
 ## Still Weak
 
