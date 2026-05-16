@@ -9,7 +9,14 @@ from app.db.session import get_db
 from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.section_analysis_repository import SectionAnalysisRepository
-from app.schemas.document_schema import DocumentCreate, DocumentListItem, DocumentRead, DocumentSectionRead
+from app.schemas.document_schema import (
+    DocumentCreate,
+    DocumentListItem,
+    DocumentRead,
+    DocumentSectionRead,
+    DuplicateDocumentCleanupItem,
+    DuplicateDocumentCleanupResponse,
+)
 from app.services.academic_text_service import AcademicTextService
 from app.services.document_ingestion_service import DocumentIngestionError, DocumentIngestionService
 from app.services.document_section_service import DocumentSectionService
@@ -53,6 +60,36 @@ async def attach_document_file(document_id: str, file: UploadFile = File(...), d
     if not document:
         raise not_found("Document not found")
     return _read_document(document)
+
+
+@router.post("/cleanup-duplicates", response_model=DuplicateDocumentCleanupResponse)
+def cleanup_duplicate_documents(db: Session = Depends(get_db)):
+    repository = DocumentRepository(db)
+    groups: dict[tuple[str, str], list] = {}
+    for document in repository.list():
+        key = (document.source_type, document.title.strip().lower())
+        groups.setdefault(key, []).append(document)
+
+    cleaned: list[DuplicateDocumentCleanupItem] = []
+    for rows in groups.values():
+        if len(rows) <= 1:
+            continue
+        ranked = sorted(rows, key=lambda document: _document_cleanup_score(document, db), reverse=True)
+        kept = ranked[0]
+        deleted_ids: list[str] = []
+        for duplicate in ranked[1:]:
+            if repository.delete(duplicate.id):
+                deleted_ids.append(duplicate.id)
+        if deleted_ids:
+            cleaned.append(
+                DuplicateDocumentCleanupItem(
+                    source_type=kept.source_type,
+                    title=kept.title,
+                    kept_document_id=kept.id,
+                    deleted_document_ids=deleted_ids,
+                )
+            )
+    return DuplicateDocumentCleanupResponse(groups=cleaned, deleted_count=sum(len(group.deleted_document_ids) for group in cleaned))
 
 
 @router.get("", response_model=list[DocumentListItem])
@@ -164,3 +201,12 @@ def _analyzed_section_indices(document_id: str, db: Session) -> set[int]:
     if AnalysisRepository(db).get_result(document_id):
         indices.add(0)
     return indices
+
+
+def _document_cleanup_score(document, db: Session) -> tuple[int, int, int, float]:
+    sections = _document_sections(document.content)
+    total = max(len(sections), 1)
+    analyzed = len(_analyzed_section_indices(document.id, db))
+    complete = 1 if total > 1 and analyzed >= total else 0
+    has_analysis = 1 if AnalysisRepository(db).get_result(document.id) else 0
+    return (complete, analyzed, has_analysis, document.created_at.timestamp())

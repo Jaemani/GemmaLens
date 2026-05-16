@@ -40,7 +40,7 @@ Evaluate GemmaLens as a real user reading famous academic PDFs end to end. The a
 
 - The final whole-paper guide is still a structured draft, not a model-backed synthesis pass over all section summaries.
 - Staged analysis is still request/response style and lacks a durable background job queue, but the UI now supports both small batches and a `Study remaining` action for moving a paper toward complete coverage.
-- Duplicate document records are hidden in lists but not merged or cleaned in the database. Document deletion now removes base and section-analysis caches, so cleanup does not leave orphaned learning rows.
+- Duplicate document records are hidden in lists and can now be cleaned by the backend duplicate-cleanup endpoint, which keeps the highest-progress record and deletes lower-quality duplicates with their caches. The local demo DB was cleaned from 7 records to 5, with no duplicate `(source_type, title)` groups remaining.
 - PDF extraction still loses equations, columns, and some mathematical layout; the UI is honest about this but does not solve OCR/layout recovery.
 - Dictionary review now shows lightweight review states (`New`, `Review soon`, `Familiar`) from encounter and view counts. Saved items can be reviewed directly from Quiz, and opening a saved-item quiz prompt increments the dictionary view count. It is still not a full spaced-repetition scheduler.
 - Video transcript analysis is aligned visually: video results show the concept map, learning objects, summaries, and sentence structures immediately with transcript-aware copy. YouTube caption availability still needs broader real-world testing.

@@ -35,6 +35,18 @@ class DocumentListItem(BaseModel):
     has_analysis: bool = False
 
 
+class DuplicateDocumentCleanupItem(BaseModel):
+    source_type: str
+    title: str
+    kept_document_id: str
+    deleted_document_ids: list[str]
+
+
+class DuplicateDocumentCleanupResponse(BaseModel):
+    groups: list[DuplicateDocumentCleanupItem]
+    deleted_count: int
+
+
 class DocumentSectionRead(BaseModel):
     index: int
     section_number: int

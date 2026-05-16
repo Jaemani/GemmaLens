@@ -229,6 +229,33 @@ def test_document_section_analysis_stays_on_parent_document(client):
     assert client.get(f"/documents/{created.json()['id']}/sections/1/analysis").status_code == 404
 
 
+def test_cleanup_duplicate_documents_keeps_best_progress_record(client):
+    content = " ".join([SAMPLE_TEXT] * 14)
+    first = client.post("/documents", json={"title": "duplicate.pdf", "content": content, "source_type": "pdf"})
+    second = client.post("/documents", json={"title": "duplicate.pdf", "content": content, "source_type": "pdf"})
+    assert first.status_code == 200
+    assert second.status_code == 200
+
+    analyzed = client.post(f"/documents/{first.json()['id']}/sections/1/analyze")
+    assert analyzed.status_code == 200
+
+    cleanup = client.post("/documents/cleanup-duplicates")
+    assert cleanup.status_code == 200
+    body = cleanup.json()
+    assert body["deleted_count"] == 1
+    assert body["groups"][0]["kept_document_id"] == first.json()["id"]
+    assert body["groups"][0]["deleted_document_ids"] == [second.json()["id"]]
+
+    listed = client.get("/documents")
+    assert listed.status_code == 200
+    matching = [document for document in listed.json() if document["title"] == "duplicate.pdf"]
+    assert [document["id"] for document in matching] == [first.json()["id"]]
+
+    repeated = client.post("/documents/cleanup-duplicates")
+    assert repeated.status_code == 200
+    assert repeated.json()["deleted_count"] == 0
+
+
 def test_staged_analysis_analyzes_next_unstudied_sections(client):
     content = " ".join([SAMPLE_TEXT] * 14)
     created = client.post(
