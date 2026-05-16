@@ -69,6 +69,8 @@ class AnalysisQualityService:
         return tokens
 
     def _light_stem(self, token: str) -> str:
+        if token.endswith("ally") and len(token) > 7:
+            return f"{token[:-4]}al"
         for suffix in ("ing", "ed", "s"):
             if len(token) > len(suffix) + 3 and token.endswith(suffix):
                 return token[: -len(suffix)]

@@ -1612,3 +1612,67 @@ def test_resnet_imagenet_localization_setup_recovers_task_and_rpn_adaptation():
     assert result.summaries.one_line.startswith("This section transitions from ImageNet detection results")
     assert result.sentences[0].core_structure == "A requires to classify and localize B."
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
+
+
+def test_resnet_imagenet_localization_details_recovers_anchor_and_testing_protocol():
+    document = (
+        "The cls and reg layers are both in a per-class form, in contrast to prior work. "
+        "Specifically, the cls layer has a 1000-d output, and each dimension is binary logistic regression for predicting being or not being an object class; "
+        "the reg layer has a 1000x4-d output consisting of box regressors for 1000 classes. "
+        "Our bounding box regression is with reference to multiple translation-invariant anchor boxes at each position. "
+        "We use a mini-batch size of 256 images for fine-tuning. "
+        "To avoid negative samples being dominate, 8 anchors are randomly sampled for each image, where the sampled positive and negative anchors have a ratio of 1:1. "
+        "For testing, the network is applied on the image fully-convolutionally. "
+        "Following prior work, we first perform oracle testing using the ground truth class as the classification prediction. "
+        "Under the same setting, our RPN method using ResNet-101 net significantly reduces the center-crop localization error to 13.3%."
+    )
+    payload = {
+        "terms": [
+            {"term": "mini-batch", "meaning": "training detail"},
+            {"term": "ImageNet classification", "meaning": "wrong section"},
+            {"term": "cls layer", "meaning": "too narrow alone"},
+            {"term": "box regressors", "meaning": "too narrow alone"},
+            {"term": "anchor boxes", "meaning": "important"},
+            {"term": "state-of-the-art methods", "meaning": "previous table"},
+            {"term": "Faster R-CNN", "meaning": "too broad here"},
+            {"term": "multi-scale testing", "meaning": "previous detail"},
+        ],
+        "concepts": [
+            {"concept": "mini-batch", "explanation": "training detail"},
+            {"concept": "ImageNet classification", "explanation": "wrong section"},
+            {"concept": "cls layer", "explanation": "too narrow alone"},
+            {"concept": "box regressors", "explanation": "too narrow alone"},
+            {"concept": "anchor boxes", "explanation": "too narrow alone"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "The cls and reg layers are both in a per-class form, in contrast to prior work."},
+        "sentences": [{"sentence": "The cls and reg layers are both in a per-class form, in contrast to prior work.", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:0", "term_not_in_source_sentence:anchor boxes"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-imagenet-loc-detail", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert not {"mini-batch", "ImageNet classification", "cls layer", "box regressors", "state-of-the-art methods", "Faster R-CNN", "multi-scale testing"} & terms
+    assert not {"mini-batch", "ImageNet classification", "cls layer", "box regressors", "anchor boxes"} & concepts
+    assert {"reg layer", "binary logistic regression", "anchor boxes", "positive and negative anchors", "oracle testing", "fully-convolutional testing"}.issubset(terms)
+    assert {"per-class cls/reg heads", "anchor-based box regression", "balanced anchor sampling", "oracle and dense testing comparison"}.issubset(concepts)
+    assert {
+        "in contrast to",
+        "Specifically",
+        "consisting of",
+        "with reference to",
+        "To avoid",
+        "are randomly sampled",
+        "fully-convolutionally",
+        "using the ground truth class",
+        "Under the same setting",
+        "significantly reduces",
+    }.issubset(phrases)
+    assert result.summaries.one_line.startswith("This section details the per-class localization RPN")
+    assert result.sentences[0].core_structure == "A is with reference to B at each position."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings
+    assert "term_not_in_source_sentence:anchor boxes" not in result.quality_warnings
+    assert "term_not_in_source_sentence:fully-convolutional testing" not in result.quality_warnings

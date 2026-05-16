@@ -51,6 +51,9 @@ class AnalysisNormalizationService:
             terms = self._prefer_resnet_imagenet_detection_setup_terms(terms, document_text)
         if self._is_resnet_imagenet_localization_setup_section(document_text):
             terms = self._filter_resnet_imagenet_localization_setup_noise(terms, "term")
+        if self._is_resnet_imagenet_localization_details_section(document_text):
+            terms = self._filter_resnet_imagenet_localization_details_noise(terms, "term")
+            terms = self._prefer_resnet_imagenet_localization_details_terms(terms, document_text)
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -107,6 +110,9 @@ class AnalysisNormalizationService:
         if self._is_resnet_imagenet_localization_setup_section(document_text):
             normalized["concepts"] = self._prefer_resnet_imagenet_localization_setup_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_resnet_imagenet_localization_setup_noise(normalized["phrases"], "phrase")
+        if self._is_resnet_imagenet_localization_details_section(document_text):
+            normalized["concepts"] = self._prefer_resnet_imagenet_localization_details_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_resnet_imagenet_localization_details_noise(normalized["phrases"], "phrase")
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -1421,6 +1427,55 @@ class AnalysisNormalizationService:
                     "hard",
                     "The section contrasts this with the per-class RPN design.",
                 ),
+                (
+                    "cls layer",
+                    "The classification head in the localization RPN.",
+                    "field_term",
+                    "medium",
+                    "This is one of the two sibling output heads.",
+                ),
+                (
+                    "reg layer",
+                    "The box-regression head in the localization RPN.",
+                    "field_term",
+                    "medium",
+                    "This is the second sibling output head.",
+                ),
+                (
+                    "binary logistic regression",
+                    "A binary classifier used for each class dimension in the cls layer.",
+                    "field_term",
+                    "hard",
+                    "This explains how the 1000-dimensional cls output is interpreted.",
+                ),
+                (
+                    "anchor boxes",
+                    "Translation-invariant reference boxes used for bounding-box regression.",
+                    "field_term",
+                    "hard",
+                    "This is the reference structure for box regression.",
+                ),
+                (
+                    "positive and negative anchors",
+                    "Sampled anchor boxes balanced during fine-tuning.",
+                    "field_term",
+                    "hard",
+                    "The section samples them at a 1:1 ratio to avoid dominance by negatives.",
+                ),
+                (
+                    "oracle testing",
+                    "Testing that uses the ground truth class as the class prediction.",
+                    "field_term",
+                    "hard",
+                    "This separates localization quality from classification mistakes.",
+                ),
+                (
+                    "fully-convolutional testing",
+                    "Applying the network densely over the image rather than only on a crop.",
+                    "field_term",
+                    "hard",
+                    "This is the testing mode that improves localization error.",
+                ),
             ]
         else:
             known = [
@@ -1721,6 +1776,17 @@ class AnalysisNormalizationService:
                 ("is designed in a per-class form", "method", "States the key RPN modification for localization."),
                 ("ends with two sibling", "method", "Describes the final RPN heads for classification and box regression."),
                 ("surpassing the second place", "result", "States the competition margin over the runner-up."),
+                ("in contrast to", "contrast", "Marks the difference from the category-agnostic Faster R-CNN setup."),
+                ("Specifically", "general", "Introduces detailed layer dimensions after the high-level statement."),
+                ("consisting of", "general", "Explains what an output vector contains."),
+                ("with reference to", "method", "Explains that regression is defined relative to anchor boxes."),
+                ("To avoid", "method", "Introduces a training-sampling constraint."),
+                ("being dominate", "limitation", "Describes the imbalance that anchor sampling tries to avoid."),
+                ("are randomly sampled", "method", "Explains the sampling procedure for anchors."),
+                ("fully-convolutionally", "method", "Names dense convolutional testing over the image."),
+                ("using the ground truth class", "method", "Defines oracle testing for localization."),
+                ("Under the same setting", "result", "Introduces a controlled comparison result."),
+                ("significantly reduces", "result", "States the result improvement."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
                 ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
@@ -2337,6 +2403,26 @@ class AnalysisNormalizationService:
                     "This is the architecture modification worth learning from the section.",
                 ),
                 (
+                    "per-class cls/reg heads",
+                    "The localization RPN has 1000-dimensional classification output and 1000x4-dimensional box-regression output.",
+                    "This explains how class-specific localization is implemented.",
+                ),
+                (
+                    "anchor-based box regression",
+                    "Bounding-box regression is defined relative to multiple translation-invariant anchor boxes at each position.",
+                    "This is the geometric reference system used by the localization RPN.",
+                ),
+                (
+                    "balanced anchor sampling",
+                    "The training procedure samples positive and negative anchors at a 1:1 ratio.",
+                    "This explains how the model avoids being dominated by negative samples.",
+                ),
+                (
+                    "oracle and dense testing comparison",
+                    "The section compares oracle testing with ground-truth classes and dense multi-scale testing results.",
+                    "This helps separate localization error from classification error.",
+                ),
+                (
                     "zero-padding shortcuts",
                     "The parameter-free shortcut option that pads increased dimensions with zeros.",
                     "This is option A in the projection-shortcut comparison.",
@@ -2564,6 +2650,27 @@ class AnalysisNormalizationService:
                     "The authors contrast category-agnostic RPN with the per-class localization RPN.",
                     "'Unlike'는 기존 방식과 새 변형의 차이를 여는 표현입니다.",
                     "This is the architecture-change sentence in the section.",
+                ),
+                (
+                    "bounding box regression is with reference to",
+                    "A is with reference to B at each position.",
+                    "The authors explain that box regression is anchored to reference boxes.",
+                    "'with reference to'는 어떤 기준점을 바탕으로 한다는 뜻입니다.",
+                    "This sentence links regression outputs to anchor boxes.",
+                ),
+                (
+                    "To avoid",
+                    "To avoid A, B are sampled with C.",
+                    "The authors explain the reason for balanced anchor sampling.",
+                    "'To avoid'는 어떤 문제를 피하기 위한 목적을 말합니다.",
+                    "This is a training-procedure rationale, not the main result.",
+                ),
+                (
+                    "Under the same setting",
+                    "Under the same setting, A significantly reduces B to C.",
+                    "The authors state a controlled comparison result.",
+                    "'Under the same setting'은 비교 조건이 같음을 강조합니다.",
+                    "This phrase helps read the localization-error comparison fairly.",
                 ),
                 (
                     "as easy as stacking more layers",
@@ -3569,6 +3676,23 @@ class AnalysisNormalizationService:
                         "Track the contrast: category-agnostic RPN versus per-class RPN.",
                     ],
                 }
+            if self._is_resnet_imagenet_localization_details_section(document_text):
+                return {
+                    "one_line": "This section details the per-class localization RPN: cls/reg heads, anchor boxes, balanced sampling, and oracle/dense testing.",
+                    "simple": (
+                        "The authors explain how the localization RPN works. It uses class-specific classification and box-regression heads, "
+                        "regresses boxes relative to anchors, balances positive and negative anchors during training, and reports oracle/dense testing comparisons."
+                    ),
+                    "academic": (
+                        "The section specifies the per-class RPN implementation for ImageNet localization, including 1000-class cls/reg outputs, "
+                        "anchor-relative box regression, balanced anchor sampling, fully convolutional testing, and controlled localization-error comparisons."
+                    ),
+                    "study_notes": [
+                        "Read the first prose sentences as implementation detail, not as a new paper thesis.",
+                        "Anchor boxes are the reference frame for box regression.",
+                        "Oracle testing uses the ground-truth class, so it isolates localization from classification error.",
+                    ],
+                }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
                 return {
                     "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
@@ -3862,6 +3986,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_resnet_imagenet_localization_setup_section(document_text):
             return True
+        if self._is_resnet_imagenet_localization_details_section(document_text):
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -4101,6 +4227,7 @@ class AnalysisNormalizationService:
             or self._is_resnet_detection_result_narrative_section(document_text)
             or self._is_resnet_imagenet_detection_setup_section(document_text)
             or self._is_resnet_imagenet_localization_setup_section(document_text)
+            or self._is_resnet_imagenet_localization_details_section(document_text)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
@@ -4171,6 +4298,15 @@ class AnalysisNormalizationService:
             and "per-class regression" in lowered
             and "category-agnostic" in lowered
             and "two sibling" in lowered
+        )
+
+    def _is_resnet_imagenet_localization_details_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "cls and reg layers" in lowered
+            and "anchor" in lowered
+            and "oracle" in lowered
+            and "localization error" in lowered
         )
 
     def _prefer_resnet_deep_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
@@ -4847,6 +4983,153 @@ class AnalysisNormalizationService:
             "multi-scale testing",
         }
         return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_imagenet_localization_details_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"mini-batch", "imagenet classification", "cls layer", "box regressors", "anchor boxes"}
+        preferred = {
+            "per-class cls/reg heads": (
+                "The localization RPN uses class-specific classification and box-regression outputs.",
+                "This is the implementation detail behind per-class localization.",
+            ),
+            "anchor-based box regression": (
+                "Bounding-box regression is defined relative to translation-invariant anchor boxes.",
+                "This explains the geometric reference point for predicted boxes.",
+            ),
+            "balanced anchor sampling": (
+                "Positive and negative anchors are sampled at a 1:1 ratio during fine-tuning.",
+                "This prevents negative samples from dominating training.",
+            ),
+            "oracle and dense testing comparison": (
+                "Oracle testing uses ground-truth classes, while dense testing applies the network fully convolutionally.",
+                "This separates localization quality from classification quality.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = (
+                    "cls and reg layers"
+                    if "heads" in lowered
+                    else "anchor"
+                    if "anchor-based" in lowered or "balanced" in lowered
+                    else "oracle"
+                )
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_resnet_imagenet_localization_details_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {
+            "mini-batch",
+            "imagenet classification",
+            "cls layer",
+            "box regressors",
+            "resnet-101",
+            "ground truth class",
+            "localization error",
+            "state-of-the-art methods",
+            "imagenet",
+            "faster r-cnn",
+            "multi-scale testing",
+        }
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_imagenet_localization_details_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        preferred = [
+            (
+                "reg layer",
+                "The box-regression output head in the per-class localization RPN.",
+                "field_term",
+                "medium",
+                "reg layer",
+                "This is one of the two sibling localization heads.",
+            ),
+            (
+                "binary logistic regression",
+                "The binary classifier used for each class dimension in the cls output.",
+                "field_term",
+                "hard",
+                "binary logistic regression",
+                "This explains how the 1000-dimensional classification output is interpreted.",
+            ),
+            (
+                "anchor boxes",
+                "Translation-invariant reference boxes used for bounding-box regression.",
+                "field_term",
+                "hard",
+                "anchor",
+                "This is the reference frame for box regression.",
+            ),
+            (
+                "positive and negative anchors",
+                "Balanced anchor samples used during fine-tuning.",
+                "field_term",
+                "hard",
+                "positive and negative anchors",
+                "This explains the 1:1 sampling rule.",
+            ),
+            (
+                "oracle testing",
+                "Testing that uses the ground-truth class as the class prediction.",
+                "field_term",
+                "hard",
+                "oracle",
+                "This separates localization quality from classification quality.",
+            ),
+            (
+                "fully-convolutional testing",
+                "Applying the network densely over the image at test time.",
+                "field_term",
+                "hard",
+                "fully-convolutionally",
+                "This is the dense testing mode used for localization.",
+            ),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, target, reason in preferred:
+            lowered = term.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                promoted.append(
+                    {
+                        "term": term,
+                        "meaning": meaning,
+                        "domain_relevance": "high" if priority == "field_term" else "medium",
+                        "difficulty": difficulty,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "should_save": True,
+                        "learning_priority": priority,
+                        "reason": reason,
+                        "context_meaning": meaning,
+                        "general_meaning": meaning,
+                        "confidence": 0.9,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [row for row in rows if str(row.get("term") or "").strip().lower() not in {term.lower() for term, *_ in preferred}]
+        return [*promoted, *rest][:12]
 
     def _prefer_resnet_imagenet_detection_setup_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         preferred = [
