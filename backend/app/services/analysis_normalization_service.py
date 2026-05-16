@@ -41,6 +41,8 @@ class AnalysisNormalizationService:
             terms = self._filter_resnet_detection_evaluation_noise(terms, "term")
         if self._is_resnet_detection_improvements_section(document_text):
             terms = self._filter_resnet_detection_improvements_noise(terms, "term")
+        if self._is_resnet_detection_results_table_section(document_text):
+            terms = self._filter_resnet_detection_results_table_noise(terms, "term")
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -85,6 +87,9 @@ class AnalysisNormalizationService:
         if self._is_resnet_detection_improvements_section(document_text):
             normalized["concepts"] = self._prefer_resnet_detection_improvements_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_resnet_detection_improvements_noise(normalized["phrases"], "phrase")
+        if self._is_resnet_detection_results_table_section(document_text):
+            normalized["concepts"] = self._prefer_resnet_detection_results_table_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_resnet_detection_results_table_noise(normalized["phrases"], "phrase")
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -1238,6 +1243,41 @@ class AnalysisNormalizationService:
                     "hard",
                     "This is the third improvement and is explicitly limited to testing in this implementation.",
                 ),
+                (
+                    "baseline+++",
+                    "The strengthened detector variant that includes box refinement, context, and multi-scale testing.",
+                    "field_term",
+                    "hard",
+                    "This is the table shorthand for the improved detection system.",
+                ),
+                (
+                    "COCO test-dev",
+                    "The MS COCO evaluation split used for reporting final detection results.",
+                    "field_term",
+                    "medium",
+                    "This distinguishes validation results from leaderboard-style test results.",
+                ),
+                (
+                    "PASCAL VOC 2007 test set",
+                    "The PASCAL VOC detection benchmark split used for one result table.",
+                    "field_term",
+                    "medium",
+                    "This tells the reader which benchmark the table is evaluating.",
+                ),
+                (
+                    "PASCAL VOC 2012 test set",
+                    "The PASCAL VOC detection benchmark split used for another result table.",
+                    "field_term",
+                    "medium",
+                    "This is the second PASCAL benchmark table in the section.",
+                ),
+                (
+                    "ensemble",
+                    "A combined prediction system using multiple models or runs.",
+                    "useful",
+                    "medium",
+                    "The table reports an ensemble as the strongest COCO system.",
+                ),
             ]
         else:
             known = [
@@ -1510,6 +1550,10 @@ class AnalysisNormalizationService:
                 ("trained end-to-end", "method", "States that the added structure is optimized together."),
                 ("single-scale training/testing", "contrast", "Names the baseline inference setting before multi-scale testing."),
                 ("because of limited time", "limitation", "Explains an implementation limitation rather than a scientific claim."),
+                ("Object detection improvements on", "result", "Introduces a result table and its benchmark setting."),
+                ("Detection results on", "result", "Introduces benchmark-specific detection results."),
+                ("The baseline is", "general", "Defines the comparison system used in a result table."),
+                ("include box refinement", "method", "Expands what the improved `baseline+++` shorthand contains."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
                 ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
@@ -2049,6 +2093,21 @@ class AnalysisNormalizationService:
                     "multi-scale testing limitation",
                     "The competition-time choice to perform multi-scale testing only at inference and only for the Fast R-CNN step.",
                     "This helps the reader separate implemented improvements from untried extensions.",
+                ),
+                (
+                    "detection result table reading",
+                    "The result tables compare VGG-16, ResNet-101, improved baseline+++, and ensemble systems across COCO and PASCAL.",
+                    "This section should be read as evidence tables, not as ordinary prose.",
+                ),
+                (
+                    "baseline+++ system",
+                    "The table shorthand for ResNet-101 plus box refinement, context, and multi-scale testing.",
+                    "This connects the previous method-improvement section to the numeric benchmark gains.",
+                ),
+                (
+                    "cross-benchmark detection validation",
+                    "The results are reported on MS COCO test-dev and PASCAL VOC 2007/2012 test sets.",
+                    "This shows the improvements are evaluated across multiple detection benchmarks.",
                 ),
                 (
                     "zero-padding shortcuts",
@@ -2623,6 +2682,20 @@ class AnalysisNormalizationService:
                     "This is a limitation sentence, not the main experimental result.",
                 ),
                 (
+                    "The baseline is",
+                    "The baseline is A.",
+                    "The caption defines which detector the table compares against.",
+                    "'baseline'은 비교 기준이 되는 시스템을 뜻합니다.",
+                    "This is table-caption language; it tells you how to interpret the rows.",
+                ),
+                (
+                    "include box refinement",
+                    "A include B, C, and D.",
+                    "The caption expands the `baseline+++` shorthand into its added components.",
+                    "'include'는 구성 요소를 나열할 때 쓰는 기본 동사입니다.",
+                    "This connects the table label to the previous method improvements.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -3096,6 +3169,23 @@ class AnalysisNormalizationService:
                         "Separate the limitation: multi-scale training was not performed because of limited time.",
                     ],
                 }
+            if self._is_resnet_detection_results_table_section(document_text):
+                return {
+                    "one_line": "This table section reports how ResNet-101 detector variants improve COCO and PASCAL VOC results.",
+                    "simple": (
+                        "The tables compare baseline Faster R-CNN systems with ResNet-101, then add box refinement, context, multi-scale testing, "
+                        "and an ensemble. Read the rows as cumulative evidence that the detection improvements raise mAP across COCO and PASCAL."
+                    ),
+                    "academic": (
+                        "The section is a result-table block: COCO and PASCAL VOC metrics show progressively stronger detection systems, "
+                        "from VGG-16 and ResNet-101 baselines to `baseline+++` and ensemble variants."
+                    ),
+                    "study_notes": [
+                        "Do not read the table dump word by word; identify rows, benchmarks, metrics, and system variants.",
+                        "`baseline+++` means the improved ResNet detector with box refinement, context, and multi-scale testing.",
+                        "Use mAP@.5 and mAP@[.5,.95] as metric labels rather than vocabulary to memorize in isolation.",
+                    ],
+                }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
                 return {
                     "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
@@ -3381,6 +3471,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_resnet_detection_improvements_section(document_text):
             return True
+        if self._is_resnet_detection_results_table_section(document_text):
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -3616,6 +3708,7 @@ class AnalysisNormalizationService:
             or self._is_resnet_detection_baseline_section(document_text)
             or self._is_resnet_detection_evaluation_section(document_text)
             or self._is_resnet_detection_improvements_section(document_text)
+            or self._is_resnet_detection_results_table_section(document_text)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
@@ -3653,6 +3746,14 @@ class AnalysisNormalizationService:
     def _is_resnet_detection_improvements_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "box refinement" in lowered and "global context" in lowered and "multi-scale testing" in lowered
+
+    def _is_resnet_detection_results_table_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "baseline+++resnet-101" in lowered
+            and "detection results on the pascal voc" in lowered
+            and "object detection improvements on ms coco" in lowered
+        )
 
     def _prefer_resnet_deep_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         blocked = {"feature maps", "resnet", "model", "we combine six models"}
@@ -4088,6 +4189,54 @@ class AnalysisNormalizationService:
 
     def _filter_resnet_detection_improvements_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {"feature maps", "global spatial pyramid pooling", "map", "rpn step"}
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_detection_results_table_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"map", "faster r-cnn", "ensemble", "coco"}
+        preferred = {
+            "detection result table reading": (
+                "The tables compare detector variants and benchmark splits rather than developing a new prose argument.",
+                "This prevents the PDF table dump from becoming a fake paragraph summary.",
+            ),
+            "baseline+++ system": (
+                "The improved ResNet-101 detector that includes box refinement, context, and multi-scale testing.",
+                "This is the key row label that connects the numeric tables to the previous method section.",
+            ),
+            "cross-benchmark detection validation": (
+                "The same detection system family is evaluated on MS COCO and PASCAL VOC 2007/2012.",
+                "This explains why the table block matters for the paper's transfer claim.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = "baseline+++" if "baseline" in lowered else "Detection results on"
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_resnet_detection_results_table_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {"map", "coco", "faster r-cnn"}
         return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
 
     def _fresh_quality_warnings(self, warnings: Any) -> list[str]:

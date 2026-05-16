@@ -1413,3 +1413,50 @@ def test_resnet_detection_improvements_section_recovers_method_recipe():
     assert result.sentences[0].core_structure == "A is applied on B, followed by C."
     assert "analysis_mode:atomic_remote" in result.quality_warnings
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
+
+
+def test_resnet_detection_results_table_section_becomes_table_reading_guide():
+    document = (
+        "training data COCO train COCO trainval test data COCO val COCO test-dev mAP @.5 @[.5, .95] "
+        "baseline Faster R-CNN (VGG-16) 41.5 21.2 baseline Faster R-CNN (ResNet-101) 48.4 27.2 "
+        "+box refinement 49.9 29.9 +context 51.1 30.0 +multi-scale testing 53.8 32.5 ensemble 59.0 37. "
+        "Object detection improvements on MS COCO using Faster R-CNN and ResNet-101. "
+        "baseline+++ResNet-101 COCO+07+12 85.6 90.0 89.6. "
+        "Detection results on the PASCAL VOC 2007 test set. The baseline is the Faster R-CNN system. "
+        "The system baseline+++ include box refinement, context, and multi-scale testing in Table 9. "
+        "Detection results on the PASCAL VOC 2012 test set."
+    )
+    payload = {
+        "terms": [
+            {"term": "mAP", "meaning": "metric"},
+            {"term": "Faster R-CNN", "meaning": "detector"},
+            {"term": "COCO", "meaning": "dataset"},
+            {"term": "ensemble", "meaning": "combined model"},
+        ],
+        "concepts": [
+            {"concept": "mAP", "explanation": "metric"},
+            {"concept": "Faster R-CNN", "explanation": "detector"},
+            {"concept": "COCO", "explanation": "dataset"},
+            {"concept": "ensemble", "explanation": "combined model"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "training data COCO train COCO trainval test data COCO val COCO test-dev mAP @.5."},
+        "sentences": [{"sentence": "training data COCO train COCO trainval test data COCO val COCO test-dev mAP @.5.", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:0", "term_not_in_source_sentence:mAP"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-detection-table", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert not {"mAP", "Faster R-CNN", "COCO"} & terms
+    assert not {"mAP", "Faster R-CNN", "COCO", "ensemble"} & concepts
+    assert {"baseline+++", "COCO test-dev", "PASCAL VOC 2007 test set", "PASCAL VOC 2012 test set", "ensemble"}.issubset(terms)
+    assert {"detection result table reading", "baseline+++ system", "cross-benchmark detection validation"}.issubset(concepts)
+    assert {"Object detection improvements on", "Detection results on", "The baseline is", "include box refinement"}.issubset(phrases)
+    assert result.summaries.one_line == "This table section reports how ResNet-101 detector variants improve COCO and PASCAL VOC results."
+    assert result.sentences[0].core_structure == "The baseline is A."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings
+    assert "term_not_in_source_sentence:mAP" not in result.quality_warnings
+    assert not any(warning.startswith("source_sentence_not_in_document:") for warning in result.quality_warnings)

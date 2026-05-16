@@ -25,7 +25,7 @@ class AnalysisQualityService:
             seen_terms.add(key)
             if not term.meaning.strip():
                 warnings.append(f"empty_term_meaning:{term.term}")
-            if term.source_sentence and term.source_sentence.lower() not in text_lower:
+            if term.source_sentence and not self._source_in_text(term.source_sentence, text_lower):
                 warnings.append(f"source_sentence_not_in_document:{term.term}")
             if term.term.lower() not in term.source_sentence.lower():
                 warnings.append(f"term_not_in_source_sentence:{term.term}")
@@ -35,9 +35,16 @@ class AnalysisQualityService:
         for phrase in result.phrases:
             if not phrase.explanation.strip():
                 warnings.append(f"empty_phrase_explanation:{phrase.phrase}")
-            if phrase.source_sentence and phrase.source_sentence.lower() not in text_lower:
+            if phrase.source_sentence and not self._source_in_text(phrase.source_sentence, text_lower):
                 warnings.append(f"phrase_source_sentence_not_in_document:{phrase.phrase}")
             if phrase.phrase.lower() not in phrase.source_sentence.lower():
                 warnings.append(f"phrase_not_in_source_sentence:{phrase.phrase}")
 
         return warnings
+
+    def _source_in_text(self, source: str, text_lower: str) -> bool:
+        source_lower = source.lower()
+        if source_lower in text_lower:
+            return True
+        trimmed = source_lower.strip(". ")
+        return bool(trimmed and trimmed in text_lower)
