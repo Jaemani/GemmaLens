@@ -343,3 +343,26 @@ def test_attention_paper_snippet_keeps_discourse_signals_out_of_terms():
     assert "based solely on" in phrases
     assert result.summaries.one_line.startswith("The paper introduces the Transformer")
     assert result.sentences[0].core_structure == "X is based solely on Y, dispensing with Z."
+
+
+def test_attention_intro_summary_replaces_long_first_sentence_copy():
+    document = (
+        "1 Introduction Recurrent neural networks, long short-term memory and gated recurrent neural networks in particular, "
+        "have been firmly established as state of the art approaches in sequence modeling and transduction problems such as "
+        "language modeling and machine translation. Recurrent models typically factor computation along the symbol positions."
+    )
+    payload = {
+        "terms": [],
+        "phrases": [],
+        "sentences": [],
+        "summaries": {
+            "one_line": document.split(".")[0] + ".",
+            "simple": document.split(".")[0] + ".",
+            "academic": document.split(".")[0] + ".",
+        },
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "attention-intro", document)
+
+    assert result.summaries.one_line == "This section explains recurrent sequence-modeling baselines before the Transformer contrast."
+    assert "background" in result.summaries.study_notes[0].lower()

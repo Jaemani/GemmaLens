@@ -896,6 +896,7 @@ class AnalysisNormalizationService:
 
     def _heuristic_summaries(self, document_text: str) -> dict[str, Any]:
         lower = document_text.lower()
+        compact_lower = " ".join(lower.split())
         if "batch normalization" in lower and "internal covariate shift" in lower:
             return {
                 "one_line": "The paper proposes Batch Normalization to make deep neural network training faster and more stable.",
@@ -911,6 +912,23 @@ class AnalysisNormalizationService:
                     "Track the argument chain: training instability -> internal covariate shift -> mini-batch normalization -> faster optimization.",
                     "Separate concept words from academic moves: 'refer to this phenomenon as' names a concept; 'allows us to' states a benefit.",
                     "When reading equations, first identify what statistics are estimated from the mini-batch: mean and variance.",
+                ],
+            }
+        if "recurrent neural networks" in compact_lower and "sequence modeling" in compact_lower and "machine translation" in compact_lower:
+            return {
+                "one_line": "This section explains recurrent sequence-modeling baselines before the Transformer contrast.",
+                "simple": (
+                    "The authors review RNN, LSTM, and gated recurrent models as established baselines for language modeling and translation. "
+                    "This prepares the reader for why reducing sequential computation matters."
+                ),
+                "academic": (
+                    "The section frames recurrent encoder-decoder models as the prior state of the art, then sets up the paper's efficiency argument "
+                    "around sequential computation and long dependency paths."
+                ),
+                "study_notes": [
+                    "Treat this as background, not the proposed method.",
+                    "Track the contrast: recurrent sequence modeling first, attention-only Transformer next.",
+                    "Save baseline names only if you need them to understand the paper's comparison.",
                 ],
             }
         if self._is_attention_text(document_text):
@@ -1044,6 +1062,8 @@ class AnalysisNormalizationService:
             return True
         values = [str(summaries.get(key) or "").strip() for key in ("one_line", "simple", "academic")]
         if any(not value for value in values):
+            return True
+        if any(len(value) > 240 for value in values[:2]):
             return True
         if len(set(values)) == 1:
             return True

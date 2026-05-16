@@ -175,3 +175,35 @@ def test_paper_map_includes_base_analysis_with_section_cache():
 
     assert paper_map.analyzed_sections == [1, 3]
     assert [summary.text for summary in paper_map.section_summaries] == ["Section 1", "Section 3"]
+
+
+def test_paper_map_skips_cached_attribution_sections():
+    attribution = "Llion also experimented with novel model variants and was responsible for our initial codebase."
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-4",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [{"term": "Transformer", "meaning": "attention model", "domain_relevance": "high", "difficulty": "hard", "source_sentence": "The Transformer uses attention.", "should_save": True}],
+            "phrases": [],
+            "concepts": [{"concept": "Transformer", "explanation": "attention model", "source_sentence": "The Transformer uses attention."}],
+            "sentences": [],
+            "summaries": {
+                "one_line": "The first section introduces the Transformer.",
+                "simple": "The first section introduces the Transformer.",
+                "academic": "The first section introduces the Transformer.",
+                "study_notes": [],
+            },
+            "quality_warnings": [],
+        }
+    )
+    bad_cached = base.model_copy(
+        update={"summaries": base.summaries.model_copy(update={"one_line": attribution, "simple": attribution, "academic": attribution})}
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows([(1, bad_cached)])).build(
+        "doc-4", ["The Transformer uses attention.", attribution]
+    )
+
+    assert paper_map.analyzed_sections == [1]
+    assert [summary.text for summary in paper_map.section_summaries] == ["Section 1"]

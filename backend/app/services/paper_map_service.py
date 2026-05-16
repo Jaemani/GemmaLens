@@ -31,9 +31,13 @@ class PaperMapService:
         terms: OrderedDict[str, dict[str, Any]] = OrderedDict()
         phrases: OrderedDict[str, dict[str, Any]] = OrderedDict()
         summaries: list[dict[str, Any]] = []
+        analyzed_sections: list[int] = []
 
         for section_index, result in section_results:
             section_number = section_index + 1
+            if not self._is_learning_signal(result.summaries.one_line):
+                continue
+            analyzed_sections.append(section_number)
             summaries.append(
                 {
                     "text": f"Section {section_number}",
@@ -57,7 +61,6 @@ class PaperMapService:
         top_concepts = self._rank(concepts, 10)
         top_terms = self._rank(terms, 12)
         top_phrases = self._rank(phrases, 12)
-        analyzed_sections = [index + 1 for index, _ in section_results]
 
         return PaperMapResponse(
             document_id=document_id,
@@ -86,6 +89,20 @@ class PaperMapService:
 
     def _rank(self, rows: OrderedDict[str, dict[str, Any]], limit: int) -> list[dict[str, Any]]:
         return sorted(rows.values(), key=lambda row: (-row["count"], row["sections"][0], row["text"].lower()))[:limit]
+
+    def _is_learning_signal(self, text: str) -> bool:
+        lowered = " ".join(text.lower().split())
+        if not lowered:
+            return False
+        non_content_markers = [
+            "work performed while",
+            "conference on neural information processing systems",
+            "spent countless long days",
+            "initial codebase",
+            "tensor2tensor",
+            "provided proper attribution",
+        ]
+        return not any(marker in lowered for marker in non_content_markers)
 
     def _guide(
         self,

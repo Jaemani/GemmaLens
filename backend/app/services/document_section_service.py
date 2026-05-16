@@ -17,21 +17,21 @@ class DocumentSectionService:
 
     def split_with_labels(self, text: str) -> list[DocumentSection]:
         if not self.page_marker_pattern.search(text):
-            return [DocumentSection(section) for section in self._split_plain(self._clean(text))]
+            return [DocumentSection(section) for section in self._split_plain(self._clean(text)) if self._is_learning_section(section)]
 
         sections: list[DocumentSection] = []
         parts = self.page_marker_pattern.split(text)
         leading = parts[0]
-        sections.extend(DocumentSection(section) for section in self._split_plain(self._clean(leading)))
+        sections.extend(DocumentSection(section) for section in self._split_plain(self._clean(leading)) if self._is_learning_section(section))
         for index in range(1, len(parts), 2):
             page_number = parts[index]
             page_text = parts[index + 1] if index + 1 < len(parts) else ""
             label = f"PDF page {page_number}"
-            sections.extend(DocumentSection(section, label) for section in self._split_plain(self._clean(page_text)))
+            sections.extend(DocumentSection(section, label) for section in self._split_plain(self._clean(page_text)) if self._is_learning_section(section))
         return sections
 
     def _split_plain(self, cleaned: str) -> list[str]:
-        sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", cleaned) if part.strip()]
+        sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", cleaned) if part.strip() and self._is_learning_section(part)]
         sections: list[str] = []
         current = ""
         for sentence in sentences:
@@ -62,3 +62,19 @@ class DocumentSectionService:
         )
         text = re.sub(r"[ \t]+", " ", text)
         return text.strip()
+
+    def _is_learning_section(self, text: str) -> bool:
+        lowered = " ".join(text.lower().split())
+        if not lowered:
+            return False
+        non_content_markers = [
+            "work performed while",
+            "conference on neural information processing systems",
+            "spent countless long days",
+            "initial codebase",
+            "tensor2tensor",
+            "provided proper attribution",
+        ]
+        if any(marker in lowered for marker in non_content_markers):
+            return False
+        return True
