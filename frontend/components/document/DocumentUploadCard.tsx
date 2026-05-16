@@ -15,7 +15,7 @@ export function DocumentUploadCard({ disabled, onFile }: { disabled?: boolean; o
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{disabled ? "Processing document..." : "Upload document"}</p>
           <p className="mt-1 text-sm leading-6 text-neutral-600">
-            Select a PDF, DOCX, text, or markdown file. GemmaLens extracts text first, then runs structured learning analysis.
+            Select a PDF, DOCX, text, or markdown file. GemmaLens extracts text first, then opens the source reader for section learning.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button

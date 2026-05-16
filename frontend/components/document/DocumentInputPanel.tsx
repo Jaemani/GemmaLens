@@ -70,13 +70,9 @@ export function DocumentInputPanel() {
       setStep(1);
       setStatus(`Uploading ${file.name} and extracting text...`);
       const document = await api.uploadDocument(file);
-      setStep(2);
-      setProgressTitle("Analyzing document");
-      setStatus(`Text extracted from ${file.name}. Running model analysis...`);
-      await api.analyzeDocument(document.id);
       setStep(4);
-      setProgressTitle("Opening result");
-      setStatus("Opening result...");
+      setProgressTitle("Opening reader");
+      setStatus(`Text extracted from ${file.name}. Opening the source reader...`);
       router.push(`/analysis/${document.id}`);
     });
   }
@@ -123,7 +119,7 @@ export function DocumentInputPanel() {
           <div className="mt-6 space-y-4">
             <DocumentUploadCard disabled={busy} onFile={uploadAndAnalyze} />
             <div className="rounded-lg border border-line bg-surface p-4 text-sm leading-6 text-neutral-700">
-              PDF and DOCX files are converted to text before analysis. Scanned PDFs or image-only DOCX files need OCR or pasted text.
+              PDF and DOCX files are converted to text first. Long files open in the source reader before section lessons are prepared. Scanned PDFs or image-only DOCX files need OCR or pasted text.
             </div>
           </div>
         )}
@@ -167,7 +163,7 @@ export function DocumentInputPanel() {
           <div className="rounded-lg border border-line bg-panel p-5 text-sm leading-6 text-neutral-600 shadow-material">
             <p className="font-semibold text-ink">Learning output</p>
             <p className="mt-2">
-              GemmaLens creates vocabulary, expressions, summaries, and sentence-structure notes from the selected content.
+              Uploads open the reader first, then GemmaLens prepares section lessons without blocking the source view.
             </p>
           </div>
         ) : null}
