@@ -69,6 +69,8 @@ def test_paper_map_normalizes_base_analysis_when_no_section_cache():
     assert "batch normalization" in mapped
     assert paper_map.guide.coverage_note == "1 of 1 sections analyzed. This is a partial reading guide, not a whole-paper conclusion."
     assert paper_map.guide.reading_focus
+    assert paper_map.synthesis.status == "whole-paper draft"
+    assert paper_map.synthesis.priority_terms
 
 
 def test_paper_map_guide_separates_partial_coverage_from_whole_paper_claim():
@@ -119,5 +121,7 @@ def test_paper_map_guide_separates_partial_coverage_from_whole_paper_claim():
 
     assert paper_map.guide.thesis_so_far.startswith("So far")
     assert "1 of 2 sections analyzed" in paper_map.guide.coverage_note
+    assert paper_map.synthesis.status == "partial synthesis"
+    assert paper_map.synthesis.argument_flow
     assert any("Concept path" in item for item in paper_map.guide.reading_focus)
     assert any("next unstudied section" in item for item in paper_map.guide.next_steps)

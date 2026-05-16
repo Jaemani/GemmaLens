@@ -146,6 +146,8 @@ Current implementation note: `GET /documents/{id}/paper-map` returns both `total
 
 The same endpoint also returns a deterministic reading guide with `thesis_so_far`, `coverage_note`, `reading_focus`, and `next_steps`. This is intentionally not a final whole-paper summary. It is a source-grounded synthesis of analyzed sections that tells the learner what to focus on next.
 
+It also returns a deterministic `synthesis` object: `argument_flow`, `priority_concepts`, `priority_terms`, `reusable_expressions`, and `review_plan`. This gives the learner a paper-level study draft from cached section lessons while avoiding a long, fragile edge-model call over the whole paper.
+
 The frontend should not duplicate section-splitting logic. The reader requests backend-cleaned sections from `GET /documents/{id}/sections`, and `Analyze this section` sends the same zero-based section index to `POST /documents/{id}/sections/{section_index}/analyze`. This keeps displayed text, cache keys, paper-map coverage, and model input aligned.
 
 `POST /documents/{id}/staged-analysis` analyzes the next unstudied sections in backend order. The current endpoint is synchronous, which is acceptable for local functional testing, but the release version should become a durable job with pause/resume, cancellation, and status polling. This matters for edge devices because a slow model should not make the browser responsible for remembering which sections succeeded.

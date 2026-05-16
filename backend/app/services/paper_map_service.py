@@ -3,7 +3,7 @@ from typing import Any
 
 from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.section_analysis_repository import SectionAnalysisRepository
-from app.schemas.analysis_schema import PaperMapGuide, PaperMapResponse
+from app.schemas.analysis_schema import PaperMapGuide, PaperMapResponse, PaperMapSynthesis
 from app.services.analysis_normalization_service import AnalysisNormalizationService
 
 
@@ -63,6 +63,7 @@ class PaperMapService:
             total_sections=len(section_texts or []),
             analyzed_sections=analyzed_sections,
             guide=self._guide(len(section_texts or []), analyzed_sections, top_concepts, top_terms, top_phrases, summaries),
+            synthesis=self._synthesis(len(section_texts or []), analyzed_sections, top_concepts, top_terms, top_phrases, summaries),
             top_concepts=top_concepts,
             top_terms=top_terms,
             top_phrases=top_phrases,
@@ -142,4 +143,51 @@ class PaperMapService:
             coverage_note=coverage,
             reading_focus=focus[:4],
             next_steps=next_steps[:4],
+        )
+
+    def _synthesis(
+        self,
+        total_sections: int,
+        analyzed_sections: list[int],
+        top_concepts: list[dict[str, Any]],
+        top_terms: list[dict[str, Any]],
+        top_phrases: list[dict[str, Any]],
+        summaries: list[dict[str, Any]],
+    ) -> PaperMapSynthesis:
+        analyzed_count = len(analyzed_sections)
+        if analyzed_count == 0:
+            return PaperMapSynthesis(
+                status="empty",
+                argument_flow=["Analyze sections to build a whole-paper learning synthesis."],
+                review_plan=["Start with the first readable section.", "Save concepts and terms separately as they appear."],
+            )
+
+        coverage_ratio = analyzed_count / total_sections if total_sections else 0
+        status = "whole-paper draft" if total_sections and coverage_ratio >= 0.8 else "partial synthesis"
+        flow = [f"S{item['sections'][0]}: {item['meaning']}" for item in summaries[:6] if item.get("meaning")]
+        if len(summaries) > 6:
+            flow.append(f"...{len(summaries) - 6} more analyzed section summaries are folded into the lists below.")
+
+        repeated_concepts = [item for item in top_concepts if int(item.get("count") or 0) > 1]
+        priority_concepts = repeated_concepts[:5] or top_concepts[:5]
+        priority_terms = top_terms[:8]
+        reusable_expressions = top_phrases[:6]
+
+        review_plan = [
+            "Read the next unanalyzed section before treating this as a final whole-paper view.",
+            "Save concept anchors first; they explain why the vocabulary matters.",
+            "Then save recurring terms and reusable academic expressions separately.",
+        ]
+        if status == "whole-paper draft":
+            review_plan[0] = "Review the argument flow, then use the priority lists as the paper-level study plan."
+        if priority_concepts:
+            review_plan.append(f"First review concept: {priority_concepts[0]['text']}.")
+
+        return PaperMapSynthesis(
+            status=status,
+            argument_flow=flow,
+            priority_concepts=priority_concepts,
+            priority_terms=priority_terms,
+            reusable_expressions=reusable_expressions,
+            review_plan=review_plan[:5],
         )

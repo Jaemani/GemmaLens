@@ -157,11 +157,21 @@ class PaperMapGuide(BaseModel):
     next_steps: list[str] = Field(default_factory=list)
 
 
+class PaperMapSynthesis(BaseModel):
+    status: str = "partial"
+    argument_flow: list[str] = Field(default_factory=list)
+    priority_concepts: list[PaperMapItem] = Field(default_factory=list)
+    priority_terms: list[PaperMapItem] = Field(default_factory=list)
+    reusable_expressions: list[PaperMapItem] = Field(default_factory=list)
+    review_plan: list[str] = Field(default_factory=list)
+
+
 class PaperMapResponse(BaseModel):
     document_id: str
     total_sections: int = 0
     analyzed_sections: list[int] = Field(default_factory=list)
     guide: PaperMapGuide = Field(default_factory=PaperMapGuide)
+    synthesis: PaperMapSynthesis = Field(default_factory=PaperMapSynthesis)
     top_concepts: list[PaperMapItem] = Field(default_factory=list)
     top_terms: list[PaperMapItem] = Field(default_factory=list)
     top_phrases: list[PaperMapItem] = Field(default_factory=list)

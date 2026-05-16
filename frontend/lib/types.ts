@@ -100,6 +100,14 @@ export type PaperMap = {
     reading_focus: string[];
     next_steps: string[];
   };
+  synthesis?: {
+    status: string;
+    argument_flow: string[];
+    priority_concepts: PaperMapItem[];
+    priority_terms: PaperMapItem[];
+    reusable_expressions: PaperMapItem[];
+    review_plan: string[];
+  };
   top_concepts: PaperMapItem[];
   top_terms: PaperMapItem[];
   top_phrases: PaperMapItem[];

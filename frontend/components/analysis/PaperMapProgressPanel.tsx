@@ -41,6 +41,14 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
     reading_focus: [],
     next_steps: ["Analyze the next unstudied section."]
   };
+  const synthesis = paperMap.synthesis ?? {
+    status: "partial",
+    argument_flow: [],
+    priority_concepts: paperMap.top_concepts.slice(0, 5),
+    priority_terms: paperMap.top_terms.slice(0, 8),
+    reusable_expressions: paperMap.top_phrases.slice(0, 6),
+    review_plan: []
+  };
 
   return (
     <section className="rounded-lg border border-line bg-panel shadow-material">
@@ -83,6 +91,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
         <MapList title="Concepts" rows={paperMap.top_concepts} />
         <MapList title="Terms" rows={paperMap.top_terms} />
         <MapList title="Expressions" rows={paperMap.top_phrases} />
+        <SynthesisPanel synthesis={synthesis} />
       </div>
       <div className="border-t border-line p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Analyzed sections</p>
@@ -100,6 +109,47 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
         )}
       </div>
     </section>
+  );
+}
+
+function SynthesisPanel({ synthesis }: { synthesis: NonNullable<PaperMap["synthesis"]> }) {
+  return (
+    <div className="rounded-md border border-line bg-surface p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Whole-paper learning draft</p>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-neutral-500">{synthesis.status}</span>
+      </div>
+      <GuideList title="Argument flow" rows={synthesis.argument_flow} />
+      <div className="mt-4 grid gap-4">
+        <SynthesisList title="Priority concepts" rows={synthesis.priority_concepts} />
+        <SynthesisList title="Priority terms" rows={synthesis.priority_terms} />
+        <SynthesisList title="Reusable expressions" rows={synthesis.reusable_expressions} />
+      </div>
+      <GuideList title="Review plan" rows={synthesis.review_plan} />
+    </div>
+  );
+}
+
+function SynthesisList({ title, rows }: { title: string; rows: PaperMap["top_terms"] }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
+      {rows.length ? (
+        <div className="mt-2 space-y-3">
+          {rows.slice(0, 5).map((row) => (
+            <div key={row.text} className="border-t border-line pt-3 first:border-t-0 first:pt-0">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-semibold text-ink">{row.text}</p>
+                <span className="shrink-0 text-[11px] font-semibold text-neutral-500">S{row.sections.join(", ")}</span>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-neutral-600">{row.meaning}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 text-xs leading-5 text-neutral-600">Analyze more sections to build this list.</p>
+      )}
+    </div>
   );
 }
 
