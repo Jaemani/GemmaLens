@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Paperclip, ScanText, SkipForward } from "lucide-react";
+import { BookmarkPlus, CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Paperclip, ScanText, SkipForward } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { AnalysisResult, DocumentRead, DocumentSection } from "@/lib/types";
@@ -383,31 +383,97 @@ export function SectionLessonCard({
   isAnalyzingNext: boolean;
   embedded?: boolean;
 }) {
+  const [saved, setSaved] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState<string | null>(null);
+  const concepts = (analysis.concepts ?? []).slice(0, 5);
   const terms = analysis.terms.slice(0, 6);
-  const phrases = analysis.phrases.slice(0, 6);
+  const phrases = analysis.phrases.filter((phrase) => isUsefulExpression(phrase.phrase)).slice(0, 5);
   const className = embedded
     ? "border-t border-line p-5"
     : "rounded-lg border border-line bg-panel p-5 shadow-material";
+
+  async function saveItem(item: LessonSaveItem) {
+    const key = `${item.item_type}:${item.text}`;
+    setSaving(key);
+    try {
+      await api.saveDictionaryItem({
+        ...item,
+        document_id: analysis.document_id
+      });
+      setSaved((current) => new Set(current).add(key));
+    } finally {
+      setSaving(null);
+    }
+  }
+
   return (
     <div className={className}>
-      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section {sectionNumber} lesson</p>
-      <h3 className="mt-1 text-lg font-semibold">{analysis.summaries.one_line}</h3>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section {sectionNumber} lesson</p>
+          <h3 className="mt-1 text-lg font-semibold">{analysis.summaries.one_line}</h3>
+        </div>
+        <p className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-accent">
+          {concepts.length} concepts · {terms.length} terms · {phrases.length} expressions
+        </p>
+      </div>
       <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.summaries.simple}</p>
-      {analysis.concepts?.length ? (
+      {concepts.length ? (
         <div className="mt-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Concept anchors</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {analysis.concepts.slice(0, 5).map((concept) => (
-              <span key={concept.concept} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-accent">
-                {concept.concept}
-              </span>
-            ))}
+            {concepts.map((concept) => {
+              const key = `concept:${concept.concept}`;
+              const isSaved = saved.has(key);
+              return (
+                <button
+                  key={concept.concept}
+                  type="button"
+                  onClick={() =>
+                    saveItem({
+                      item_type: "concept",
+                      text: concept.concept,
+                      meaning: concept.explanation || concept.why_it_matters,
+                      source_sentence: concept.source_sentence
+                    })
+                  }
+                  disabled={isSaved || saving === key}
+                  className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-accent hover:bg-blue-100 disabled:text-green-700"
+                  title={isSaved ? "Saved to dictionary" : "Save concept"}
+                >
+                  {isSaved ? <CheckCircle2 size={12} /> : <BookmarkPlus size={12} />}
+                  {concept.concept}
+                </button>
+              );
+            })}
           </div>
         </div>
       ) : null}
       <div className="mt-5 grid gap-4">
-        <MiniList title="Terms to notice" rows={terms.map((term) => [term.term, term.meaning])} />
-        <MiniList title="Academic expressions" rows={phrases.map((phrase) => [phrase.phrase, phrase.explanation])} />
+        <MiniList
+          title="Terms to save if unfamiliar"
+          rows={terms.map((term) => ({
+            item_type: "term" as const,
+            text: term.term,
+            meaning: term.meaning,
+            source_sentence: term.source_sentence
+          }))}
+          saved={saved}
+          saving={saving}
+          onSave={saveItem}
+        />
+        <MiniList
+          title="Reusable academic expressions"
+          rows={phrases.map((phrase) => ({
+            item_type: "phrase" as const,
+            text: phrase.phrase,
+            meaning: phrase.explanation,
+            source_sentence: phrase.source_sentence
+          }))}
+          saved={saved}
+          saving={saving}
+          onSave={saveItem}
+        />
       </div>
       {analysis.sentences[0] ? (
         <div className="mt-5 rounded-md border border-line bg-surface p-4">
@@ -433,24 +499,64 @@ export function SectionLessonCard({
   );
 }
 
-function MiniList({ title, rows }: { title: string; rows: Array<[string, string]> }) {
+type LessonSaveItem = {
+  item_type: "term" | "phrase" | "sentence" | "concept";
+  text: string;
+  meaning?: string;
+  source_sentence?: string;
+};
+
+function MiniList({
+  title,
+  rows,
+  saved,
+  saving,
+  onSave
+}: {
+  title: string;
+  rows: LessonSaveItem[];
+  saved: Set<string>;
+  saving: string | null;
+  onSave: (item: LessonSaveItem) => Promise<void>;
+}) {
   return (
     <div className="rounded-md border border-line bg-surface p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
       {rows.length ? (
         <div className="mt-3 space-y-3">
-          {rows.map(([label, description]) => (
-            <div key={label}>
-              <p className="text-sm font-semibold text-ink">{label}</p>
-              <p className="mt-1 text-xs leading-5 text-neutral-600">{description}</p>
+          {rows.map((row) => {
+            const key = `${row.item_type}:${row.text}`;
+            const isSaved = saved.has(key);
+            return (
+            <div key={row.text} className="flex items-start justify-between gap-3 border-t border-line pt-3 first:border-t-0 first:pt-0">
+              <div>
+                <p className="text-sm font-semibold text-ink">{row.text}</p>
+                <p className="mt-1 text-xs leading-5 text-neutral-600">{row.meaning}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSave(row)}
+                disabled={isSaved || saving === key}
+                className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line bg-panel px-2.5 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:text-green-700"
+              >
+                {isSaved ? <CheckCircle2 size={13} /> : <BookmarkPlus size={13} />}
+                {isSaved ? "Saved" : saving === key ? "Saving" : "Save"}
+              </button>
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <p className="mt-3 text-sm text-neutral-600">No strong items found for this section.</p>
       )}
     </div>
   );
+}
+
+function isUsefulExpression(value: string) {
+  const normalized = value.trim().toLowerCase();
+  const blocked = new Set(["the best performing models", "best performing models", "performing models"]);
+  return Boolean(normalized) && !blocked.has(normalized);
 }
 
 function pdfPageFromLabel(label: string | null) {

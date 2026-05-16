@@ -62,6 +62,8 @@ Local demo records currently include:
 - The PDF pane now has zoom controls and a higher default zoom. The original source is closer to a readable PDF view rather than a small page thumbnail.
 - The section strip keeps section numbers visible even after analysis, so users can identify `S2`, `S3`, etc. instead of seeing anonymous green check boxes.
 - Paper-map section summaries are collapsed by default. The paper map now opens as a study guide first, with the section-by-section audit trail available on demand.
+- The current section lesson now has direct dictionary save buttons for concepts, terms, and reusable expressions. A user no longer has to open the legacy detailed output just to save an item while reading.
+- Generic discourse fragments such as `the best performing models` are filtered out of the section lesson expression list. They may explain the argument, but they are not useful as primary save targets.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
 - Added real-paper normalization fixtures for BatchNorm and BERT snippets so generic fragments and PDF split artifacts are rejected in tests.
 - Added an Attention/Transformer fixture so `the best performing models` is handled as a discourse signal rather than a saveable term/concept, while Transformer, self-attention, sequence transduction, and parallelization remain learnable.

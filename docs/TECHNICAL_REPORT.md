@@ -140,6 +140,8 @@ Important current policy:
 - The paper map now returns total section count and analyzed section numbers. The UI displays coverage such as `1 / 27 sections analyzed`, and refreshes automatically after a section lesson is generated.
 - Reordered the paper workspace so the section reader and "Analyze this section" action appear directly beside the PDF before the cumulative map and lower learning-object tables. This supports page-by-page study instead of forcing the user to scroll through a static analysis report before continuing.
 - The current section lesson now renders immediately below the section controls, before the paper map. This keeps the user in a read-analyze-learn loop rather than sending them through a cumulative report first.
+- The current section lesson includes direct dictionary save buttons for concepts, terms, and reusable expressions, so the primary reading loop supports learning-memory creation without opening the legacy detailed output.
+- The section lesson filters generic discourse fragments out of its main expression list when they are not good save targets.
 - The PDF source pane now includes zoom controls and defaults to a more readable scale, with overflow contained inside the pane.
 - The analysis workspace grid was adjusted to avoid horizontal overflow at laptop widths while preserving the two-pane paper/source layout.
 - Renamed the single-result concept panel to "Concept anchors" so it is not confused with the cumulative paper map.

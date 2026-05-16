@@ -2,6 +2,8 @@
 
 ## 2026-05-15
 
+- Added one-click dictionary saves directly inside the current section lesson for concepts, terms, and reusable expressions.
+- Filtered generic discourse fragments such as `the best performing models` out of section lesson expression lists, keeping them out of the main save flow.
 - Reworked the analysis page as a paper-reading workspace: the current section lesson now appears immediately after section controls, before the cumulative paper map.
 - Compactified the reading profile card so it no longer dominates the top of the workspace.
 - Added PDF zoom controls and a higher default zoom so the original PDF pane works as a readable source, not just a thumbnail preview.
