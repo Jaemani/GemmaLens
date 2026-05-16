@@ -387,6 +387,20 @@ function SectionPreparationPanel({
   if (!status) return null;
   const progress = status.total ? Math.min(100, Math.round((status.ready / status.total) * 100)) : 0;
   const canContinue = !status.running && status.ready < status.total;
+  const complete = status.ready >= status.total;
+  if (complete) {
+    return (
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm shadow-material">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Section preparation</p>
+          <p className="mt-1 font-semibold text-ink">All section lessons are ready.</p>
+        </div>
+        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-emerald-700">
+          {status.ready} / {status.total} ready
+        </span>
+      </section>
+    );
+  }
   return (
     <section className="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-material">
       <div className="flex flex-wrap items-start justify-between gap-4">

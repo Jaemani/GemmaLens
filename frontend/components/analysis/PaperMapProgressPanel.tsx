@@ -9,6 +9,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
   const [paperMap, setPaperMap] = useState<PaperMap | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
+  const [showStudyLists, setShowStudyLists] = useState(false);
   const [showSignals, setShowSignals] = useState(false);
   const [showSectionSummaries, setShowSectionSummaries] = useState(false);
 
@@ -58,10 +59,12 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
     <section className="rounded-lg border border-line bg-panel shadow-material">
       <div className="flex flex-wrap items-start justify-between gap-3 p-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Progressive paper map</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{complete ? "Paper study map" : "Progressive paper map"}</p>
           <h2 className="mt-1 text-base font-semibold">{complete ? "Whole-paper guide ready" : "Map from ready sections"}</h2>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-neutral-600">
-            Auto-refreshes as section lessons finish. Expand when you want the argument flow and priority concepts.
+            {complete
+              ? "Complete section-level map for the paper: reading guide, argument flow, priority concepts, and review material."
+              : "Auto-refreshes as section lessons finish. Expand when you want the argument flow and priority concepts."}
           </p>
           {complete ? (
             <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Complete map</span>
@@ -75,15 +78,17 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={load}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            Refresh
-          </button>
+          {!complete ? (
+            <button
+              type="button"
+              onClick={load}
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              Refresh
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setExpanded((value) => !value)}
@@ -111,6 +116,34 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
           <div className="rounded-md border border-line bg-panel p-4">
             <button
               type="button"
+              onClick={() => setShowStudyLists((value) => !value)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <span>
+                <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">Vocabulary and review plan</span>
+                <span className="mt-1 block text-sm leading-6 text-neutral-600">
+                  Paper-level terms, reusable expressions, and review sequence. Keep separate from the visual map because it is study material, not navigation.
+                </span>
+              </span>
+              {showStudyLists ? <ChevronDown size={18} className="shrink-0 text-neutral-500" /> : <ChevronRight size={18} className="shrink-0 text-neutral-500" />}
+            </button>
+          </div>
+          {showStudyLists ? (
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="rounded-md border border-line bg-surface p-4 lg:col-span-1">
+                <SynthesisList title="Priority terms" rows={synthesis.priority_terms} limit={8} />
+              </div>
+              <div className="rounded-md border border-line bg-surface p-4 lg:col-span-1">
+                <SynthesisList title="Reusable expressions" rows={synthesis.reusable_expressions} limit={6} />
+              </div>
+              <div className="rounded-md border border-line bg-surface p-4 lg:col-span-1">
+                <GuideList title="Review plan" rows={synthesis.review_plan} />
+              </div>
+            </div>
+          ) : null}
+          <div className="rounded-md border border-line bg-panel p-4">
+            <button
+              type="button"
               onClick={() => setShowSignals((value) => !value)}
               className="flex w-full items-center justify-between gap-3 text-left"
             >
@@ -124,11 +157,11 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
             </button>
           </div>
           {showSignals ? (
-            <>
+            <div className="grid gap-4 lg:grid-cols-3">
               <MapList title="Concepts" rows={paperMap.top_concepts} />
               <MapList title="Terms" rows={paperMap.top_terms} />
               <MapList title="Expressions" rows={paperMap.top_phrases} />
-            </>
+            </div>
           ) : null}
           <div className="border-t border-line pt-5">
             <button
@@ -151,7 +184,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
               )}
             </button>
             {showSectionSummaries && paperMap.section_summaries.length ? (
-              <div className="mt-3 grid gap-3">
+              <div className="mt-3 grid max-h-[520px] gap-3 overflow-y-auto pr-1">
                 {paperMap.section_summaries.map((summary) => (
                   <article key={summary.text} className="rounded-md border border-line bg-surface p-3">
                     <p className="text-sm font-semibold text-ink">{summary.text}</p>
@@ -169,10 +202,9 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
 
 function SynthesisPanel({ synthesis, complete }: { synthesis: NonNullable<PaperMap["synthesis"]>; complete: boolean }) {
   const [showFullFlow, setShowFullFlow] = useState(false);
-  const [showStudyLists, setShowStudyLists] = useState(false);
   const visibleFlow = showFullFlow ? synthesis.argument_flow : synthesis.argument_flow.slice(0, 5);
   const hiddenFlowCount = Math.max(0, synthesis.argument_flow.length - visibleFlow.length);
-  const title = complete ? "Complete map" : "Draft map";
+  const title = complete ? "Argument map" : "Draft argument map";
 
   return (
     <div className="rounded-md border border-line bg-surface p-4">
@@ -203,26 +235,6 @@ function SynthesisPanel({ synthesis, complete }: { synthesis: NonNullable<PaperM
       <div className="mt-4 rounded-md border border-line bg-panel p-3">
         <SynthesisList title="Priority concepts" rows={synthesis.priority_concepts} limit={6} />
       </div>
-      <div className="mt-4 rounded-md border border-line bg-panel p-3">
-        <button
-          type="button"
-          onClick={() => setShowStudyLists((value) => !value)}
-          className="flex w-full items-center justify-between gap-3 text-left"
-        >
-          <span>
-            <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">Vocabulary and review plan</span>
-            <span className="mt-1 block text-xs leading-5 text-neutral-600">Open when organizing saved terms and expressions.</span>
-          </span>
-          {showStudyLists ? <ChevronDown size={16} className="shrink-0 text-neutral-500" /> : <ChevronRight size={16} className="shrink-0 text-neutral-500" />}
-        </button>
-      </div>
-      {showStudyLists ? (
-        <div className="mt-4 grid gap-4">
-          <SynthesisList title="Priority terms" rows={synthesis.priority_terms} limit={8} />
-          <SynthesisList title="Reusable expressions" rows={synthesis.reusable_expressions} limit={6} />
-          <GuideList title="Review plan" rows={synthesis.review_plan} />
-        </div>
-      ) : null}
     </div>
   );
 }
