@@ -32,6 +32,9 @@ class AnalysisNormalizationService:
             terms = self._prefer_bert_architecture_model_size_terms(terms, document_text)
         if self._is_bert_input_representation_masked_lm_transition_section(document_text):
             terms = self._prefer_bert_input_representation_masked_lm_terms(terms, document_text)
+        if self._is_bert_masked_lm_procedure_section(document_text):
+            terms = self._prefer_bert_masked_lm_procedure_terms(terms, document_text)
+            phrases = self._filter_bert_masked_lm_procedure_phrases(phrases)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -96,6 +99,9 @@ class AnalysisNormalizationService:
             normalized["concepts"] = self._prefer_bert_architecture_model_size_concepts(normalized["concepts"], document_text)
         if self._is_bert_input_representation_masked_lm_transition_section(document_text):
             normalized["concepts"] = self._prefer_bert_input_representation_masked_lm_concepts(normalized["concepts"], document_text)
+        if self._is_bert_masked_lm_procedure_section(document_text):
+            normalized["concepts"] = self._prefer_bert_masked_lm_procedure_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_bert_masked_lm_procedure_phrases(normalized["phrases"])
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -1791,6 +1797,16 @@ class AnalysisNormalizationService:
                 ("is constructed by summing", "method", "Explains how BERT builds each token input vector."),
                 ("we do not use traditional", "contrast", "Contrasts BERT pre-training with left-to-right/right-to-left language models."),
                 ("Instead, we pre-train", "method", "Introduces the replacement method after rejecting a prior approach."),
+                ("In order to train", "method", "Introduces the purpose of a training procedure."),
+                ("We refer to this procedure as", "general", "Names a method after describing it."),
+                ("although it is often referred to as", "general", "Connects the paper's term to another literature term."),
+                ("are fed into", "method", "Describes where model vectors go in the prediction step."),
+                ("In contrast to", "contrast", "Contrasts the method with a related prior method."),
+                ("rather than reconstructing", "contrast", "Clarifies what the method does not try to predict."),
+                ("a downside is that", "limitation", "Introduces a practical limitation of the method."),
+                ("To mitigate this", "method", "Introduces a workaround for a stated limitation."),
+                ("chooses 15% of the token positions", "method", "States the sampling rule for masked-token prediction."),
+                ("will be used to predict", "method", "Explains the prediction target and loss connection."),
             ]
         elif self._is_attention_text(document_text):
             phrase_specs = [
@@ -2753,6 +2769,17 @@ class AnalysisNormalizationService:
 
     def _heuristic_sentences(self, document_text: str) -> list[dict[str, str]]:
         if self._is_bert_text(document_text):
+            if self._is_bert_masked_lm_procedure_section(document_text):
+                sentence = self._source_sentence(None, "In contrast to", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "In contrast to A, we do B rather than C.",
+                        "simplified_version": "Unlike denoising auto-encoders, BERT predicts masked words instead of reconstructing the whole input.",
+                        "korean_explanation": "'In contrast to'는 비슷한 방법과 BERT의 차이를 설명하는 신호입니다.",
+                        "difficulty_reason": "The sentence is dense because it compares objectives and uses a rather-than contrast.",
+                    }
+                ]
             specs = [
                 (
                     "There are two existing strategies",
@@ -2914,6 +2941,27 @@ class AnalysisNormalizationService:
                     "The authors move from rejecting traditional directional language models to introducing BERT's two unsupervised tasks.",
                     "'Instead'는 앞 방법을 쓰지 않고 대체 방법을 제시한다는 신호입니다.",
                     "This sentence is the transition from input representation to masked language modeling.",
+                ),
+                (
+                    "In contrast to",
+                    "In contrast to A, we do B rather than C.",
+                    "The authors contrast MLM with denoising auto-encoders: predict masked words, not the whole input.",
+                    "'In contrast to'는 비슷한 방법과의 차이를 명확히 하는 표현입니다.",
+                    "The sentence matters because it limits what the objective predicts.",
+                ),
+                (
+                    "Although this allows us to",
+                    "Although A allows us to do B, a downside is that C.",
+                    "The authors state the benefit of MLM and immediately admit the [MASK] mismatch problem.",
+                    "'Although'는 장점 뒤에 한계를 붙이는 논문식 균형 표현입니다.",
+                    "The reader should keep both sides: bidirectional pre-training benefit and fine-tuning mismatch cost.",
+                ),
+                (
+                    "To mitigate this",
+                    "To mitigate this, we do not always replace X with Y.",
+                    "The authors introduce the 80/10/10 replacement rule as a workaround for [MASK] mismatch.",
+                    "'To mitigate this'는 앞에서 말한 문제를 줄이기 위한 조치를 소개합니다.",
+                    "This sentence starts the procedural details; the percentages explain the actual rule.",
                 ),
             ]
         elif self._is_attention_text(document_text):
@@ -4275,6 +4323,23 @@ class AnalysisNormalizationService:
                         "The final paragraph is a transition into Masked LM, not another input-format detail.",
                     ],
                 }
+            if self._is_bert_masked_lm_procedure_section(document_text):
+                return {
+                    "one_line": "This section defines BERT's Masked LM objective and its 80/10/10 token replacement workaround.",
+                    "simple": (
+                        "BERT masks 15% of WordPiece token positions and predicts the original tokens from their final hidden vectors. "
+                        "Because [MASK] does not appear during fine-tuning, the selected tokens are replaced with [MASK] 80% of the time, a random token 10%, and unchanged 10%."
+                    ),
+                    "academic": (
+                        "The section presents masked language modeling as BERT's bidirectional pre-training objective, contrasts it with full-input denoising reconstruction, "
+                        "and explains the replacement distribution used to reduce the pre-training/fine-tuning mismatch introduced by [MASK]."
+                    ),
+                    "study_notes": [
+                        "The important number is not just 15%; it is 15% selected positions plus 80/10/10 replacement.",
+                        "Separate the objective from the workaround: predict original token vs. avoid [MASK] mismatch.",
+                        "Read 'In contrast to' and 'Although' as signals for method comparison and limitation.",
+                    ],
+                }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
                 return {
                     "one_line": "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning.",
@@ -4934,6 +4999,131 @@ class AnalysisNormalizationService:
         ]
         return [*promoted, *rest][:8]
 
+    def _prefer_bert_masked_lm_procedure_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"bidirectional representation", "wordpiece tokens", "bert", "pre-training", "fine-tuning", "next sentence prediction"}
+        preferred = [
+            ("masked LM", "BERT's objective of predicting masked tokens from bidirectional context.", "field_term", "hard", "This is the section's central method."),
+            ("Cloze task", "A fill-in-the-blank prediction task known in earlier literature.", "useful", "medium", "The paper maps MLM to a familiar prior term."),
+            ("output softmax", "The prediction layer over vocabulary items for masked token prediction.", "field_term", "hard", "This explains how hidden vectors become token predictions."),
+            ("15% of all WordPiece tokens", "The fraction of token positions selected for MLM prediction.", "field_term", "medium", "This is the sampling rate for the objective."),
+            ("denoising auto-encoders", "Models trained to reconstruct corrupted input.", "useful", "medium", "BERT contrasts MLM with reconstructing an entire input."),
+            ("pre-training and fine-tuning mismatch", "The gap created because [MASK] appears during pre-training but not fine-tuning.", "field_term", "hard", "This motivates the replacement workaround."),
+            ("[MASK] token", "The special token used for most selected masked positions.", "field_term", "medium", "This is central to the mismatch problem and the 80% replacement case."),
+            ("80/10/10 replacement rule", "The selected-token rule: [MASK] 80%, random token 10%, unchanged token 10%.", "field_term", "hard", "This is the practical detail learners need to retain."),
+            ("original token", "The true token that the model must predict after replacement.", "useful", "medium", "This separates replacement input from prediction target."),
+            ("cross entropy loss", "The loss used to train prediction of the original token.", "field_term", "medium", "This connects MLM prediction to the training signal."),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            lowered = term.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = {
+                    "masked LM": "masked LM",
+                    "15% of all WordPiece tokens": "mask 15% of all WordPiece tokens",
+                    "pre-training and fine-tuning mismatch": "mismatch between pre-training and fine-tuning",
+                    "80/10/10 replacement rule": "80% of the time",
+                    "original token": "predict the original token",
+                }.get(term, term)
+                promoted.append(
+                    {
+                        "term": term,
+                        "meaning": meaning,
+                        "domain_relevance": "high" if priority == "field_term" else "medium",
+                        "difficulty": difficulty,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "should_save": True,
+                        "learning_priority": priority,
+                        "reason": reason,
+                        "context_meaning": meaning,
+                        "general_meaning": meaning,
+                        "confidence": 0.9,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}
+        ]
+        return [*promoted, *rest][:12]
+
+    def _prefer_bert_masked_lm_procedure_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {
+            "bidirectional representation",
+            "wordpiece tokens",
+            "cross entropy loss",
+            "masked lm",
+            "cloze task",
+            "fine-tuning",
+            "next sentence prediction",
+            "pre-training",
+        }
+        preferred = {
+            "masked-token prediction objective": (
+                "BERT selects some input tokens at random and predicts the original tokens from bidirectional context.",
+                "This is the core method, not just a vocabulary item.",
+                "mask some percentage of the input tokens",
+            ),
+            "MLM versus denoising reconstruction": (
+                "BERT predicts only masked words rather than reconstructing the entire input.",
+                "This explains how MLM differs from denoising auto-encoders.",
+                "rather than reconstructing the entire input",
+            ),
+            "[MASK] mismatch problem": (
+                "[MASK] appears during pre-training but not during fine-tuning, creating a distribution mismatch.",
+                "This is why the paper needs the replacement rule.",
+                "mismatch between pre-training and fine-tuning",
+            ),
+            "80/10/10 replacement strategy": (
+                "Selected positions become [MASK] 80% of the time, a random token 10%, and unchanged 10%.",
+                "This is the concrete workaround for the [MASK] mismatch problem.",
+                "80% of the time",
+            ),
+            "original-token prediction target": (
+                "Even when the input is replaced randomly or left unchanged, the target is still the original token.",
+                "This prevents confusion between the input corruption and the training label.",
+                "predict the original token",
+            ),
+            "transition to next sentence prediction": (
+                "After MLM, the section moves to NSP for sentence-relationship tasks such as QA and NLI.",
+                "This links token-level pre-training to sentence-pair understanding.",
+                "Task #2: Next Sentence Prediction",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            lowered = concept.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                promoted.append(
+                    {
+                        "concept": concept,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [concept],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.88,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_bert_masked_lm_procedure_phrases(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        blocked = {"allows us to", "during fine-tuning"}
+        return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -4963,7 +5153,7 @@ class AnalysisNormalizationService:
 
     def _needs_bert_section_sentence_override(self, document_text: str) -> bool:
         lowered = document_text.lower()
-        return self._is_bert_text(document_text) and "contributions of our paper" in lowered
+        return (self._is_bert_text(document_text) and "contributions of our paper" in lowered) or self._is_bert_masked_lm_procedure_section(document_text)
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
         lowered = document_text.lower()
@@ -4979,6 +5169,8 @@ class AnalysisNormalizationService:
         if self._is_bert_architecture_model_size_section(document_text):
             return True
         if self._is_bert_input_representation_masked_lm_transition_section(document_text):
+            return True
+        if self._is_bert_masked_lm_procedure_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -5242,6 +5434,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_input_representation_masked_lm_transition_section(document_text):
             return True
+        if self._is_bert_masked_lm_procedure_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -5270,6 +5464,10 @@ class AnalysisNormalizationService:
     def _is_bert_input_representation_masked_lm_transition_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "first token of every sequence" in lowered and "constructed by summing" in lowered and "task #1: masked lm" in lowered
+
+    def _is_bert_masked_lm_procedure_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "we refer to this procedure as a" in lowered and "80% of the time" in lowered and "cross entropy loss" in lowered
 
     def _is_attention_text(self, document_text: str) -> bool:
         lowered = document_text.lower()

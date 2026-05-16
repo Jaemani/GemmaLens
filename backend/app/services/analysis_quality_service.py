@@ -66,6 +66,7 @@ class AnalysisQualityService:
             "token embeddings": "token",
             "left-to-right language models": "left-to-right",
             "right-to-left language models": "right-to-left",
+            "80/10/10 replacement rule": "80% of the time",
         }
         alias = support_aliases.get(value_lower)
         if alias and alias in source_lower:

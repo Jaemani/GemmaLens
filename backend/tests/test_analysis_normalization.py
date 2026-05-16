@@ -2099,3 +2099,92 @@ def test_bert_input_representation_section_recovers_masked_lm_transition():
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
     assert "term_count_out_of_range:2" not in result.quality_warnings
     assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)
+
+
+def test_bert_masked_lm_section_recovers_replacement_strategy():
+    document = (
+        "In order to train a deep bidirectional representation, we simply mask some percentage of the input tokens at random, "
+        "and then predict those masked tokens. We refer to this procedure as a masked LM (MLM), although it is often referred to as a Cloze task in the literature. "
+        "In this case, the final hidden vectors corresponding to the mask tokens are fed into an output softmax over the vocabulary. "
+        "In all of our experiments, we mask 15% of all WordPiece tokens in each sequence at random. "
+        "In contrast to denoising auto-encoders, we only predict the masked words rather than reconstructing the entire input. "
+        "Although this allows us to obtain a bidirectional pre-trained model, a downside is that we are creating a mismatch "
+        "between pre-training and fine-tuning, since the [MASK] token does not appear during fine-tuning. "
+        "To mitigate this, we do not always replace masked words with the actual [MASK] token. "
+        "If the i-th token is chosen, we replace the i-th token with (1) the [MASK] token 80% of the time (2) a random token 10% of the time (3) the unchanged i-th token 10% of the time. "
+        "Then, Ti will be used to predict the original token with cross entropy loss. "
+        "Task #2: Next Sentence Prediction (NSP) Many important downstream tasks such as Question Answering and Natural Language Inference are based on understanding the relationship between two sentences."
+    )
+    payload = {
+        "terms": [
+            {"term": "bidirectional representation", "meaning": "too broad alone"},
+            {"term": "WordPiece tokens", "meaning": "subword tokens"},
+            {"term": "cross entropy loss", "meaning": "loss"},
+        ],
+        "concepts": [
+            {"concept": "bidirectional representation", "explanation": "term duplicated as concept"},
+            {"concept": "WordPiece tokens", "explanation": "term duplicated as concept"},
+            {"concept": "cross entropy loss", "explanation": "term duplicated as concept"},
+        ],
+        "phrases": [{"phrase": "allows us to", "function": "result", "explanation": "thin phrase"}],
+        "summaries": {"one_line": "In order to train a deep bidirectional representation, we simply mask some percentage of the input tokens at random."},
+        "sentences": [
+            {
+                "sentence": "Although this allows us to obtain a bidirectional pre-trained model, a downside is that we are creating a mismatch between pre-training and fine-tuning.",
+                "core_structure": "Method allows us to do A and be less B.",
+            }
+        ],
+        "quality_warnings": ["phrase_count_out_of_range:1"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-mlm-procedure", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "masked LM",
+        "cloze task",
+        "output softmax",
+        "15% of all WordPiece tokens",
+        "denoising auto-encoders",
+        "pre-training and fine-tuning mismatch",
+        "[MASK] token",
+        "80/10/10 replacement rule",
+        "original token",
+        "cross entropy loss",
+    }.issubset(terms)
+    assert "bidirectional representation" not in terms
+    assert "WordPiece tokens" not in terms
+    assert "fine-tuning" not in terms
+    assert "next sentence prediction" not in terms
+    assert {
+        "masked-token prediction objective",
+        "MLM versus denoising reconstruction",
+        "[MASK] mismatch problem",
+        "80/10/10 replacement strategy",
+        "original-token prediction target",
+        "transition to next sentence prediction",
+    }.issubset(concepts)
+    assert "bidirectional representation" not in concepts
+    assert "WordPiece tokens" not in concepts
+    assert "fine-tuning" not in concepts
+    assert "next sentence prediction" not in concepts
+    assert "pre-training" not in concepts
+    assert {
+        "In order to train",
+        "We refer to this procedure as",
+        "although it is often referred to as",
+        "are fed into",
+        "In contrast to",
+        "rather than reconstructing",
+        "a downside is that",
+        "To mitigate this",
+        "will be used to predict",
+    }.issubset(phrases)
+    assert "allows us to" not in phrases
+    assert "During fine-tuning" not in phrases
+    assert result.summaries.one_line == "This section defines BERT's Masked LM objective and its 80/10/10 token replacement workaround."
+    assert result.sentences[0].core_structure == "In contrast to A, we do B rather than C."
+    assert "phrase_count_out_of_range:1" not in result.quality_warnings
+    assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)
