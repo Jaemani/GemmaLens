@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { BookOpen, FileQuestion, FileText, HelpCircle, Languages, LayoutDashboard, Settings, Video } from "lucide-react";
-import { GlobalStatusDock } from "./GlobalStatusDock";
 
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -15,12 +14,12 @@ const items = [
 
 export function Sidebar() {
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-line bg-panel px-4 py-5 md:flex">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 overflow-y-auto border-r border-line bg-panel px-4 py-5 md:block">
       <div className="mb-7">
         <p className="text-base font-semibold text-ink">GemmaLens</p>
         <h1 className="mt-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">Edge language learning</h1>
       </div>
-      <nav className="flex-1 space-y-1">
+      <nav className="space-y-1">
         {items.map((item) => {
           const Icon = item.icon;
           return (
@@ -31,7 +30,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <GlobalStatusDock />
     </aside>
   );
 }

@@ -79,7 +79,11 @@ export function GlobalStatusDock() {
   }
 
   return (
-    <aside className="w-full rounded-lg border border-line bg-surface text-[11px]">
+    <aside
+      className={`fixed bottom-3 right-3 z-40 rounded-lg border border-line bg-panel/95 text-[11px] shadow-material backdrop-blur ${
+        expanded ? "w-[min(260px,calc(100vw-1.5rem))]" : "w-[min(150px,calc(100vw-1.5rem))]"
+      }`}
+    >
       <div className="flex items-center justify-between gap-2 px-3 py-2">
         <button type="button" onClick={openActivity} className="flex min-w-0 items-center gap-2 text-left font-semibold text-ink disabled:cursor-default" disabled={!activity?.href}>
           <Activity size={13} className={activity ? "shrink-0 animate-pulse text-accent" : "shrink-0 text-neutral-500"} />
