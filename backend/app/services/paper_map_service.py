@@ -58,9 +58,9 @@ class PaperMapService:
             for phrase in result.phrases:
                 self._add(phrases, phrase.phrase, phrase.explanation, section_number)
 
-        top_concepts = [item for item in self._rank(concepts, 20) if not self._is_bibliography_study_item(str(item["text"]))][:10]
-        top_terms = [item for item in self._rank(terms, 30) if not self._is_bibliography_study_item(str(item["text"]))][:12]
-        top_phrases = [item for item in self._rank(phrases, 80) if not self._is_bibliography_study_item(str(item["text"]))][:40]
+        top_concepts = [item for item in self._rank(concepts, 20) if not self._is_paper_map_study_noise(str(item["text"]))][:10]
+        top_terms = [item for item in self._rank(terms, 30) if not self._is_paper_map_study_noise(str(item["text"]))][:12]
+        top_phrases = [item for item in self._rank(phrases, 80) if not self._is_paper_map_study_noise(str(item["text"]))][:40]
 
         return PaperMapResponse(
             document_id=document_id,
@@ -179,21 +179,26 @@ class PaperMapService:
             return 2
         return 1
 
-    def _is_bibliography_study_item(self, text: str) -> bool:
+    def _is_paper_map_study_noise(self, text: str) -> bool:
         lowered = " ".join(text.lower().split())
-        bibliography_items = {
+        noisy_items = {
             "acl",
             "advances in neural information processing systems",
             "arxiv preprint",
             "association for computational linguistics",
+            "50% of the time",
+            "conll",
             "proceedings",
             "in acl",
+            "in conll",
             "in proceedings of",
             "in advances in",
+            "is a collection of",
             "journal of machine learning research",
             "corr",
         }
-        return lowered in bibliography_items
+        conference_markers = {"acl", "conll", "emnlp", "naacl", "neurips", "nips", "icml", "iclr", "cvpr", "iccv", "eccv"}
+        return lowered in noisy_items or (lowered.startswith("in ") and lowered[3:] in conference_markers)
 
     def _is_learning_signal(self, text: str) -> bool:
         lowered = " ".join(text.lower().split())

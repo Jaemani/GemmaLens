@@ -26,7 +26,7 @@ Evaluate GemmaLens as a real user reading famous academic PDFs end to end. The a
 | Page vs section distinction | `DocumentPageReader` groups sections under PDF page headers and shows document section plus page-local section | Met |
 | Useful complete paper guide | `PaperMapProgressPanel` shows whole-paper guide, collapsed argument flow, priority concepts, terms, expressions; completed paper maps now return `complete section guide` | Partly met; synthesis is deterministic and light |
 | Concepts vs words separated | `SectionLessonCard` separates concept anchors, terms, reusable expressions, hard sentence pattern | Met in UI; quality still depends on profiles/normalizer |
-| Extraction trash hidden | Dashboard/Documents previews and lesson snippets strip PDF markers and raw clutter; paper-map synthesis filters references-boundary summaries and bibliography venue markers from priority study lists | Met for inspected pages |
+| Extraction trash hidden | Dashboard/Documents previews and lesson snippets strip PDF markers and raw clutter; paper-map synthesis filters references-boundary summaries, bibliography venue markers, and low-value expression fragments from priority study lists | Met for inspected pages |
 | Duplicate partial uploads reduced | `displayableDocuments` chooses the most complete display item per title/source type | Met for display; raw duplicate records still exist |
 | Translate is not blank/opaque | Translate page empty/loading/copy states verified by Playwright | Met |
 | Video has usable empty/progress state | Video page empty/fetch/parse states verified by screenshot and build | Met for empty state; full transcript interaction still lightly tested |

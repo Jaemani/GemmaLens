@@ -136,7 +136,7 @@ def test_paper_map_argument_flow_skips_reference_boundary_artifacts():
     assert "implementation details" in flow_text
 
 
-def test_paper_map_priority_lists_skip_bibliography_items():
+def test_paper_map_priority_lists_skip_study_noise():
     text = "BERT uses masked language modeling for bidirectional pre-training."
     result = AnalysisResult.model_validate(
         {
@@ -159,7 +159,10 @@ def test_paper_map_priority_lists_skip_bibliography_items():
             ],
             "phrases": [
                 {"phrase": "In ACL", "function": "general", "explanation": "conference marker", "source_sentence": text},
+                {"phrase": "In CoNLL", "function": "general", "explanation": "conference marker", "source_sentence": text},
                 {"phrase": "In Proceedings of", "function": "general", "explanation": "bibliography marker", "source_sentence": text},
+                {"phrase": "50% of the time", "function": "general", "explanation": "sampling ratio", "source_sentence": text},
+                {"phrase": "is a collection of", "function": "general", "explanation": "generic definition fragment", "source_sentence": text},
                 {"phrase": "In contrast to", "function": "contrast", "explanation": "contrast signal", "source_sentence": text},
             ],
             "concepts": [{"concept": "masked language model", "explanation": "paper concept", "source_sentence": text}],
@@ -176,9 +179,12 @@ def test_paper_map_priority_lists_skip_bibliography_items():
     assert "acl" not in top_text
     assert "advances in neural information processing systems" not in top_text
     assert "in acl" not in top_text
+    assert "in conll" not in top_text
     assert "proceedings" not in top_text
     assert "arxiv preprint" not in top_text
     assert "in proceedings of" not in top_text
+    assert "50% of the time" not in top_text
+    assert "is a collection of" not in top_text
 
 
 def test_paper_map_guide_separates_partial_coverage_from_whole_paper_claim():
