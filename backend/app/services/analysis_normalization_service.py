@@ -76,6 +76,8 @@ class AnalysisNormalizationService:
         )
         if self._is_bert_text(document_text):
             normalized["concepts"] = self._filter_bert_learning_rows(normalized["concepts"], "concept")
+        if self._is_bert_feature_based_related_work_section(document_text):
+            normalized["concepts"] = self._prefer_bert_feature_related_work_concepts(normalized["concepts"], document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -460,6 +462,48 @@ class AnalysisNormalizationService:
                     "field_term",
                     "hard",
                     "This task supports sentence-pair understanding in BERT.",
+                ),
+                (
+                    "pre-trained word embeddings",
+                    "Word vectors learned before downstream task training.",
+                    "field_term",
+                    "medium",
+                    "This is the older feature-based representation line the section reviews.",
+                ),
+                (
+                    "sentence embeddings",
+                    "Vector representations for whole sentences rather than individual words.",
+                    "field_term",
+                    "medium",
+                    "This shows how feature-based representation learning moves to coarser granularities.",
+                ),
+                (
+                    "paragraph embeddings",
+                    "Vector representations for paragraphs or longer text units.",
+                    "field_term",
+                    "medium",
+                    "This is another coarser-granularity representation baseline.",
+                ),
+                (
+                    "ELMo",
+                    "A feature-based contextual representation model built from left-to-right and right-to-left language models.",
+                    "field_term",
+                    "hard",
+                    "This is the key feature-based predecessor BERT contrasts with.",
+                ),
+                (
+                    "context-sensitive features",
+                    "Token representations that depend on surrounding context.",
+                    "field_term",
+                    "hard",
+                    "This is the main feature extracted by ELMo.",
+                ),
+                (
+                    "left-to-right and right-to-left language model",
+                    "A pair of directional language models whose representations are concatenated.",
+                    "field_term",
+                    "hard",
+                    "This explains the ELMo-style bidirectional feature construction.",
                 ),
             ]
         elif self._is_attention_text(document_text):
@@ -1648,6 +1692,13 @@ class AnalysisNormalizationService:
                 ("reduce the need for", "result", "States a practical simplification benefit."),
                 ("we demonstrate", "result", "Signals the evidence used to support the paper's claim."),
                 ("obtains new state-of-the-art", "result", "States an empirical performance result."),
+                ("has been an active area of research", "general", "Introduces a long-running research area."),
+                ("are an integral part of", "claim", "States that a method family is now central to modern systems."),
+                ("offering significant improvements over", "result", "Compares pre-trained embeddings with training from scratch."),
+                ("have been generalized to", "general", "Shows how a method family extends to broader representation levels."),
+                ("along a different dimension", "contrast", "Marks that ELMo generalizes prior work in a different way."),
+                ("extract context-sensitive features", "method", "Explains ELMo's feature-extraction role."),
+                ("is the concatenation of", "method", "Explains how directional representations are combined."),
             ]
         elif self._is_attention_text(document_text):
             phrase_specs = [
@@ -1937,6 +1988,26 @@ class AnalysisNormalizationService:
                     "next sentence prediction",
                     "A pre-training objective that teaches relationships between sentence pairs.",
                     "This supports tasks where understanding the relation between two sentences matters.",
+                ),
+                (
+                    "feature-based representation history",
+                    "The section reviews non-neural and neural word-representation methods before BERT.",
+                    "This frames the related-work section as background, not BERT's method.",
+                ),
+                (
+                    "coarser-granularity embeddings",
+                    "Representation learning was extended from words to sentences and paragraphs.",
+                    "This explains the progression from word embeddings to larger text-unit embeddings.",
+                ),
+                (
+                    "ELMo contextual feature extraction",
+                    "ELMo extracts context-sensitive token features from left-to-right and right-to-left language models.",
+                    "This is the feature-based predecessor most relevant to BERT.",
+                ),
+                (
+                    "directional representation concatenation",
+                    "ELMo forms token representations by concatenating left-to-right and right-to-left representations.",
+                    "This explains why earlier bidirectionality is shallow compared with BERT.",
                 ),
             ]
         elif self._is_attention_text(document_text):
@@ -2646,6 +2717,27 @@ class AnalysisNormalizationService:
                     "After pre-training, BERT can be adapted to many tasks with a small task-specific layer.",
                     "'can be fine-tuned'는 모델을 특정 과제에 맞게 조정할 수 있다는 뜻입니다.",
                     "Passive voice plus ML workflow vocabulary makes the sentence dense.",
+                ),
+                (
+                    "has been an active area of research",
+                    "Learning A has been an active area of research for B.",
+                    "The authors introduce a long-running related-work area.",
+                    "'has been an active area of research'는 오래 연구된 주제임을 말하는 문헌리뷰 표현입니다.",
+                    "This is background framing, not the paper's own method.",
+                ),
+                (
+                    "have been generalized to",
+                    "These approaches have been generalized to A, such as B or C.",
+                    "The authors explain how representation learning extends from words to larger text units.",
+                    "'have been generalized to'는 한 방법이 더 넓은 범위로 확장됐다는 뜻입니다.",
+                    "The sentence is dense because it lists examples and citations inside a related-work move.",
+                ),
+                (
+                    "is the concatenation of",
+                    "The representation of A is the concatenation of B and C.",
+                    "The authors explain how ELMo combines two directional representations.",
+                    "'concatenation'은 여러 벡터를 이어 붙인다는 뜻입니다.",
+                    "This sentence describes representation construction, not just a vocabulary word.",
                 ),
             ]
         elif self._is_attention_text(document_text):
@@ -3939,6 +4031,23 @@ class AnalysisNormalizationService:
                         "The phrase 'major limitation is that' signals the problem BERT is designed to solve.",
                     ],
                 }
+            if "feature-based approaches" in lower and "elmo" in lower and "context-sensitive features" in lower:
+                return {
+                    "one_line": "This related-work section traces feature-based representations from word embeddings to ELMo's contextual token features.",
+                    "simple": (
+                        "The authors review earlier feature-based representation learning: word embeddings, sentence and paragraph embeddings, "
+                        "and ELMo. ELMo is important because it extracts context-sensitive features from left-to-right and right-to-left language models."
+                    ),
+                    "academic": (
+                        "The section positions BERT against feature-based representation learning, moving from static word embeddings and sentence-level objectives "
+                        "to ELMo's contextualized token features formed by concatenating directional language-model representations."
+                    ),
+                    "study_notes": [
+                        "Read this as related work, not BERT's own method.",
+                        "Track the granularity progression: words -> sentences/paragraphs -> contextual token features.",
+                        "ELMo matters here because it is contextual and bidirectional, but still feature-based.",
+                    ],
+                }
             return {
                 "one_line": "The paper introduces BERT, a bidirectional Transformer representation model for language understanding.",
                 "simple": "BERT learns from both left and right context during pre-training, then can be fine-tuned for many NLP tasks.",
@@ -3985,6 +4094,9 @@ class AnalysisNormalizationService:
             "pre-trained bert model",
             "new language representation model",
             "language representation models",
+            "feature-based",
+            "embeddings",
+            "language modeling objectives",
         }
         if key == "phrase":
             blocked = {*blocked, "feature-based"}
@@ -3999,6 +4111,62 @@ class AnalysisNormalizationService:
                 continue
             filtered.append(row)
         return filtered
+
+    def _prefer_bert_feature_related_work_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"embeddings", "language modeling objectives", "context-sensitive features"}
+        preferred = {
+            "feature-based representation history": (
+                "The section reviews non-neural and neural word-representation methods before BERT.",
+                "This frames the section as related work, not BERT's own method.",
+            ),
+            "coarser-granularity embeddings": (
+                "Representation learning extends from words to sentences and paragraphs.",
+                "This explains the progression of representation granularity.",
+            ),
+            "ELMo contextual feature extraction": (
+                "ELMo extracts context-sensitive token features from left-to-right and right-to-left language models.",
+                "This is the key feature-based predecessor BERT builds against.",
+            ),
+            "directional representation concatenation": (
+                "ELMo concatenates left-to-right and right-to-left token representations.",
+                "This explains why earlier bidirectionality is shallower than BERT's joint bidirectional pre-training.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = (
+                    "active area of research"
+                    if "history" in lowered
+                    else "coarser granularities"
+                    if "coarser" in lowered
+                    else "context-sensitive features"
+                    if "extraction" in lowered
+                    else "concatenation"
+                )
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
 
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
@@ -4035,6 +4203,8 @@ class AnalysisNormalizationService:
         lowered = document_text.lower()
         compact_lower = " ".join(lowered.split())
         if "two existing strategies" in lowered and "feature-based" in lowered and ("fine-tuning" in lowered or "ﬁne-tuning" in lowered):
+            return True
+        if "feature-based approaches" in lowered and "elmo" in lowered and "context-sensitive features" in lowered:
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -4288,9 +4458,15 @@ class AnalysisNormalizationService:
 
     def _is_bert_text(self, document_text: str) -> bool:
         lowered = document_text.lower()
+        if self._is_bert_feature_based_related_work_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
+
+    def _is_bert_feature_based_related_work_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "feature-based approaches" in lowered and "elmo" in lowered and "context-sensitive features" in lowered
 
     def _is_attention_text(self, document_text: str) -> bool:
         lowered = document_text.lower()

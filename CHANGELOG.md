@@ -2,6 +2,8 @@
 
 ## 2026-05-15
 
+- Added BERT feature-based related-work guardrails after testing section 4. The app now teaches the representation-learning progression from pre-trained word embeddings to sentence/paragraph embeddings and ELMo, instead of surfacing broad save targets such as `embeddings`, `feature-based`, or `language modeling objectives`.
+- Quality checks now compare source snippets with normalized PDF whitespace, preventing false source warnings when extracted paper text has line/page wrapping artifacts.
 - Fixed a real ResNet PDF page-break failure where extracted text split `high- 2 / way networks` into two sections. Section splitting now merges dangling page-break fragments and normalizes page-number hyphen artifacts before analysis.
 - Added ResNet highway-transition guardrails after testing section 7. The app now recognizes the contrast between gated highway networks and ResNet's always-open identity shortcuts, and surfaces `On the contrary` / `In addition` as reusable academic expressions.
 - Fixed paper-map argument flow folding so seven or eight analyzed section summaries are shown directly instead of hiding the latest section behind a `...1 more` line.

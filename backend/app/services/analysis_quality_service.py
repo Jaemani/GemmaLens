@@ -1,4 +1,5 @@
 from app.schemas.analysis_schema import AnalysisResult
+from app.services.text_cleanup_service import normalize_pdf_ligatures
 
 
 class AnalysisQualityService:
@@ -43,11 +44,16 @@ class AnalysisQualityService:
         return warnings
 
     def _source_in_text(self, source: str, text_lower: str) -> bool:
-        source_lower = source.lower()
-        if source_lower in text_lower:
+        source_lower = normalize_pdf_ligatures(source).lower()
+        normalized_text = normalize_pdf_ligatures(text_lower).lower()
+        if source_lower in normalized_text:
             return True
         trimmed = source_lower.strip(". ")
-        return bool(trimmed and trimmed in text_lower)
+        if trimmed and trimmed in normalized_text:
+            return True
+        source_compact = " ".join(source_lower.split())
+        text_compact = " ".join(normalized_text.split())
+        return bool(source_compact and source_compact.strip(". ") in text_compact)
 
     def _value_supported_by_source(self, value: str, source: str) -> bool:
         value_lower = value.lower()

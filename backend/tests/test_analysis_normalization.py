@@ -1737,3 +1737,69 @@ def test_resnet_imagenet_localization_rcnn_section_recovers_final_pipeline():
     assert result.summaries.one_line.startswith("This final section explains why ImageNet localization uses RoI-centric R-CNN")
     assert result.sentences[0].core_structure == "Motivated by this, we use A in place of B."
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
+
+
+def test_bert_feature_based_related_work_becomes_literature_map():
+    document = (
+        "1 Unsupervised Feature-based Approaches Learning widely applicable representations of words has been an active area of research for decades, "
+        "including non-neural and neural methods. Pre-trained word embeddings are an integral part of modern NLP systems, offering significant improvements over embeddings learned from scratch. "
+        "To pretrain word embedding vectors, left-to-right language modeling objectives have been used. "
+        "These approaches have been generalized to coarser granularities, such as sentence embeddings or paragraph embeddings. "
+        "ELMo and its predecessor generalize traditional word embedding research along a different dimension. "
+        "They extract context-sensitive features from a left-to-right and a right-to-left language model. "
+        "The contextual representation of each token is the concatenation of the left-to-right and right-to-left representations."
+    )
+    payload = {
+        "terms": [
+            {"term": "embeddings", "meaning": "too broad alone"},
+            {"term": "language modeling objectives", "meaning": "too broad alone"},
+            {"term": "context-sensitive features", "meaning": "important but too narrow alone"},
+        ],
+        "concepts": [
+            {"concept": "embeddings", "explanation": "too broad alone"},
+            {"concept": "language modeling objectives", "explanation": "too broad alone"},
+            {"concept": "context-sensitive features", "explanation": "important but too narrow alone"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "1 Unsupervised Feature-based Approaches Learning widely applicable representations of words has been an active area of research for decades."},
+        "sentences": [
+            {
+                "sentence": (
+                    "1 Unsupervised Feature-based Approaches Learning widely applicable representations of words "
+                    "has been an active area of research for decades."
+                ),
+                "core_structure": "Main claim + explanation.",
+            }
+        ],
+        "quality_warnings": ["phrase_count_out_of_range:0"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-related-work-feature", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {"pre-trained word embeddings", "sentence embeddings", "paragraph embeddings", "ELMo", "context-sensitive features"}.issubset(terms)
+    assert "embeddings" not in terms
+    assert "feature-based" not in terms
+    assert "language modeling objectives" not in terms
+    assert {
+        "feature-based representation history",
+        "coarser-granularity embeddings",
+        "ELMo contextual feature extraction",
+        "directional representation concatenation",
+    }.issubset(concepts)
+    assert "embeddings" not in concepts
+    assert "language modeling objectives" not in concepts
+    assert {
+        "has been an active area of research",
+        "are an integral part of",
+        "offering significant improvements over",
+        "have been generalized to",
+        "along a different dimension",
+        "extract context-sensitive features",
+        "is the concatenation of",
+    }.issubset(phrases)
+    assert result.summaries.one_line == "This related-work section traces feature-based representations from word embeddings to ELMo's contextual token features."
+    assert result.sentences[0].core_structure == "Learning A has been an active area of research for B."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings
