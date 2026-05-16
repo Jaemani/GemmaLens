@@ -7,9 +7,9 @@ export default async function AnalysisPage({ params }: { params: Promise<{ docum
     <AppShell>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Paper reading workspace</h1>
+          <h1 className="text-2xl font-semibold">Language learning workspace</h1>
           <p className="mt-1 max-w-3xl text-sm text-neutral-600">
-            Read the source on the left. Build the language guide section by section on the right.
+            Read the source, transcript, or section guide while building durable concepts, terms, expressions, and sentence patterns.
           </p>
         </div>
       </div>
