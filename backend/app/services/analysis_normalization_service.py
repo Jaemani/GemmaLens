@@ -805,6 +805,34 @@ class AnalysisNormalizationService:
                     "This tells the reader what the figure comparison is meant to reveal.",
                 ),
                 (
+                    "vanishing gradients",
+                    "A training failure where gradients become too small to update earlier layers effectively.",
+                    "field_term",
+                    "medium",
+                    "This section explicitly argues that vanishing gradients are unlikely to explain the plain-net degradation.",
+                ),
+                (
+                    "forward propagated signals",
+                    "Activations passed from earlier layers toward later layers during inference/training.",
+                    "field_term",
+                    "medium",
+                    "The authors use non-zero forward signal variance as evidence against vanishing signals.",
+                ),
+                (
+                    "backward propagated gradients",
+                    "Gradients passed backward through the network during training.",
+                    "field_term",
+                    "medium",
+                    "Healthy backward gradient norms are evidence that gradients are not simply vanishing.",
+                ),
+                (
+                    "convergence rates",
+                    "How quickly optimization reduces training error.",
+                    "field_term",
+                    "hard",
+                    "The authors conjecture slow convergence may explain deep plain-net optimization difficulty.",
+                ),
+                (
                     "CIFAR-10",
                     "A small image classification benchmark used for controlled experiments.",
                     "useful",
@@ -1002,6 +1030,12 @@ class AnalysisNormalizationService:
                 ("show that", "result", "Introduces the experimental finding."),
                 ("To reveal the reasons", "method", "Explains why the authors inspect training and validation curves."),
                 ("we compare", "method", "Introduces a direct empirical comparison."),
+                ("unlikely to be caused by", "contrast", "Rejects a tempting explanation for the observed optimization difficulty."),
+                ("ensures forward propagated signals", "claim", "Explains why Batch Normalization makes vanishing forward signals unlikely."),
+                ("exhibit healthy norms", "result", "Reports evidence that backward gradients are not vanishing."),
+                ("neither forward nor backward signals vanish", "contrast", "Summarizes the argument against vanishing-gradient explanations."),
+                ("may have exponentially low convergence rates", "claim", "States the authors' conjecture about why deep plain nets train slowly."),
+                ("Next we evaluate", "method", "Moves from plain-network diagnosis to residual-network experiments."),
                 ("trained end-to-end", "method", "Signals that the whole network remains trainable as one model."),
                 ("We show that", "result", "Introduces a list of empirical claims."),
                 ("easy to optimize", "result", "States the optimization benefit of residual networks."),
@@ -1312,6 +1346,26 @@ class AnalysisNormalizationService:
                     "training/validation errors",
                     "The curves used to diagnose the reason for the deeper plain network's worse performance.",
                     "This connects the experiment to the optimization argument.",
+                ),
+                (
+                    "vanishing gradients",
+                    "An explanation the authors test and reject for the plain-network degradation.",
+                    "This keeps the reader from confusing degradation with the older vanishing-gradient problem.",
+                ),
+                (
+                    "forward propagated signals",
+                    "Signals moving forward through the network whose non-zero variance is used as evidence.",
+                    "This supports the claim that activations are not simply vanishing.",
+                ),
+                (
+                    "backward propagated gradients",
+                    "Training gradients moving backward through the network.",
+                    "Healthy gradient norms support the claim that gradients are not simply vanishing.",
+                ),
+                (
+                    "convergence rates",
+                    "The speed at which optimization reduces training error.",
+                    "The authors conjecture this may explain why deep plain nets train poorly.",
                 ),
                 (
                     "residual network",
@@ -1641,6 +1695,27 @@ class AnalysisNormalizationService:
                     "The phrase changes the reading mode from result reporting to diagnostic comparison.",
                 ),
                 (
+                    "We argue that this optimization difficulty is unlikely to be caused by",
+                    "We argue that X is unlikely to be caused by Y.",
+                    "The authors reject vanishing gradients as the explanation for the deeper plain network's worse training.",
+                    "'is unlikely to be caused by'는 가능한 원인을 조심스럽게 배제하는 논문식 표현입니다.",
+                    "The sentence is important because it narrows the diagnosis from general optimization trouble to something more specific.",
+                ),
+                (
+                    "So neither forward nor backward signals vanish",
+                    "So neither A nor B does C.",
+                    "The authors summarize evidence that both activations and gradients remain healthy.",
+                    "'neither A nor B'는 두 가능성을 동시에 배제하는 구조입니다.",
+                    "The sentence condenses the diagnostic evidence into one conclusion.",
+                ),
+                (
+                    "Next we evaluate",
+                    "Next we evaluate A and B.",
+                    "The authors move from diagnosing plain networks to testing residual networks.",
+                    "'Next we evaluate'는 실험 순서가 바뀌는 신호입니다.",
+                    "This phrase helps the reader follow the experimental sequence rather than treating all results as one block.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -1823,6 +1898,23 @@ class AnalysisNormalizationService:
                         "Separate setup details from the result: dataset/metrics first, plain-network comparison second.",
                         "The key result is not the exact hyperparameter list; it is that the 34-layer plain net performs worse than the 18-layer one.",
                         "Use 'The results in Table 2 show that' as a reusable expression for turning table data into a claim.",
+                    ],
+                }
+            if "34-layer plain net has higher training error" in compact_lower and "next we evaluate" in compact_lower:
+                return {
+                    "one_line": "This section diagnoses plain-network degradation and then turns to residual-network experiments.",
+                    "simple": (
+                        "The 34-layer plain net has higher training error throughout training. The authors argue this is probably not due to vanishing gradients, "
+                        "because forward signals and backward gradients look healthy, then they move on to evaluate residual networks."
+                    ),
+                    "academic": (
+                        "The section interprets the plain-network failure as an optimization issue not explained by vanishing gradients, introduces slow convergence "
+                        "as a possible cause, and transitions from plain baselines to 18-layer and 34-layer ResNet experiments."
+                    ),
+                    "study_notes": [
+                        "Track the diagnostic chain: higher training error -> not vanishing gradients -> possible low convergence rates.",
+                        "Do not save isolated fragments like 'throughout the whole training'; save the claim it supports.",
+                        "Use 'Next we evaluate' as the transition from diagnosing plain nets to testing residual nets.",
                     ],
                 }
             if "based on the above plain network" in compact_lower and "we insert shortcut connections" in compact_lower:
@@ -2173,6 +2265,8 @@ class AnalysisNormalizationService:
             return True
         if "imagenet classification" in compact_lower and "34-layer plain net has higher validation error" in compact_lower:
             return True
+        if "34-layer plain net has higher training error" in compact_lower and "next we evaluate" in compact_lower:
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -2308,6 +2402,8 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"imagenet classification we", "plain networks", "we evaluate our method"}:
             return ""
+        if lowered in {"net has higher training", "throughout the whole training", "gradients", "residual networks"}:
+            return ""
         if lowered.startswith(("we describe ", "we also note ", "we can also use ")):
             return ""
         if lowered in {"reveals that network", "has higher training", "higher training", "deeper network"}:
@@ -2391,6 +2487,7 @@ class AnalysisNormalizationService:
             or ("identity mapping is sufficient" in lowered and "network architectures" in lowered)
             or self._is_resnet_shortcut_option_section(document_text)
             or ("imagenet classification" in lowered and "34-layer plain net has higher validation error" in lowered)
+            or ("34-layer plain net has higher training error" in lowered and "next we evaluate" in lowered)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:

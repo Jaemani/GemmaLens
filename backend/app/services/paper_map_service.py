@@ -137,6 +137,10 @@ class PaperMapService:
             "we evaluate our method",
             "we first evaluate",
             "to reveal the reasons",
+            "unlikely to be caused by",
+            "neither forward nor backward signals vanish",
+            "may have exponentially low convergence rates",
+            "next we evaluate",
         }
         demoted = {
             "deeper neural networks",
@@ -256,7 +260,7 @@ class PaperMapService:
 
         coverage_ratio = analyzed_count / total_sections if total_sections else 0
         status = "whole-paper draft" if total_sections and coverage_ratio >= 0.8 else "partial synthesis"
-        flow_limit = 10
+        flow_limit = 12
         flow = self._argument_flow(summaries, limit=flow_limit)
         unique_summary_count = len({str(item.get("meaning") or "").strip().lower() for item in summaries if item.get("meaning")})
         if unique_summary_count > flow_limit:
@@ -319,7 +323,11 @@ class PaperMapService:
                 grouped[key] = {"meaning": meaning, "sections": []}
             grouped[key]["sections"].extend(int(section) for section in item.get("sections") or [])
         flow: list[str] = []
-        for item in list(grouped.values())[:limit]:
+        grouped_values = list(grouped.values())
+        selected = grouped_values[:limit]
+        if len(grouped_values) > limit:
+            selected = [*grouped_values[: max(0, limit - 1)], grouped_values[-1]]
+        for item in selected:
             sections = sorted(set(item["sections"]))
             label = self._section_label(sections)
             flow.append(f"{label}: {self._trim_flow_text(item['meaning'])}")

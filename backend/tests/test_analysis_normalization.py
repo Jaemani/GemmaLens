@@ -932,3 +932,51 @@ def test_resnet_imagenet_plain_network_section_filters_heading_and_hyperparamete
     assert {"We evaluate our method", "We first evaluate", "The results in Table 2 show that", "To reveal the reasons"}.issubset(phrases)
     assert result.summaries.one_line == "This section starts the ImageNet experiments and shows degradation in deeper plain networks."
     assert result.sentences[0].core_structure == "We evaluate our method on dataset X that consists of Y."
+
+
+def test_resnet_plain_network_diagnosis_section_rejects_training_fragments():
+    document = (
+        "34-layer plain net has higher training error throughout the whole training procedure, even though the solution space "
+        "of the 18-layer plain network is a subspace of that of the 34-layer one. "
+        "We argue that this optimization difficulty is unlikely to be caused by vanishing gradients. "
+        "These plain networks are trained with BN, which ensures forward propagated signals to have non-zero variances. "
+        "We also verify that the backward propagated gradients exhibit healthy norms with BN. "
+        "So neither forward nor backward signals vanish. "
+        "We conjecture that the deep plain nets may have exponentially low convergence rates, which impact the reducing of the training error. "
+        "Residual Networks. Next we evaluate 18-layer and 34-layer residual nets."
+    )
+    payload = {
+        "terms": [
+            {"term": "net has higher training", "meaning": "bad fragment"},
+            {"term": "throughout the whole training", "meaning": "bad fragment"},
+            {"term": "gradients", "meaning": "too broad"},
+            {"term": "Residual Networks", "meaning": "heading glue"},
+        ],
+        "concepts": [
+            {"concept": "net has higher training", "explanation": "bad fragment"},
+            {"concept": "throughout the whole training", "explanation": "bad fragment"},
+        ],
+        "phrases": [],
+        "summaries": {
+            "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
+            "simple": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
+            "academic": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
+        },
+        "sentences": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-plain-diagnosis", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "net has higher training" not in terms
+    assert "throughout the whole training" not in terms
+    assert "gradients" not in terms
+    assert "Residual Networks" not in terms
+    assert "net has higher training" not in concepts
+    assert {"higher training error", "vanishing gradients", "forward propagated signals", "backward propagated gradients", "convergence rates"}.issubset(terms)
+    assert {"higher training error", "vanishing gradients", "convergence rates"}.issubset(concepts)
+    assert {"unlikely to be caused by", "neither forward nor backward signals vanish", "may have exponentially low convergence rates", "Next we evaluate"}.issubset(phrases)
+    assert result.summaries.one_line == "This section diagnoses plain-network degradation and then turns to residual-network experiments."
+    assert result.sentences[0].core_structure == "We argue that X is unlikely to be caused by Y."

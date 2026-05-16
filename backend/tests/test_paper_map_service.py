@@ -347,6 +347,42 @@ def test_paper_map_argument_flow_does_not_hide_tenth_section():
     assert not any("more analyzed section summaries" in item for item in paper_map.synthesis.argument_flow)
 
 
+def test_paper_map_argument_flow_keeps_latest_section_when_longer_than_limit():
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-flow-latest",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [],
+            "phrases": [],
+            "concepts": [],
+            "sentences": [],
+            "summaries": {"one_line": "Section 1 explains the opening claim.", "simple": "Section 1.", "academic": "Section 1.", "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+    sections = [
+        (
+            index,
+            base.model_copy(
+                update={
+                    "summaries": base.summaries.model_copy(
+                        update={"one_line": f"Section {index + 2} explains a distinct learning step."}
+                    )
+                }
+            ),
+        )
+        for index in range(1, 15)
+    ]
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows(sections)).build(
+        "doc-flow-latest", [f"section {index}" for index in range(15)]
+    )
+
+    assert any(item.startswith("S15:") for item in paper_map.synthesis.argument_flow)
+    assert any("more analyzed section summaries" in item for item in paper_map.synthesis.argument_flow)
+
+
 def test_paper_map_ranks_core_methods_before_generic_descriptors():
     text = "We present a residual learning framework for deeper neural networks and learning residual functions."
     base = AnalysisResult.model_validate(
