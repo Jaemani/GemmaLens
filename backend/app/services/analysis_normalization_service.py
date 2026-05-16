@@ -53,6 +53,9 @@ class AnalysisNormalizationService:
         if self._is_bert_squad_results_transition_section(document_text):
             terms = self._prefer_bert_squad_results_transition_terms(terms, document_text)
             phrases = self._prefer_bert_squad_results_transition_phrases(phrases, document_text)
+        if self._is_bert_squad2_swag_transition_section(document_text):
+            terms = self._prefer_bert_squad2_swag_transition_terms(terms, document_text)
+            phrases = self._prefer_bert_squad2_swag_transition_phrases(phrases, document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -137,6 +140,9 @@ class AnalysisNormalizationService:
         if self._is_bert_squad_results_transition_section(document_text):
             normalized["concepts"] = self._prefer_bert_squad_results_transition_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._prefer_bert_squad_results_transition_phrases(normalized["phrases"], document_text)
+        if self._is_bert_squad2_swag_transition_section(document_text):
+            normalized["concepts"] = self._prefer_bert_squad2_swag_transition_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_bert_squad2_swag_transition_phrases(normalized["phrases"], document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -2944,6 +2950,17 @@ class AnalysisNormalizationService:
                         "difficulty_reason": "The sentence combines an ablation condition, small metric loss, and comparison claim.",
                     }
                 ]
+            if self._is_bert_squad2_swag_transition_section(document_text):
+                sentence = self._source_sentence(None, "We predict a non-null answer", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "We predict X when A > B + threshold, where threshold is selected to maximize Y.",
+                        "simplified_version": "BERT answers only when the best real span scores higher than the no-answer span by a dev-set threshold.",
+                        "korean_explanation": "'when'은 예측 조건을 만들고, 'where' 절은 threshold τ가 어떻게 선택되는지 설명합니다.",
+                        "difficulty_reason": "The sentence combines a decision rule, mathematical notation, and dev-set model selection.",
+                    }
+                ]
             specs = [
                 (
                     "There are two existing strategies",
@@ -4656,6 +4673,23 @@ class AnalysisNormalizationService:
                         "The SQuAD v2.0 paragraph changes the task definition by adding no-answer cases.",
                     ],
                 }
+            if self._is_bert_squad2_swag_transition_section(document_text):
+                return {
+                    "one_line": "This section explains BERT's SQuAD v2.0 no-answer decision rule and introduces the SWAG commonsense task.",
+                    "simple": (
+                        "For SQuAD 2.0, BERT compares the best real answer span with a [CLS]-based no-answer score and uses a dev-set threshold. "
+                        "The section then moves to SWAG, where BERT chooses the most plausible continuation from four sentence-pair choices."
+                    ),
+                    "academic": (
+                        "The passage defines the SQuAD v2.0 null-answer extension through snull, best non-null span scoring, threshold τ selection on the dev set, "
+                        "leaderboard comparison, and then introduces SWAG as a grounded commonsense inference benchmark using four constructed input sequences."
+                    ),
+                    "study_notes": [
+                        "Separate the SQuAD v2.0 decision rule from the SWAG task transition.",
+                        "The threshold τ is selected on the dev set, not learned as a new language concept.",
+                        "SWAG changes the output type from answer span selection to four-choice continuation selection.",
+                    ],
+                }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
                 return {
                     "one_line": "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning.",
@@ -6255,6 +6289,163 @@ class AnalysisNormalizationService:
         ]
         return [*promoted, *rest][:12]
 
+    def _prefer_bert_squad2_swag_transition_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"learning rate", "probability space", "non-null span", "fine-tuned", "bertbase"}
+        preferred = [
+            ("no-answer decision rule", "The rule that compares a no-answer score with the best non-null answer span.", "field_term", "hard", "This is the SQuAD v2.0 adaptation visible in this section."),
+            ("[CLS] token", "The token used to represent the no-answer span.", "field_term", "medium", "This is the no-answer anchor in BERT."),
+            ("no-answer span", "The null-answer candidate scored with the [CLS] representation.", "field_term", "hard", "This is the alternative to choosing a real passage span."),
+            ("best non-null span", "The highest-scoring real answer span in the paragraph.", "field_term", "hard", "This is compared against the no-answer score."),
+            ("threshold τ", "The dev-set threshold used to decide whether to return a non-null answer.", "field_term", "hard", "This explains the decision rule."),
+            ("dev set", "The validation split used to choose the no-answer threshold.", "field_term", "medium", "This explains model selection."),
+            ("SQuAD leaderboard entries", "Prior systems used for SQuAD v2.0 result comparison.", "useful", "medium", "This frames the result comparison."),
+            ("SWAG dataset", "A sentence-pair completion dataset for grounded commonsense inference.", "field_term", "medium", "This is the next benchmark in the section."),
+            ("grounded commonsense inference", "The reasoning ability SWAG evaluates.", "field_term", "hard", "This explains what SWAG is testing."),
+            ("plausible continuation", "The most likely next sentence choice in SWAG.", "field_term", "medium", "This is the SWAG output target."),
+            ("four input sequences", "The four BERT inputs constructed for the four SWAG answer choices.", "field_term", "medium", "This explains the adaptation recipe."),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            target = {
+                "no-answer decision rule": "We predict a non-null answer when",
+                "threshold τ": "threshold τ",
+                "SQuAD leaderboard entries": "leaderboard entries",
+                "SWAG dataset": "Situations With Adversarial Generations",
+                "four input sequences": "four input sequences",
+            }.get(term, term)
+            row = keyed.get(term.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "term": term,
+                    "meaning": row.get("meaning") or meaning,
+                    "domain_relevance": row.get("domain_relevance") or ("high" if priority == "field_term" else "medium"),
+                    "difficulty": row.get("difficulty") or difficulty,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "should_save": bool(row.get("should_save", True)),
+                    "learning_priority": row.get("learning_priority") or priority,
+                    "reason": row.get("reason") or reason,
+                    "context_meaning": row.get("context_meaning") or meaning,
+                    "general_meaning": row.get("general_meaning") or meaning,
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}
+        ]
+        return [*promoted, *rest][:14]
+
+    def _prefer_bert_squad2_swag_transition_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"learning rate", "probability space", "non-null span", "fine-tuned"}
+        preferred = {
+            "SQuAD v2.0 null-answer scoring": (
+                "The start/end probability space is extended so [CLS] can represent no answer.",
+                "This is the core adaptation from SQuAD v1.1 to v2.0.",
+                "probability space",
+            ),
+            "null versus non-null decision rule": (
+                "BERT compares the no-answer score against the best non-null span plus threshold τ.",
+                "This explains how the model decides whether to answer.",
+                "snull",
+            ),
+            "dev-set threshold selection": (
+                "The threshold τ is selected on the dev set to maximize F1.",
+                "This is an evaluation-tuned decision rule, not a vocabulary item.",
+                "threshold τ",
+            ),
+            "SQuAD v2.0 result comparison": (
+                "The section compares BERT against prior leaderboard and published systems while excluding systems that use BERT.",
+                "This frames the +5.1 F1 improvement claim.",
+                "previous best system",
+            ),
+            "SWAG task transition": (
+                "The section moves from extractive QA to SWAG sentence-pair completion.",
+                "This marks a new task family after SQuAD.",
+                "SW AG",
+            ),
+            "grounded commonsense inference": (
+                "SWAG evaluates whether a model can choose the most plausible continuation from four options.",
+                "This explains the reasoning target of the benchmark.",
+                "grounded commonsense inference",
+            ),
+            "four-choice input construction": (
+                "For SWAG, BERT constructs four input sequences, one for each possible continuation.",
+                "This is the task-specific input adaptation.",
+                "four input sequences",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            row = keyed.get(concept.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "concept": concept,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "related_terms": row.get("related_terms") or [concept],
+                    "why_it_matters": row.get("why_it_matters") or why_it_matters,
+                    "references": row.get("references") or self._references_near("", document_text),
+                    "learning_priority": row.get("learning_priority") or "field_term",
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _prefer_bert_squad2_swag_transition_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"probability space", "non-null span"}
+        preferred = [
+            ("is extended to include", "method", "Explains an expanded probability space or label space."),
+            ("For prediction, we compare", "method", "Introduces a decision comparison."),
+            ("We predict a non-null answer when", "method", "States the answer/no-answer decision rule."),
+            ("selected on the dev set to maximize", "method", "Explains threshold selection."),
+            ("We did not use", "limitation", "States a data restriction."),
+            ("The results compared to", "result", "Introduces benchmark comparison context."),
+            ("excluding systems that use", "method", "Defines a comparison filter."),
+            ("We observe a", "result", "Introduces an empirical improvement."),
+            ("extends the SQuAD 1.1 problem definition by allowing", "method", "Defines the SQuAD 2.0 task change."),
+            ("making the problem more realistic", "claim", "Explains why the no-answer extension matters."),
+            ("the task is to choose", "claim", "Defines the SWAG task objective."),
+            ("we construct four input sequences", "method", "Explains BERT's SWAG input construction."),
+        ]
+        keyed = {str(row.get("phrase") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for phrase, function, explanation in preferred:
+            if phrase.lower() not in document_text.lower():
+                continue
+            row = keyed.get(phrase.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "phrase": phrase,
+                    "function": row.get("function") or function,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(row.get("source_sentence"), phrase, document_text),
+                    "learning_priority": row.get("learning_priority") or ("must_review" if function in {"method", "result", "contrast"} else "useful"),
+                    "reason": row.get("reason") or "Reusable benchmark/task-transition expression detected in the source.",
+                    "context_meaning": row.get("context_meaning") or explanation,
+                    "confidence": self._confidence(row.get("confidence"), 0.87),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("phrase") or "").strip().lower() not in blocked | {phrase.lower() for phrase, *_ in preferred}
+        ]
+        return [*promoted, *rest][:12]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -6293,6 +6484,7 @@ class AnalysisNormalizationService:
             or self._is_bert_glue_result_interpretation_section(document_text)
             or self._is_bert_squad_span_prediction_section(document_text)
             or self._is_bert_squad_results_transition_section(document_text)
+            or self._is_bert_squad2_swag_transition_section(document_text)
         )
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
@@ -6323,6 +6515,8 @@ class AnalysisNormalizationService:
         if self._is_bert_squad_span_prediction_section(document_text):
             return True
         if self._is_bert_squad_results_transition_section(document_text):
+            return True
+        if self._is_bert_squad2_swag_transition_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -6600,6 +6794,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_squad_results_transition_section(document_text):
             return True
+        if self._is_bert_squad2_swag_transition_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -6677,6 +6873,16 @@ class AnalysisNormalizationService:
             and "squad" in lowered
             and "no short answer exists" in lowered
             and "[cls] token" in lowered
+        )
+
+    def _is_bert_squad2_swag_transition_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "probability space" in lowered
+            and "best non-null span" in lowered
+            and "threshold" in lowered
+            and "grounded commonsense inference" in lowered
+            and "four input sequences" in lowered
         )
 
     def _is_attention_text(self, document_text: str) -> bool:

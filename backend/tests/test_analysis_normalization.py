@@ -2690,3 +2690,90 @@ def test_bert_squad_results_section_recovers_table_and_v2_transition():
     assert result.summaries.one_line == "This section interprets BERT's SQuAD v1.1 results and transitions to SQuAD v2.0 no-answer handling."
     assert result.sentences[0].core_structure == "Without X, we only lose Y, still doing Z."
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
+
+
+def test_bert_squad2_swag_section_recovers_no_answer_rule_and_swag_transition():
+    document = (
+        "The probability space for the start and end answer span positions is extended to include the position of the [CLS] token. "
+        "For prediction, we compare the score of the no-answer span snull to the score of the best non-null span. "
+        "We predict a non-null answer when the best span score is greater than snull plus threshold τ, where the threshold τ is selected on the dev set to maximize F1. "
+        "We did not use TriviaQA data for this model. "
+        "The results compared to prior leaderboard entries and top published work are shown in Table 3, excluding systems that use BERT as one of their components. "
+        "We observe a +5.1 F1 improvement over the previous best system. "
+        "SQuAD 2.0 task extends the SQuAD 1.1 problem definition by allowing for the possibility that no short answer exists in the provided paragraph, making the problem more realistic. "
+        "The Situations With Adversarial Generations (SWAG) dataset contains 113k sentence-pair completion examples that evaluate grounded commonsense inference. "
+        "Given a sentence, the task is to choose the most plausible continuation among four choices. "
+        "When fine-tuning on the SWAG dataset, we construct four input sequences, each containing the concatenation of the given sentence and a possible continuation."
+    )
+    payload = {
+        "terms": [
+            {"term": "learning rate", "meaning": "too broad"},
+            {"term": "probability space", "meaning": "generic"},
+            {"term": "non-null span", "meaning": "fragment"},
+            {"term": "fine-tuned", "meaning": "generic"},
+        ],
+        "concepts": [
+            {"concept": "learning rate", "explanation": "too broad"},
+            {"concept": "probability space", "explanation": "term duplicated as concept"},
+            {"concept": "non-null span", "explanation": "fragment"},
+            {"concept": "fine-tuned", "explanation": "generic"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "The probability space for the start and end answer span positions is extended to include the position of the [CLS] token."},
+        "sentences": [
+            {
+                "sentence": "The probability space for the start and end answer span positions is extended to include the position of the [CLS] token.",
+                "core_structure": "Main claim + explanation.",
+            }
+        ],
+        "quality_warnings": ["phrase_count_out_of_range:0", "term_not_in_source_sentence:non-null span"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-squad2-swag", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "no-answer decision rule",
+        "[CLS] token",
+        "no-answer span",
+        "best non-null span",
+        "threshold τ",
+        "dev set",
+        "SQuAD leaderboard entries",
+        "SWAG dataset",
+        "grounded commonsense inference",
+        "plausible continuation",
+        "four input sequences",
+    }.issubset(terms)
+    assert "learning rate" not in terms
+    assert "probability space" not in terms
+    assert {
+        "SQuAD v2.0 null-answer scoring",
+        "null versus non-null decision rule",
+        "dev-set threshold selection",
+        "SQuAD v2.0 result comparison",
+        "SWAG task transition",
+        "grounded commonsense inference",
+        "four-choice input construction",
+    }.issubset(concepts)
+    assert "probability space" not in concepts
+    assert {
+        "is extended to include",
+        "For prediction, we compare",
+        "We predict a non-null answer when",
+        "selected on the dev set to maximize",
+        "We did not use",
+        "The results compared to",
+        "excluding systems that use",
+        "We observe a",
+        "extends the SQuAD 1.1 problem definition by allowing",
+        "making the problem more realistic",
+        "the task is to choose",
+        "we construct four input sequences",
+    }.issubset(phrases)
+    assert result.summaries.one_line == "This section explains BERT's SQuAD v2.0 no-answer decision rule and introduces the SWAG commonsense task."
+    assert result.sentences[0].core_structure == "We predict X when A > B + threshold, where threshold is selected to maximize Y."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings
+    assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)

@@ -72,10 +72,15 @@ class AnalysisQualityService:
             "self-attention mechanism": "selfattention mechanism",
             "task-specific inputs and outputs": "inputs and outputs",
             "token-level tasks": "tokenlevel tasks",
+            "no-answer decision rule": "non-null answer",
             "squad v11": "squad",
             "squad v1.1": "squad",
+            "squad 20": "no short answer",
+            "squad 2.0": "no short answer",
             "squad leaderboard": "leaderboard",
+            "squad leaderboard entries": "leaderboard entries",
             "softmax over paragraph tokens": "softmax over all of the words",
+            "swag dataset": "situations with adversarial generations",
             "triviaqa fine-tuning data": "triviaqa",
         }
         alias = support_aliases.get(value_lower)

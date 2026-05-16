@@ -26,14 +26,16 @@ export function PdfSourcePane({
   const fileUrl = api.documentFileUrl(document.id);
 
   useEffect(() => {
-    if (requestedPage && requestedPage > 0) {
+    if (requestedPage && requestedPage > 0 && requestedPage !== pageNumber) {
       setPageNumber(requestedPage);
     }
-  }, [requestedPage]);
+  }, [pageNumber, requestedPage]);
 
   useEffect(() => {
-    onPageChange?.(pageNumber);
-  }, [pageNumber, onPageChange]);
+    if (pageNumber !== requestedPage) {
+      onPageChange?.(pageNumber);
+    }
+  }, [pageNumber, onPageChange, requestedPage]);
 
   useEffect(() => {
     let cancelled = false;

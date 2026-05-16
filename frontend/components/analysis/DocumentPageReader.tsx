@@ -40,6 +40,9 @@ export function DocumentPageReader({
   const targetUnanalyzedIndex = nextUnanalyzedIndex >= 0 ? nextUnanalyzedIndex : fallbackUnanalyzedIndex;
   const plannedBatchIndices = nextUnanalyzedSectionIndices(sections, pageIndex, 3);
   const progressStorageKey = `gemmalens:auto-study:${documentId}`;
+  const sectionGroups = groupSectionsByPdfPage(sections);
+  const currentPdfPage = pdfPageFromLabel(currentSection?.source_label ?? null);
+  const currentPageSectionNumber = currentSection ? sectionNumberWithinPdfPage(sections, pageIndex) : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -87,16 +90,15 @@ export function DocumentPageReader({
   }, [currentSection?.analyzed, currentSection?.index, document, onSectionLesson, pageIndex, sectionAnalysisIndex]);
 
   useEffect(() => {
-    onSourcePageChange?.(pdfPageFromLabel(currentSection?.source_label ?? null));
-  }, [currentSection?.source_label, onSourcePageChange]);
+    onSourcePageChange?.(currentPdfPage);
+  }, [currentPdfPage, onSourcePageChange]);
 
   useEffect(() => {
     if (!requestedSourcePage || !sections.length) return;
-    const currentPage = pdfPageFromLabel(currentSection?.source_label ?? null);
-    if (currentPage === requestedSourcePage) return;
+    if (currentPdfPage === requestedSourcePage) return;
     const matchingIndex = sections.findIndex((section) => pdfPageFromLabel(section.source_label) === requestedSourcePage);
-    if (matchingIndex >= 0) setPageIndex(matchingIndex);
-  }, [currentSection?.source_label, requestedSourcePage, sections]);
+    if (matchingIndex >= 0 && matchingIndex !== pageIndex) setPageIndex(matchingIndex);
+  }, [currentPdfPage, pageIndex, requestedSourcePage, sections]);
 
   useEffect(() => {
     const saved = readAutoStudyProgress(progressStorageKey);
@@ -218,9 +220,9 @@ export function DocumentPageReader({
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line p-5">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section study</p>
-          <h2 className="mt-1 text-lg font-semibold">Move through extracted sections</h2>
+          <h2 className="mt-1 text-lg font-semibold">Move through PDF pages and text sections</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">
-            Use this when the whole document is too long for one edge-model pass. These are model-input text sections, not rendered PDF pages.
+            PDF pages are the visual source on the left. Sections are backend-cleaned text chunks sent to the model; one PDF page can contain several sections.
           </p>
           <p className="mt-2 text-xs font-semibold text-neutral-600">
             {analyzedCount} / {sections.length || 1} sections analyzed
@@ -284,24 +286,33 @@ export function DocumentPageReader({
         <div className="border-b border-line bg-blue-50 px-5 py-3 text-sm font-medium text-accent">{batchStatus}</div>
       ) : null}
       {sections.length ? (
-        <div className="flex gap-1 overflow-x-auto border-b border-line px-5 py-2">
-          {sections.map((section, index) => (
-            <button
-              key={section.index}
-              type="button"
-              onClick={() => setPageIndex(index)}
-              className={`flex h-8 min-w-10 items-center justify-center rounded-md border px-2 text-[11px] font-semibold ${
-                index === pageIndex
-                  ? "border-accent bg-accent text-white"
-                  : section.analyzed
-                    ? "border-green-200 bg-green-50 text-green-700"
-                    : "border-line bg-panel text-neutral-500 hover:bg-surface"
-              }`}
-              title={`Section ${section.section_number}${section.analyzed ? " analyzed" : " not analyzed"}`}
-            >
-              <span>S{section.section_number}</span>
-              {section.analyzed && index !== pageIndex ? <CheckCircle2 size={12} className="ml-1" /> : null}
-            </button>
+        <div className="flex gap-3 overflow-x-auto border-b border-line px-5 py-3">
+          {sectionGroups.map((group) => (
+            <div key={group.key} className="shrink-0 rounded-md border border-line bg-surface p-2">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{group.label}</p>
+              <div className="flex gap-1">
+                {group.items.map(({ section, index, localNumber }) => (
+                  <button
+                    key={section.index}
+                    type="button"
+                    onClick={() => setPageIndex(index)}
+                    className={`flex h-8 min-w-12 items-center justify-center rounded-md border px-2 text-[11px] font-semibold ${
+                      index === pageIndex
+                        ? "border-accent bg-accent text-white"
+                        : section.analyzed
+                          ? "border-green-200 bg-green-50 text-green-700"
+                          : "border-line bg-panel text-neutral-500 hover:bg-white"
+                    }`}
+                    title={`${group.label}, section ${localNumber} on this page, document section ${section.section_number}${
+                      section.analyzed ? " analyzed" : " not analyzed"
+                    }`}
+                  >
+                    <span>S{localNumber}</span>
+                    {section.analyzed && index !== pageIndex ? <CheckCircle2 size={12} className="ml-1" /> : null}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       ) : null}
@@ -317,9 +328,12 @@ export function DocumentPageReader({
         </button>
         <div className="text-center">
           <p className="text-sm font-semibold text-ink">
-            Section {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
+            Document section {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
           </p>
-          {currentSection?.source_label ? <p className="text-xs font-semibold text-neutral-600">{currentSection.source_label}</p> : null}
+          <p className="text-xs font-semibold text-neutral-600">
+            {currentPdfPage ? `PDF page ${currentPdfPage}` : "PDF page unknown"}
+            {currentPageSectionNumber ? ` · page section S${currentPageSectionNumber}` : ""}
+          </p>
           <p className="text-xs text-neutral-500">{(currentSection?.char_count ?? page.length).toLocaleString()} chars from backend-cleaned text</p>
           {currentSection?.analyzed ? <p className="text-xs font-semibold text-green-700">Analyzed</p> : null}
         </div>
@@ -598,6 +612,43 @@ function truncateText(value: string, limit: number) {
 function pdfPageFromLabel(label: string | null) {
   const match = label?.match(/^PDF page (\d+)$/);
   return match ? Number(match[1]) : null;
+}
+
+function groupSectionsByPdfPage(sections: DocumentSection[]) {
+  const groups: Array<{
+    key: string;
+    label: string;
+    items: Array<{ section: DocumentSection; index: number; localNumber: number }>;
+  }> = [];
+  const lookup = new Map<string, (typeof groups)[number]>();
+
+  sections.forEach((section, index) => {
+    const pdfPage = pdfPageFromLabel(section.source_label);
+    const key = pdfPage ? `pdf-${pdfPage}` : "unknown";
+    const label = pdfPage ? `PDF page ${pdfPage}` : "PDF page unknown";
+    let group = lookup.get(key);
+    if (!group) {
+      group = { key, label, items: [] };
+      lookup.set(key, group);
+      groups.push(group);
+    }
+    group.items.push({ section, index, localNumber: group.items.length + 1 });
+  });
+
+  return groups;
+}
+
+function sectionNumberWithinPdfPage(sections: DocumentSection[], index: number) {
+  const section = sections[index];
+  if (!section) return null;
+  const page = pdfPageFromLabel(section.source_label);
+  let localNumber = 0;
+  for (let cursor = 0; cursor <= index; cursor += 1) {
+    if (pdfPageFromLabel(sections[cursor]?.source_label ?? null) === page) {
+      localNumber += 1;
+    }
+  }
+  return localNumber || null;
 }
 
 function nextUnanalyzedSectionIndices(sections: DocumentSection[], currentIndex: number, limit: number) {
