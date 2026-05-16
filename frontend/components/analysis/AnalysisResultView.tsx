@@ -193,7 +193,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       <p className="mt-1">
         {isVideoSource
           ? "This result covers the transcript text sent from the video page. Longer videos should be analyzed scene by scene, then merged into a full-video learning guide."
-          : "This is not the whole paper yet. It covers the first readable section after front matter cleanup. Use source slices for page-level study while full-paper staged analysis is being built."}
+          : "This base result covers the first readable section. Use Section study and Auto-study to analyze more sections; the paper map and whole-paper draft update from analyzed section caches."}
       </p>
     </section>
   ) : null;

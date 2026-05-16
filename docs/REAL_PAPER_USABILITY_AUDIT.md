@@ -25,6 +25,7 @@ Local demo records currently include:
 
 - `batch_norm.pdf`: `126750e9-d96a-43b0-84ad-1c9d7bd6d04a`
 - `bert.pdf`: `95a095cf-71fb-42ec-9b76-934c32ce86ca`
+- `attention_is_all_you_need.pdf`: `e5795f9e-8ca4-438d-a083-08bac1a1caae`
 
 ## Fixed From Direct Use
 
@@ -49,6 +50,8 @@ Local demo records currently include:
 - Whole-paper draft priority lists show only the top three compact items by default, so the paper-level study plan remains scannable.
 - The old full generated-output report is collapsed by default. The main reading workspace now prioritizes PDF/source, section study, paper map, whole-paper draft, and current section lesson.
 - Paper-map coverage now includes the base first-section analysis even when later section caches exist. This fixes a real BERT smoke-test mismatch where the reader showed section 1 analyzed but the paper map only summarized section 3.
+- Attention Is All You Need smoke test now produces useful first-section anchors: Transformer, self-attention, attention mechanism, sequence transduction, recurrent/convolutional baselines, and BLEU. Raw signal lists remain collapsed by default.
+- Updated stale scope copy so the analysis page explains the current staged section-analysis and paper-map draft behavior instead of implying full-paper staged analysis is still absent.
 - Already analyzed sections now load their cached lesson when selected, so the green analyzed state leads back to usable learning content rather than only acting as a status marker.
 - Analysis-column learning cards now stay single-column in the PDF workspace. The previous multi-column layout made concept and term cards too narrow on normal desktop widths.
 - Old bad base-analysis fragments such as `Training Deep Neural Networks` and `inputs changes during training` are normalized out of cumulative paper-map terms/concepts.
