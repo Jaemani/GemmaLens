@@ -307,7 +307,7 @@ export function DocumentPageReader({
                       section.analyzed ? " analyzed" : " not analyzed"
                     }`}
                   >
-                    <span>S{localNumber}</span>
+                    <span>P{group.pdfPage ?? "?"}-S{localNumber}</span>
                     {section.analyzed && index !== pageIndex ? <CheckCircle2 size={12} className="ml-1" /> : null}
                   </button>
                 ))}
@@ -332,7 +332,7 @@ export function DocumentPageReader({
           </p>
           <p className="text-xs font-semibold text-neutral-600">
             {currentPdfPage ? `PDF page ${currentPdfPage}` : "PDF page unknown"}
-            {currentPageSectionNumber ? ` · page section S${currentPageSectionNumber}` : ""}
+            {currentPageSectionNumber ? ` · section P${currentPdfPage ?? "?"}-S${currentPageSectionNumber} on this page` : ""}
           </p>
           <p className="text-xs text-neutral-500">{(currentSection?.char_count ?? page.length).toLocaleString()} chars from backend-cleaned text</p>
           {currentSection?.analyzed ? <p className="text-xs font-semibold text-green-700">Analyzed</p> : null}
@@ -618,6 +618,7 @@ function groupSectionsByPdfPage(sections: DocumentSection[]) {
   const groups: Array<{
     key: string;
     label: string;
+    pdfPage: number | null;
     items: Array<{ section: DocumentSection; index: number; localNumber: number }>;
   }> = [];
   const lookup = new Map<string, (typeof groups)[number]>();
@@ -625,14 +626,15 @@ function groupSectionsByPdfPage(sections: DocumentSection[]) {
   sections.forEach((section, index) => {
     const pdfPage = pdfPageFromLabel(section.source_label);
     const key = pdfPage ? `pdf-${pdfPage}` : "unknown";
-    const label = pdfPage ? `PDF page ${pdfPage}` : "PDF page unknown";
     let group = lookup.get(key);
     if (!group) {
-      group = { key, label, items: [] };
+      group = { key, label: "", pdfPage, items: [] };
       lookup.set(key, group);
       groups.push(group);
     }
     group.items.push({ section, index, localNumber: group.items.length + 1 });
+    const sectionCount = group.items.length;
+    group.label = pdfPage ? `PDF page ${pdfPage} · S1-S${sectionCount}` : `PDF page unknown · S1-S${sectionCount}`;
   });
 
   return groups;

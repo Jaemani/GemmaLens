@@ -16,6 +16,7 @@ export function PdfSourcePane({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
+  const lastNotifiedPageRef = useRef<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const [zoom, setZoom] = useState(1.2);
@@ -26,16 +27,16 @@ export function PdfSourcePane({
   const fileUrl = api.documentFileUrl(document.id);
 
   useEffect(() => {
-    if (requestedPage && requestedPage > 0 && requestedPage !== pageNumber) {
-      setPageNumber(requestedPage);
-    }
-  }, [pageNumber, requestedPage]);
+    if (!requestedPage || requestedPage <= 0) return;
+    setPageNumber((current) => (current === requestedPage ? current : requestedPage));
+  }, [requestedPage]);
 
   useEffect(() => {
-    if (pageNumber !== requestedPage) {
+    if (lastNotifiedPageRef.current !== pageNumber) {
+      lastNotifiedPageRef.current = pageNumber;
       onPageChange?.(pageNumber);
     }
-  }, [pageNumber, onPageChange, requestedPage]);
+  }, [pageNumber, onPageChange]);
 
   useEffect(() => {
     let cancelled = false;
