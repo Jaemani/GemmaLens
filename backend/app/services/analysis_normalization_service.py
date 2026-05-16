@@ -7502,7 +7502,7 @@ class AnalysisNormalizationService:
             document_text,
             "term",
             profile["terms"],
-            limit=12,
+            limit=len(profile["terms"]),
             blocked={
                 "gradient",
                 "learning rate",
@@ -7560,6 +7560,15 @@ class AnalysisNormalizationService:
                 "minibatches",
                 "covariances",
                 "singular covariance matrices",
+                "normalized activations",
+                "backpropagate",
+                "stochastic gradient descent",
+                "differentiable transformation",
+                "mini-batch size m",
+                "variance estimate",
+                "inference",
+                "activation",
+                "linear transform",
             },
         )
 
@@ -9074,6 +9083,141 @@ class AnalysisNormalizationService:
                 "The authors name the mini-batch normalization operation the Batch Normalizing Transform.",
                 "'We refer to X as Y'는 논문에서 새 개념이나 연산에 이름을 붙이는 표현입니다.",
                 "The section combines statistical motivation and algorithm notation, so the reader needs a step-by-step view.",
+            )
+        if "does not independently process the activation in each training example" in lowered and "sub-network inputs all have fixed means and variances" in lowered:
+            return profile(
+                "This section explains that BatchNorm is a mini-batch operation, not an independent per-example operation.",
+                (
+                    "BN_gamma,beta depends on the current training example and the other examples in the same mini-batch. "
+                    "The internal normalized activations have expected mean 0 and variance 1, so later sub-networks receive inputs with more stable moments."
+                ),
+                (
+                    "The passage clarifies the training-time semantics of BatchNorm: the transform couples examples inside a mini-batch, creates internal normalized activations, "
+                    "then sends scaled and shifted values to the next layers while preserving differentiability for backpropagation."
+                ),
+                [
+                    "Do not read BatchNorm as a per-example preprocessing step; during training, each example is normalized using its mini-batch.",
+                    "Separate internal normalized activations x-hat from the values y passed to later layers.",
+                    "The learning goal is stable means and variances for sub-network inputs, not memorizing the summation identities.",
+                ],
+                [
+                    ("BN γ,β", "The BatchNorm transform with learned scale gamma and shift beta.", "BN γ,β"),
+                    ("mini-batch", "The group of examples whose statistics are used together.", "mini-batch"),
+                    ("normalized activations", "Internal x-hat values with expected mean 0 and variance 1.", "normalized activations"),
+                    ("scaled and shifted values", "Output y after applying gamma and beta to x-hat.", "scaled and shifted values"),
+                    ("sub-network inputs", "Normalized activations viewed as inputs to later network parts.", "sub-network inputs"),
+                    ("fixed means and variances", "Stable first and second moments for normalized activations.", "fixed means and variances"),
+                    ("backpropagate", "Send loss gradients through the BatchNorm transformation.", "backpropagate"),
+                    ("BN transform parameters", "Gamma and beta parameters learned with the network.", "parameters of the BN transform"),
+                ],
+                [
+                    ("mini-batch coupling", "A training example's normalized value depends on other examples in its mini-batch.", "depends both on"),
+                    ("internal-vs-output activations", "x-hat is internal to BN, while y is passed onward.", "internal to our transformation"),
+                    ("stable-subnetwork-inputs", "Normalized activations give later sub-networks fixed means and variances.", "fixed means and variances"),
+                ],
+                [
+                    ("it should be noted that", "claim", "Flags an important clarification."),
+                    ("Rather", "contrast", "Corrects the previous interpretation."),
+                    ("as long as", "limitation", "States the condition under which the claim holds."),
+                    ("can be viewed as", "method", "Introduces a conceptual reframing."),
+                    ("although", "contrast", "Concedes a remaining limitation."),
+                    ("During training", "general", "Signals training-specific behavior."),
+                ],
+                "it should be noted that the BN transform does not independently process the activation in each training example",
+                "It should be noted that X does not independently Y; rather, it depends on Z.",
+                "BatchNorm normalizes each training example using statistics from the mini-batch, not only from itself.",
+                "'it should be noted that'은 독자가 오해하기 쉬운 핵심 조건을 강조할 때 쓰는 논문 표현입니다.",
+                "The section is hard because the paper switches between x, x-hat, y, gamma/beta, and sub-network interpretation.",
+            )
+        if "we use chain rule" in lowered and "training and inference with" in lowered and "population, rather than mini-batch, statistics" in lowered:
+            return profile(
+                "This section shows that BatchNorm is differentiable, then separates training-time and inference-time normalization.",
+                (
+                    "The derivative block only says gradients can pass through BatchNorm. The important reading point is the next distinction: "
+                    "training uses mini-batch statistics, but inference should use fixed population statistics so the output depends only on the input."
+                ),
+                (
+                    "The passage connects optimization and deployment: BN is inserted into selected activations and can be trained with SGD variants, "
+                    "but the stochastic mini-batch dependency is replaced at inference by population mean and variance for deterministic prediction."
+                ),
+                [
+                    "Do not study the derivative block first; identify its role: proving the transform can be trained end to end.",
+                    "The major concept contrast is training-time mini-batch statistics versus inference-time population statistics.",
+                    "This is where BatchNorm becomes a deployable network layer rather than just a training trick.",
+                ],
+                [
+                    ("chain rule", "Calculus rule used to backpropagate through BatchNorm.", "chain rule"),
+                    ("differentiable transformation", "A transform gradients can pass through during training.", "differentiable transformation"),
+                    ("affine transform", "Learned scale and shift applied after normalization.", "affine transform"),
+                    ("Stochastic Gradient Descent", "Optimizer family compatible with BatchNorm.", "Stochastic Gradient Descent"),
+                    ("Adagrad", "Example SGD variant mentioned by the paper.", "Adagrad"),
+                    ("inference", "Prediction phase after training.", "inference"),
+                    ("population statistics", "Fixed mean and variance estimates used during inference.", "population, rather than mini-batch, statistics"),
+                ],
+                [
+                    ("differentiability proof role", "The equations justify training through the BN transform.", "BN transform is a differentiable transformation"),
+                    ("training/inference split", "Training uses mini-batch statistics; inference uses fixed population statistics.", "during inference"),
+                    ("deterministic prediction requirement", "At inference, output should depend only on the input.", "depend only on the input"),
+                ],
+                [
+                    ("Thus", "claim", "Draws the conclusion from equations."),
+                    ("This ensures that", "result", "Explains the training benefit."),
+                    ("Furthermore", "general", "Adds a second benefit."),
+                    ("can be trained using", "method", "Lists compatible optimizers."),
+                    ("but is neither necessary nor desirable", "limitation", "Rejects mini-batch dependency for inference."),
+                    ("For this", "method", "Introduces the inference-time replacement."),
+                    ("rather than", "contrast", "Contrasts population and mini-batch statistics."),
+                ],
+                "The normalization of activations that depends on the mini-batch allows efficient training, but is neither necessary nor desirable during inference",
+                "X allows efficient training, but is neither necessary nor desirable during inference.",
+                "Mini-batch statistics help training, but inference needs fixed statistics so predictions are deterministic.",
+                "'but is neither necessary nor desirable'는 학습 단계에서 유용한 것이 추론 단계에는 맞지 않음을 강하게 대비합니다.",
+                "The section starts with dense derivative notation, then quickly pivots into the more important training-vs-inference distinction.",
+            )
+        if "unbiased variance estimate" in lowered and "algorithm 2" in lowered and "batch-normalized convolutional networks" in lowered:
+            return profile(
+                "This section explains how a trained BatchNorm layer is converted into a fixed inference-time linear transform.",
+                (
+                    "After training, the model estimates population mean and variance from training mini-batches. "
+                    "Because those statistics are fixed during inference, BatchNorm can be folded into one linear transform using gamma, beta, mean, and variance."
+                ),
+                (
+                    "The passage operationalizes inference for BatchNorm: collect moving or averaged statistics from mini-batches, freeze them, replace BN(x) with an equivalent affine transform, "
+                    "and then move to the convolutional-network case."
+                ),
+                [
+                    "Algorithm 2 is a deployment recipe: train with BN, estimate population statistics, freeze them, replace BN with a linear transform.",
+                    "The unbiased variance estimate corrects mini-batch variance before inference use.",
+                    "The convolutional section begins at the end; do not merge it with Algorithm 2's inference procedure.",
+                ],
+                [
+                    ("unbiased variance estimate", "Variance estimate corrected by m/(m-1).", "unbiased variance estimate"),
+                    ("moving averages", "Running estimates of mean and variance during training.", "moving averages"),
+                    ("inference", "Prediction phase using fixed normalization statistics.", "inference"),
+                    ("linear transform", "Fixed affine replacement for BN during inference.", "linear transform"),
+                    ("scaling by γ", "Learned multiplicative factor in the folded transform.", "scaling by γ"),
+                    ("shift by β", "Learned additive factor in the folded transform.", "shift by β"),
+                    ("Algorithm 2", "Procedure for training and converting a batch-normalized network for inference.", "Algorithm 2"),
+                    ("batch-normalized convolutional networks", "Next application area introduced after Algorithm 2.", "Batch-Normalized Convolutional Networks"),
+                ],
+                [
+                    ("inference-statistics estimation", "Population mean and variance are estimated from multiple training mini-batches.", "average over them"),
+                    ("BN folding", "Frozen BN can be replaced by a single linear transform.", "yield a single linear transform"),
+                    ("training-to-inference conversion", "Algorithm 2 describes converting N_tr_BN into N_inf_BN.", "Training a Batch-Normalized Network"),
+                ],
+                [
+                    ("where the expectation is over", "general", "Defines what an expectation averages over."),
+                    ("Using moving averages instead", "method", "Introduces an alternative statistics-tracking method."),
+                    ("Since", "claim", "Gives the reason for the next simplification."),
+                    ("It may further be composed with", "method", "Explains how operations can be folded together."),
+                    ("to yield", "result", "Introduces the resulting transform."),
+                    ("summarizes the procedure", "general", "Signals an algorithm overview."),
+                ],
+                "Since the means and variances are fixed during inference, the normalization is simply a linear transform",
+                "Since X is fixed during inference, Y is simply Z.",
+                "Once mean and variance are frozen, BatchNorm becomes a fixed affine operation at inference time.",
+                "'Since X, Y is simply Z'는 조건이 고정되면 복잡한 절차가 단순화됨을 설명하는 구조입니다.",
+                "The section is difficult because Algorithm 2 mixes training-network notation, inference-network notation, and folded affine parameters.",
             )
         return None
 
