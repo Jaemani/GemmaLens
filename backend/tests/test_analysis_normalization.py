@@ -1460,3 +1460,48 @@ def test_resnet_detection_results_table_section_becomes_table_reading_guide():
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
     assert "term_not_in_source_sentence:mAP" not in result.quality_warnings
     assert not any(warning.startswith("source_sentence_not_in_document:") for warning in result.quality_warnings)
+
+
+def test_resnet_detection_result_narrative_recovers_protocol_and_transfer():
+    document = (
+        "The system baseline+++ include box refinement, context, and multi-scale testing in Table 9. "
+        "Using validation data. Next we use the 80k+40k trainval set for training and the 20k test-dev set for evaluation. "
+        "The test-dev set has no publicly available ground truth and the result is reported by the evaluation server. "
+        "This is our single-model result. "
+        "Ensemble. In Faster R-CNN, the system is designed to learn region proposals and also object classifiers, so an ensemble can be used to boost both tasks. "
+        "We use an ensemble for proposing regions, and the union set of proposals are processed by an ensemble of per-region classifiers. "
+        "This result won the 1st place in the detection task in COCO 2015. "
+        "PASCAL VOC We revisit the PASCAL VOC dataset based on the above model. "
+        "With the single model on the COCO dataset, we fine-tune this model on the PASCAL VOC sets. "
+        "The result on PASCAL VOC 2012 is 10 points higher than the previous state-of-the-art result."
+    )
+    payload = {
+        "terms": [
+            {"term": "RoI pooling", "meaning": "wrong emphasis"},
+            {"term": "mAP@.5", "meaning": "metric label"},
+            {"term": "ensemble", "meaning": "too narrow alone"},
+        ],
+        "concepts": [
+            {"concept": "RoI pooling", "explanation": "wrong emphasis"},
+            {"concept": "mAP@.5", "explanation": "metric label"},
+            {"concept": "ensemble", "explanation": "too narrow alone"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "The system baseline+++ include box refinement, context, and multi-scale testing in Table 9."},
+        "sentences": [{"sentence": "The system baseline+++ include box refinement, context, and multi-scale testing in Table 9.", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:0"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-detection-narrative", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert not {"RoI pooling", "mAP@.5"} & terms
+    assert not {"RoI pooling", "mAP@.5", "ensemble"} & concepts
+    assert {"test-dev set", "evaluation server", "single-model result", "region proposals", "per-region classifiers", "state-of-the-art result"}.issubset(terms)
+    assert {"hidden-label benchmark evaluation", "single model versus ensemble", "COCO-to-PASCAL fine-tuning", "competition result claim"}.issubset(concepts)
+    assert {"no publicly available ground truth", "reported by the evaluation server", "single-model result", "boost both tasks", "fine-tune this model", "higher than the previous state-of-the-art"}.issubset(phrases)
+    assert result.summaries.one_line == "This section explains COCO test-dev evaluation, ensemble gains, and COCO-to-PASCAL fine-tuning results."
+    assert result.sentences[0].core_structure == "A has no B and the result is reported by C."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings
