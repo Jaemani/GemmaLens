@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, FileQuestion, FileText, FlaskConical, HelpCircle, Languages, LayoutDashboard, Settings, Video } from "lucide-react";
+import { BookOpen, FileQuestion, FileText, HelpCircle, Languages, LayoutDashboard, Settings, Video } from "lucide-react";
 
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -7,7 +7,6 @@ const items = [
   { href: "/video", label: "Video", icon: Video },
   { href: "/translate", label: "Translate", icon: Languages },
   { href: "/quiz", label: "Quiz", icon: FileQuestion },
-  { href: "/experiments", label: "Experiments", icon: FlaskConical },
   { href: "/dictionary", label: "Dictionary", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/guide", label: "Guide", icon: HelpCircle }
