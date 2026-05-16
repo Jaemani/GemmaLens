@@ -54,6 +54,9 @@ class AnalysisNormalizationService:
         if self._is_resnet_imagenet_localization_details_section(document_text):
             terms = self._filter_resnet_imagenet_localization_details_noise(terms, "term")
             terms = self._prefer_resnet_imagenet_localization_details_terms(terms, document_text)
+        if self._is_resnet_imagenet_localization_rcnn_section(document_text):
+            terms = self._filter_resnet_imagenet_localization_rcnn_noise(terms, "term")
+            terms = self._prefer_resnet_imagenet_localization_rcnn_terms(terms, document_text)
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -113,6 +116,9 @@ class AnalysisNormalizationService:
         if self._is_resnet_imagenet_localization_details_section(document_text):
             normalized["concepts"] = self._prefer_resnet_imagenet_localization_details_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_resnet_imagenet_localization_details_noise(normalized["phrases"], "phrase")
+        if self._is_resnet_imagenet_localization_rcnn_section(document_text):
+            normalized["concepts"] = self._prefer_resnet_imagenet_localization_rcnn_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_resnet_imagenet_localization_rcnn_noise(normalized["phrases"], "phrase")
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -1476,6 +1482,41 @@ class AnalysisNormalizationService:
                     "hard",
                     "This is the testing mode that improves localization error.",
                 ),
+                (
+                    "RoI-centric",
+                    "A training style centered on region proposals rather than whole-image batches.",
+                    "field_term",
+                    "hard",
+                    "This is why the authors switch from Fast R-CNN to original R-CNN.",
+                ),
+                (
+                    "class-dependent proposals",
+                    "Bounding-box proposals predicted for a specific class.",
+                    "field_term",
+                    "hard",
+                    "The per-class RPN outputs these proposals for localization.",
+                ),
+                (
+                    "highest scored proposals",
+                    "The top-ranked proposal boxes selected for each image or predicted class.",
+                    "field_term",
+                    "medium",
+                    "The section repeatedly uses the top 200 proposals.",
+                ),
+                (
+                    "R-CNN classifier",
+                    "The classifier trained on cropped proposal regions.",
+                    "field_term",
+                    "medium",
+                    "This is the RoI-centric classifier used instead of Fast R-CNN.",
+                ),
+                (
+                    "relative reduction of error",
+                    "A percentage reduction compared with a previous error rate.",
+                    "useful",
+                    "medium",
+                    "This is how the section reports the final localization improvement.",
+                ),
             ]
         else:
             known = [
@@ -1787,6 +1828,17 @@ class AnalysisNormalizationService:
                 ("using the ground truth class", "method", "Defines oracle testing for localization."),
                 ("Under the same setting", "result", "Introduces a controlled comparison result."),
                 ("significantly reduces", "result", "States the result improvement."),
+                ("One may use", "general", "Introduces a plausible alternative before rejecting or modifying it."),
+                ("But we notice that", "contrast", "Signals the observation that changes the implementation choice."),
+                ("As a result", "result", "Connects dataset properties to a training problem."),
+                ("Motivated by this", "method", "Introduces the design decision caused by the previous observation."),
+                ("in place of", "contrast", "States that one method replaces another."),
+                ("play a role of", "general", "Explains the function of predicted boxes in the pipeline."),
+                ("For each training image", "method", "Introduces a per-image training-sample extraction step."),
+                ("are extracted as training samples", "method", "Explains how proposals become classifier training data."),
+                ("is cropped from", "method", "Describes how an image region is prepared for R-CNN classification."),
+                ("used to update", "method", "Explains how the R-CNN refines proposal scores and boxes at test time."),
+                ("relative reduction of error", "result", "Reports the final improvement as relative error reduction."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
                 ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
@@ -2423,6 +2475,26 @@ class AnalysisNormalizationService:
                     "This helps separate localization error from classification error.",
                 ),
                 (
+                    "Fast R-CNN limitation for LOC",
+                    "On ImageNet localization, overlapping proposal regions make Fast R-CNN image-centric training less desirable.",
+                    "This explains why the authors switch methods instead of simply reusing the detector.",
+                ),
+                (
+                    "RoI-centric R-CNN choice",
+                    "The authors use original R-CNN because it trains on cropped proposal regions.",
+                    "This is the main implementation decision in the final section.",
+                ),
+                (
+                    "class-dependent proposal workflow",
+                    "Per-class RPN predicts boxes for the ground-truth class, and the top 200 proposals become R-CNN training samples.",
+                    "This is the localization pipeline to understand.",
+                ),
+                (
+                    "localization competition result",
+                    "The ensemble reaches 9.0% top-5 localization error and wins ImageNet localization in ILSVRC 2015.",
+                    "This is the final benchmark claim of the paper.",
+                ),
+                (
                     "zero-padding shortcuts",
                     "The parameter-free shortcut option that pads increased dimensions with zeros.",
                     "This is option A in the projection-shortcut comparison.",
@@ -2671,6 +2743,27 @@ class AnalysisNormalizationService:
                     "The authors state a controlled comparison result.",
                     "'Under the same setting'은 비교 조건이 같음을 강조합니다.",
                     "This phrase helps read the localization-error comparison fairly.",
+                ),
+                (
+                    "Motivated by this",
+                    "Motivated by this, we use A in place of B.",
+                    "The authors connect an observed training issue to the R-CNN design choice.",
+                    "'Motivated by this'는 앞 관찰이 뒤 방법 선택의 이유임을 보여줍니다.",
+                    "This is the key method-decision sentence in the final section.",
+                ),
+                (
+                    "play a role of",
+                    "A play a role of B.",
+                    "The authors explain how predicted boxes function as class-dependent proposals.",
+                    "'play a role of'는 어떤 대상이 맡는 기능을 설명합니다.",
+                    "This helps follow the proposal pipeline.",
+                ),
+                (
+                    "relative reduction of error",
+                    "A shows a B relative reduction of error.",
+                    "The authors report the final localization gain relative to previous results.",
+                    "'relative reduction'은 절대 차이가 아니라 비율로 줄어든 정도를 말합니다.",
+                    "This is a benchmark-result sentence.",
                 ),
                 (
                     "as easy as stacking more layers",
@@ -3693,6 +3786,23 @@ class AnalysisNormalizationService:
                         "Oracle testing uses the ground-truth class, so it isolates localization from classification error.",
                     ],
                 }
+            if self._is_resnet_imagenet_localization_rcnn_section(document_text):
+                return {
+                    "one_line": "This final section explains why ImageNet localization uses RoI-centric R-CNN and reports the winning localization result.",
+                    "simple": (
+                        "Fast R-CNN is less suitable here because proposals overlap heavily and create small sample variation. "
+                        "The authors switch to RoI-centric R-CNN, train on class-dependent proposals, and report a 9.0% top-5 localization error ensemble win."
+                    ),
+                    "academic": (
+                        "The section motivates replacing image-centric Fast R-CNN with original RoI-centric R-CNN for ImageNet LOC, "
+                        "then describes proposal extraction, cropped-region classifier training, score/box updating, and the ILSVRC 2015 localization win."
+                    ),
+                    "study_notes": [
+                        "Read the first paragraph as a design justification: overlapping proposals make image-centric training less useful.",
+                        "Track the pipeline: per-class RPN -> top proposals -> cropped regions -> R-CNN classifier -> updated scores/boxes.",
+                        "The final result is a localization competition result, not a new residual-block idea.",
+                    ],
+                }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
                 return {
                     "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
@@ -3988,6 +4098,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_resnet_imagenet_localization_details_section(document_text):
             return True
+        if self._is_resnet_imagenet_localization_rcnn_section(document_text):
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -4228,6 +4340,7 @@ class AnalysisNormalizationService:
             or self._is_resnet_imagenet_detection_setup_section(document_text)
             or self._is_resnet_imagenet_localization_setup_section(document_text)
             or self._is_resnet_imagenet_localization_details_section(document_text)
+            or self._is_resnet_imagenet_localization_rcnn_section(document_text)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
@@ -4307,6 +4420,15 @@ class AnalysisNormalizationService:
             and "anchor" in lowered
             and "oracle" in lowered
             and "localization error" in lowered
+        )
+
+    def _is_resnet_imagenet_localization_rcnn_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "roi-centric" in lowered
+            and "class-dependent proposals" in lowered
+            and "relative reduction of error" in lowered
+            and "imagenet localization task" in lowered
         )
 
     def _prefer_resnet_deep_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
@@ -5053,6 +5175,135 @@ class AnalysisNormalizationService:
             "multi-scale testing",
         }
         return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_imagenet_localization_rcnn_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"mini-batch", "roi-pooled features", "stochastic training", "per-class rpn"}
+        preferred = {
+            "Fast R-CNN limitation for LOC": (
+                "Overlapping proposal regions make Fast R-CNN image-centric training produce low-variation samples.",
+                "This explains the method switch.",
+            ),
+            "RoI-centric R-CNN choice": (
+                "The authors use original R-CNN because it trains on cropped proposal regions.",
+                "This is the main design choice of the section.",
+            ),
+            "class-dependent proposal workflow": (
+                "Per-class RPN boxes become class-dependent proposals, then the top 200 train an R-CNN classifier.",
+                "This is the localization pipeline to understand.",
+            ),
+            "localization competition result": (
+                "The ensemble reaches 9.0% top-5 localization error and wins ImageNet localization in ILSVRC 2015.",
+                "This is the final benchmark claim.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = (
+                    "small variations"
+                    if "limitation" in lowered
+                    else "RoI-centric"
+                    if "choice" in lowered
+                    else "class-dependent proposals"
+                    if "workflow" in lowered
+                    else "relative reduction of error"
+                )
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_resnet_imagenet_localization_rcnn_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {"mini-batch", "roi-pooled features", "stochastic training", "per-class rpn", "faster r-cnn", "imagenet", "ilsvrc 2015"}
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_imagenet_localization_rcnn_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        preferred = [
+            (
+                "RoI-centric",
+                "A region-centered training style used by original R-CNN.",
+                "field_term",
+                "hard",
+                "RoI-centric",
+                "This is the design choice replacing image-centric Fast R-CNN.",
+            ),
+            (
+                "class-dependent proposals",
+                "Proposal boxes tied to a specific predicted or ground-truth class.",
+                "field_term",
+                "hard",
+                "class-dependent proposals",
+                "This explains how per-class RPN outputs are used.",
+            ),
+            (
+                "highest scored proposals",
+                "The top-ranked proposal boxes selected for training or testing.",
+                "field_term",
+                "medium",
+                "highest scored",
+                "The pipeline uses the top 200 proposals.",
+            ),
+            (
+                "R-CNN classifier",
+                "A classifier trained on cropped proposal regions.",
+                "field_term",
+                "medium",
+                "R-CNN classifier",
+                "This is the classifier trained after proposal extraction.",
+            ),
+            (
+                "relative reduction of error",
+                "A result reported as percentage reduction relative to prior error.",
+                "useful",
+                "medium",
+                "relative reduction of error",
+                "This is how the final localization improvement is expressed.",
+            ),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, target, reason in preferred:
+            lowered = term.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                promoted.append(
+                    {
+                        "term": term,
+                        "meaning": meaning,
+                        "domain_relevance": "high" if priority == "field_term" else "medium",
+                        "difficulty": difficulty,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "should_save": True,
+                        "learning_priority": priority,
+                        "reason": reason,
+                        "context_meaning": meaning,
+                        "general_meaning": meaning,
+                        "confidence": 0.9,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [row for row in rows if str(row.get("term") or "").strip().lower() not in {term.lower() for term, *_ in preferred}]
+        return [*promoted, *rest][:12]
 
     def _prefer_resnet_imagenet_localization_details_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         preferred = [

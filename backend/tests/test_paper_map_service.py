@@ -75,10 +75,43 @@ def test_paper_map_normalizes_base_analysis_when_no_section_cache():
     assert "training deep neural networks" not in mapped
     assert "inputs changes during training" not in mapped
     assert "batch normalization" in mapped
-    assert paper_map.guide.coverage_note == "1 of 1 sections analyzed. This is a partial reading guide, not a whole-paper conclusion."
+    assert paper_map.guide.coverage_note == "1 of 1 sections analyzed. This is a complete section-level reading guide."
     assert paper_map.guide.reading_focus
     assert paper_map.synthesis.status == "whole-paper draft"
     assert paper_map.synthesis.priority_terms
+
+
+def _paper_result(summary: str, concept: str = "residual learning framework") -> AnalysisResult:
+    text = f"{summary} {concept}"
+    return AnalysisResult.model_validate(
+        {
+            "document_id": "doc-complete",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [{"term": concept, "meaning": "paper concept", "domain_relevance": "high", "difficulty": "hard", "source_sentence": text, "should_save": True}],
+            "phrases": [{"phrase": "We show that", "function": "result", "explanation": "result signal", "source_sentence": "We show that."}],
+            "concepts": [{"concept": concept, "explanation": "paper concept", "source_sentence": text}],
+            "sentences": [],
+            "summaries": {"one_line": summary, "simple": summary, "academic": summary, "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+
+
+def test_complete_paper_map_keeps_all_section_summaries_and_complete_copy():
+    section_texts = [f"Section {index} text." for index in range(1, 29)]
+    base = _paper_result("Section 1 summary.")
+    rows = [(index, _paper_result(f"Section {index + 1} summary.")) for index in range(1, 28)]
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows(rows)).build("doc-complete", section_texts)
+
+    assert paper_map.analyzed_sections == list(range(1, 29))
+    assert paper_map.guide.coverage_note == "28 of 28 sections analyzed. This is a complete section-level reading guide."
+    assert "Analyze the next unstudied section" not in " ".join(paper_map.guide.next_steps)
+    assert len(paper_map.section_summaries) == 28
+    assert paper_map.section_summaries[-1].text == "Section 28"
+    assert any(item.startswith("S28:") for item in paper_map.synthesis.argument_flow)
+    assert not any("more analyzed section summaries" in item for item in paper_map.synthesis.argument_flow)
 
 
 def test_paper_map_guide_separates_partial_coverage_from_whole_paper_claim():
@@ -376,7 +409,7 @@ def test_paper_map_argument_flow_keeps_latest_section_when_longer_than_limit():
     ]
 
     paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows(sections)).build(
-        "doc-flow-latest", [f"section {index}" for index in range(21)]
+        "doc-flow-latest", [f"section {index}" for index in range(22)]
     )
 
     assert any(item.startswith("S21:") for item in paper_map.synthesis.argument_flow)

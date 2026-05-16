@@ -71,7 +71,7 @@ class PaperMapService:
             top_concepts=top_concepts,
             top_terms=top_terms,
             top_phrases=top_phrases,
-            section_summaries=summaries[:20],
+            section_summaries=summaries,
         )
 
     def _add(self, rows: OrderedDict[str, dict[str, Any]], text: str, meaning: str, section_number: int) -> None:
@@ -220,7 +220,10 @@ class PaperMapService:
         else:
             thesis = latest_summary or "Analyzed sections are available, but no stable concept anchor has emerged yet."
 
-        if total_sections:
+        complete = bool(total_sections and analyzed_count >= total_sections)
+        if complete:
+            coverage = f"{analyzed_count} of {total_sections} sections analyzed. This is a complete section-level reading guide."
+        elif total_sections:
             coverage = f"{analyzed_count} of {total_sections} sections analyzed. This is a partial reading guide, not a whole-paper conclusion."
         else:
             coverage = f"{analyzed_count} analyzed section(s). This guide only reflects analyzed text."
@@ -235,7 +238,11 @@ class PaperMapService:
         if latest_summary and latest_summary != first_summary:
             focus.append(f"Latest section signal: {latest_summary}")
 
-        next_steps = ["Analyze the next unstudied section before trusting the map as a whole-paper view."]
+        next_steps = [
+            "Review the full argument flow, then use priority concepts, terms, and expressions as the paper-level study plan."
+            if complete
+            else "Analyze the next unstudied section before trusting the map as a whole-paper view."
+        ]
         if top_concepts:
             repeated = [str(item["text"]) for item in top_concepts if int(item.get("count") or 0) > 1]
             if repeated:
@@ -268,7 +275,7 @@ class PaperMapService:
 
         coverage_ratio = analyzed_count / total_sections if total_sections else 0
         status = "whole-paper draft" if total_sections and coverage_ratio >= 0.8 else "partial synthesis"
-        flow_limit = 20
+        flow_limit = max(20, analyzed_count) if total_sections and analyzed_count >= total_sections else 20
         flow = self._argument_flow(summaries, limit=flow_limit)
         unique_summary_count = len({str(item.get("meaning") or "").strip().lower() for item in summaries if item.get("meaning")})
         if unique_summary_count > flow_limit:

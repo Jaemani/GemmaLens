@@ -1676,3 +1676,64 @@ def test_resnet_imagenet_localization_details_recovers_anchor_and_testing_protoc
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
     assert "term_not_in_source_sentence:anchor boxes" not in result.quality_warnings
     assert "term_not_in_source_sentence:fully-convolutional testing" not in result.quality_warnings
+
+
+def test_resnet_imagenet_localization_rcnn_section_recovers_final_pipeline():
+    document = (
+        "One may use the detection network Fast R-CNN in Faster R-CNN to improve the results. "
+        "But we notice that on this dataset, one image usually contains a single dominate object, and the proposal regions highly overlap with each other and thus have very similar RoI-pooled features. "
+        "As a result, the image-centric training of Fast R-CNN generates samples of small variations, which may not be desired for stochastic training. "
+        "Motivated by this, in our current experiment we use the original R-CNN that is RoI-centric, in place of Fast R-CNN. "
+        "We apply the per-class RPN trained as above on the training images to predict bounding boxes for the ground truth class. "
+        "These predicted boxes play a role of class-dependent proposals. "
+        "For each training image, the highest scored 200 proposals are extracted as training samples to train an R-CNN classifier. "
+        "The image region is cropped from a proposal, warped to 224x224 pixels, and fed into the classification network as in R-CNN. "
+        "For testing, the RPN generates the highest scored 200 proposals for each predicted class, and the R-CNN network is used to update these proposals' scores and box positions. "
+        "Using an ensemble of networks for both classification and localization, we achieve a top-5 localization error of 9.0% on the test set. "
+        "This number significantly outperforms the ILSVRC 14 results, showing a 64% relative reduction of error. "
+        "This result won the 1st place in the ImageNet localization task in ILSVRC 2015."
+    )
+    payload = {
+        "terms": [
+            {"term": "mini-batch", "meaning": "wrong emphasis"},
+            {"term": "RoI-pooled features", "meaning": "symptom only"},
+            {"term": "stochastic training", "meaning": "symptom only"},
+            {"term": "per-class RPN", "meaning": "too broad alone"},
+        ],
+        "concepts": [
+            {"concept": "mini-batch", "explanation": "wrong emphasis"},
+            {"concept": "RoI-pooled features", "explanation": "symptom only"},
+            {"concept": "stochastic training", "explanation": "symptom only"},
+            {"concept": "per-class RPN", "explanation": "too broad alone"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "One may use the detection network Fast R-CNN in Faster R-CNN to improve the results."},
+        "sentences": [{"sentence": "One may use the detection network Fast R-CNN in Faster R-CNN to improve the results.", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:0"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-imagenet-loc-rcnn", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert not {"mini-batch", "RoI-pooled features", "stochastic training", "per-class RPN"} & terms
+    assert not {"mini-batch", "RoI-pooled features", "stochastic training", "per-class RPN"} & concepts
+    assert {"RoI-centric", "class-dependent proposals", "highest scored proposals", "R-CNN classifier", "relative reduction of error"}.issubset(terms)
+    assert {"Fast R-CNN limitation for LOC", "RoI-centric R-CNN choice", "class-dependent proposal workflow", "localization competition result"}.issubset(concepts)
+    assert {
+        "One may use",
+        "But we notice that",
+        "As a result",
+        "Motivated by this",
+        "in place of",
+        "play a role of",
+        "For each training image",
+        "are extracted as training samples",
+        "is cropped from",
+        "used to update",
+        "relative reduction of error",
+    }.issubset(phrases)
+    assert result.summaries.one_line.startswith("This final section explains why ImageNet localization uses RoI-centric R-CNN")
+    assert result.sentences[0].core_structure == "Motivated by this, we use A in place of B."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings
