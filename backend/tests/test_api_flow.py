@@ -224,6 +224,10 @@ def test_document_section_analysis_stays_on_parent_document(client):
     missing = client.post(f"/documents/{created.json()['id']}/sections/999/analyze")
     assert missing.status_code == 404
 
+    deleted = client.delete(f"/documents/{created.json()['id']}")
+    assert deleted.status_code == 204
+    assert client.get(f"/documents/{created.json()['id']}/sections/1/analysis").status_code == 404
+
 
 def test_staged_analysis_analyzes_next_unstudied_sections(client):
     content = " ".join([SAMPLE_TEXT] * 14)

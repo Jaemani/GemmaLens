@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.analysis import Analysis
 from app.models.dictionary import DictionaryItem
 from app.models.document import Document
+from app.models.section_analysis import SectionAnalysis
 from app.schemas.document_schema import DocumentCreate
 
 
@@ -54,6 +55,7 @@ class DocumentRepository:
         if not document:
             return False
         self.db.execute(delete(Analysis).where(Analysis.document_id == document_id))
+        self.db.execute(delete(SectionAnalysis).where(SectionAnalysis.document_id == document_id))
         self.db.execute(update(DictionaryItem).where(DictionaryItem.document_id == document_id).values(document_id=None))
         if document.original_file_path:
             try:
