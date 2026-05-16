@@ -219,7 +219,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       <div className="space-y-6">
         {hasPdfViewer ? (
           <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
-            <div className="min-w-0 xl:sticky xl:top-4">
+            <div className="min-w-0 xl:sticky xl:top-4 xl:self-start">
               <PdfSourcePane document={document} requestedPage={requestedPdfPage} onPageChange={setRequestedPdfPage} onReady={() => setSourceReady(true)} />
             </div>
             <div className="min-w-0">{workspaceContent}</div>
@@ -367,7 +367,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       <DomainOverviewCard analysis={analysis} />
       {hasPdfViewer && document ? (
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
-          <div className="min-w-0 xl:sticky xl:top-4">
+          <div className="min-w-0 xl:sticky xl:top-4 xl:self-start">
             <PdfSourcePane document={document} requestedPage={requestedPdfPage} onPageChange={setRequestedPdfPage} onReady={() => setSourceReady(true)} />
           </div>
           <div className="min-w-0">{guideContent}</div>
