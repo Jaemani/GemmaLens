@@ -3,6 +3,7 @@
 import { Eye, Trash2 } from "lucide-react";
 import type { DictionaryItem } from "@/lib/types";
 import { api } from "@/lib/api";
+import { reviewLabel, reviewState, reviewTone } from "@/lib/dictionaryReview";
 
 export function DictionaryTable({ items, onDeleted }: { items: DictionaryItem[]; onDeleted: () => void }) {
   async function remove(itemId: string) {
@@ -22,6 +23,7 @@ export function DictionaryTable({ items, onDeleted }: { items: DictionaryItem[];
           <tr>
             <th className="px-4 py-3">Item</th>
             <th className="px-4 py-3">Meaning</th>
+            <th className="px-4 py-3">Review</th>
             <th className="px-4 py-3">Seen</th>
             <th className="px-4 py-3">Viewed</th>
             <th className="px-4 py-3"></th>
@@ -35,6 +37,11 @@ export function DictionaryTable({ items, onDeleted }: { items: DictionaryItem[];
                 <p className="text-xs uppercase text-neutral-500">{item.item_type}</p>
               </td>
               <td className="px-4 py-3 text-neutral-700">{item.meaning}</td>
+              <td className="px-4 py-3">
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${reviewTone(reviewState(item))}`}>
+                  {reviewLabel(reviewState(item))}
+                </span>
+              </td>
               <td className="px-4 py-3">{item.encounter_count}</td>
               <td className="px-4 py-3">{item.view_count}</td>
               <td className="px-4 py-3 text-right">

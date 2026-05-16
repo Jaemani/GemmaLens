@@ -187,6 +187,7 @@ Local demo records currently include:
 - Navigation audit exposed that the internal Experiments page was still visible in the primary learner sidebar. The route remains available, but the main navigation now focuses on learner-facing surfaces only.
 - Quiz audit exposed two issues: it still presented itself as experimental, and it requested analysis for documents that only had section-level caches, producing browser 404 noise. The quiz page now uses learner-facing review copy, cleaned source previews, display-deduplicated sources, and the document list API exposes `has_analysis` so the quiz only requests valid base-analysis records.
 - Follow-up quiz audit exposed that review prompts should use complete paper maps when available, not only the initial base analysis. The quiz now builds concept, term, and expression prompts from paper-map priority lists before falling back to base-analysis items.
+- Dictionary follow-up audit exposed that the page still lacked a sense of review timing. Saved items now show lightweight `New`, `Review soon`, and `Familiar` states derived from encounter and view counts, with summary cards and table badges.
 
 ## Still Weak
 

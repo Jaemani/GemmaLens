@@ -41,7 +41,7 @@ Evaluate GemmaLens as a real user reading famous academic PDFs end to end. The a
 - Staged analysis is request/response style. It lacks a durable background job queue, pause/resume, and user-visible progress after refresh.
 - Duplicate document records are hidden in lists but not merged or cleaned in the database.
 - PDF extraction still loses equations, columns, and some mathematical layout; the UI is honest about this but does not solve OCR/layout recovery.
-- Dictionary review is organized but not yet an actual learning schedule.
+- Dictionary review now shows lightweight review states (`New`, `Review soon`, `Familiar`) from encounter and view counts. It is still not a full spaced-repetition scheduler.
 - Video transcript analysis is aligned visually, but the full video-result flow needs the same depth of famous-paper auditing.
 - Quiz now builds prompts from complete paper-map priority concepts, terms, and expressions when available, then falls back to base analysis items. It is still lightweight and not a full spaced-repetition scheduler.
 

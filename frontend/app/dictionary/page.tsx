@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenCheck, Filter, Layers, Quote, ScanText } from "lucide-react";
+import { BookOpenCheck, Filter, Layers, Quote, RotateCcw, ScanText, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { DictionaryTable } from "@/components/dictionary/DictionaryTable";
@@ -8,6 +8,7 @@ import { SavedTermCard } from "@/components/dictionary/SavedTermCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
+import { reviewCounts } from "@/lib/dictionaryReview";
 import type { DictionaryItem } from "@/lib/types";
 
 export default function DictionaryPage() {
@@ -28,6 +29,7 @@ export default function DictionaryPage() {
 
   const filteredItems = filter === "all" ? items : items.filter((item) => item.item_type === filter);
   const counts = countByType(items);
+  const review = reviewCounts(items);
 
   return (
     <AppShell>
@@ -46,6 +48,11 @@ export default function DictionaryPage() {
             <SummaryCard icon={<ScanText size={18} />} label="Terms" count={counts.term} />
             <SummaryCard icon={<Quote size={18} />} label="Expressions" count={counts.phrase} />
             <SummaryCard icon={<BookOpenCheck size={18} />} label="Sentences" count={counts.sentence} />
+          </section>
+          <section className="grid gap-3 md:grid-cols-3">
+            <SummaryCard icon={<Sparkles size={18} />} label="New" count={review.new} tone="blue" />
+            <SummaryCard icon={<RotateCcw size={18} />} label="Review soon" count={review["review-soon"]} tone="amber" />
+            <SummaryCard icon={<BookOpenCheck size={18} />} label="Familiar" count={review.familiar} tone="emerald" />
           </section>
           <section className="rounded-lg border border-line bg-panel p-4 shadow-material">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -97,11 +104,16 @@ function filterLabel(value: DictionaryFilter) {
   return `${value.charAt(0).toUpperCase()}${value.slice(1)}s`;
 }
 
-function SummaryCard({ icon, label, count }: { icon: ReactNode; label: string; count: number }) {
+function SummaryCard({ icon, label, count, tone = "blue" }: { icon: ReactNode; label: string; count: number; tone?: "blue" | "amber" | "emerald" }) {
+  const toneClass = {
+    blue: "bg-blue-50 text-accent",
+    amber: "bg-amber-50 text-amber-800",
+    emerald: "bg-emerald-50 text-emerald-700"
+  }[tone];
   return (
     <div className="rounded-lg border border-line bg-panel p-4 shadow-material">
       <div className="flex items-center justify-between gap-3">
-        <div className="rounded-md bg-blue-50 p-2 text-accent">{icon}</div>
+        <div className={`rounded-md p-2 ${toneClass}`}>{icon}</div>
         <span className="text-2xl font-semibold text-ink">{count}</span>
       </div>
       <p className="mt-3 text-sm font-semibold text-neutral-700">{label}</p>
