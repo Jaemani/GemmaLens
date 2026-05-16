@@ -1803,3 +1803,80 @@ def test_bert_feature_based_related_work_becomes_literature_map():
     assert result.summaries.one_line == "This related-work section traces feature-based representations from word embeddings to ELMo's contextual token features."
     assert result.sentences[0].core_structure == "Learning A has been an active area of research for B."
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
+
+
+def test_bert_elmo_to_finetuning_transition_becomes_comparison_map():
+    document = (
+        "When integrating contextual word embeddings with existing task-specific architectures, ELMo advances the state of the art "
+        "for several major NLP benchmarks including question answering and named entity recognition. "
+        "Melamud et al. proposed learning contextual representations through a task to predict a single word from both left and right context using LSTMs. "
+        "Similar to ELMo, their model is feature-based and not deeply bidirectional. "
+        "Fedus et al. shows that the cloze task can be used to improve text generation models. "
+        "2. 2 Unsupervised Fine-tuning Approaches As with the feature-based approaches, the first works in this direction only pre-trained word embedding parameters from unlabeled text. "
+        "More recently, sentence or document encoders which produce contextual token representations have been pre-trained from unlabeled text and fine-tuned for a supervised downstream task. "
+        "The advantage of these approaches is that few parameters need to be learned from scratch. "
+        "At least partly due to this advantage, OpenAI GPT achieved previously state-of-the-art results on many sentence-level tasks from the GLUE benchmark."
+    )
+    payload = {
+        "terms": [
+            {"term": "contextual word embeddings", "meaning": "contextual embeddings"},
+            {"term": "bidirectional", "meaning": "too broad alone"},
+            {"term": "cloze task", "meaning": "missing-word prediction"},
+        ],
+        "concepts": [
+            {"concept": "contextual word embeddings", "explanation": "term duplicated as concept"},
+            {"concept": "bidirectional", "explanation": "too broad alone"},
+            {"concept": "cloze task", "explanation": "term duplicated as concept"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "When integrating contextual word embeddings with existing task-specific architectures, ELMo advances the state of the art for several major NLP benchmarks."},
+        "sentences": [
+            {
+                "sentence": (
+                    "When integrating contextual word embeddings with existing task-specific architectures, "
+                    "ELMo advances the state of the art for several major NLP benchmarks."
+                ),
+                "core_structure": "Main claim + explanation.",
+            }
+        ],
+        "quality_warnings": ["phrase_count_out_of_range:0"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-elmo-gpt-transition", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "contextual word embeddings",
+        "cloze task",
+        "fine-tuning approaches",
+        "contextual token representations",
+        "supervised downstream task",
+        "OpenAI GPT",
+        "GLUE benchmark",
+    }.issubset(terms)
+    assert "bidirectional" not in terms
+    assert {
+        "ELMo benchmark integration",
+        "shallow bidirectionality limitation",
+        "cloze-style context prediction",
+        "unsupervised fine-tuning approach",
+        "parameter-efficient transfer",
+        "GPT as fine-tuning baseline",
+    }.issubset(concepts)
+    assert "contextual word embeddings" not in concepts
+    assert "bidirectional" not in concepts
+    assert {
+        "advances the state of the art",
+        "when integrating",
+        "proposed learning contextual representations through",
+        "Similar to ELMo",
+        "not deeply bidirectional",
+        "As with the feature-based approaches",
+        "fine-tuned for a supervised downstream task",
+        "few parameters need to be learned from scratch",
+    }.issubset(phrases)
+    assert result.summaries.one_line == "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning."
+    assert result.sentences[0].core_structure == "When integrating A with B, C advances the state of the art for D."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings

@@ -23,6 +23,8 @@ class AnalysisNormalizationService:
         if self._is_bert_text(document_text):
             terms = self._filter_bert_learning_rows(terms, "term")
             phrases = self._filter_bert_learning_rows(phrases, "phrase")
+        if self._is_bert_elmo_finetuning_transition_section(document_text):
+            terms = self._prefer_bert_elmo_finetuning_transition_terms(terms, document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -78,6 +80,8 @@ class AnalysisNormalizationService:
             normalized["concepts"] = self._filter_bert_learning_rows(normalized["concepts"], "concept")
         if self._is_bert_feature_based_related_work_section(document_text):
             normalized["concepts"] = self._prefer_bert_feature_related_work_concepts(normalized["concepts"], document_text)
+        if self._is_bert_elmo_finetuning_transition_section(document_text):
+            normalized["concepts"] = self._prefer_bert_elmo_finetuning_transition_concepts(normalized["concepts"], document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -504,6 +508,48 @@ class AnalysisNormalizationService:
                     "field_term",
                     "hard",
                     "This explains the ELMo-style bidirectional feature construction.",
+                ),
+                (
+                    "contextual word embeddings",
+                    "Word representations whose meaning changes with the surrounding sentence context.",
+                    "field_term",
+                    "hard",
+                    "This is the feature-based representation type being contrasted with BERT.",
+                ),
+                (
+                    "cloze task",
+                    "A prediction task where the model fills in a missing word from context.",
+                    "field_term",
+                    "medium",
+                    "The section uses it as a related pre-training idea before BERT.",
+                ),
+                (
+                    "fine-tuning approaches",
+                    "Transfer-learning methods that pre-train a model and then adapt it to a supervised downstream task.",
+                    "field_term",
+                    "medium",
+                    "This is the second prior strategy BERT improves.",
+                ),
+                (
+                    "contextual token representations",
+                    "Token vectors that depend on surrounding text, not just the token identity.",
+                    "field_term",
+                    "hard",
+                    "This connects GPT-style encoders and BERT-style representation learning.",
+                ),
+                (
+                    "supervised downstream task",
+                    "A target task with labels used after pre-training.",
+                    "useful",
+                    "medium",
+                    "This is where fine-tuned models are adapted after unsupervised pre-training.",
+                ),
+                (
+                    "GLUE benchmark",
+                    "A collection of language-understanding tasks used to compare NLP models.",
+                    "useful",
+                    "medium",
+                    "The section cites GLUE as evidence for GPT-style fine-tuning performance.",
                 ),
             ]
         elif self._is_attention_text(document_text):
@@ -1699,6 +1745,14 @@ class AnalysisNormalizationService:
                 ("along a different dimension", "contrast", "Marks that ELMo generalizes prior work in a different way."),
                 ("extract context-sensitive features", "method", "Explains ELMo's feature-extraction role."),
                 ("is the concatenation of", "method", "Explains how directional representations are combined."),
+                ("advances the state of the art", "result", "States that a method improves benchmark performance."),
+                ("when integrating", "method", "Introduces the condition or setup under which a method is used."),
+                ("proposed learning contextual representations through", "method", "Describes a prior method by its training task."),
+                ("Similar to ELMo", "contrast", "Compares a prior model to ELMo before stating its limitation."),
+                ("not deeply bidirectional", "limitation", "Names the limitation that BERT is designed to overcome."),
+                ("As with the feature-based approaches", "contrast", "Links the next related-work category back to the previous one."),
+                ("fine-tuned for a supervised downstream task", "method", "Describes the pre-train then adapt workflow."),
+                ("few parameters need to be learned from scratch", "result", "Explains the practical advantage of fine-tuning."),
             ]
         elif self._is_attention_text(document_text):
             phrase_specs = [
@@ -2738,6 +2792,27 @@ class AnalysisNormalizationService:
                     "The authors explain how ELMo combines two directional representations.",
                     "'concatenation'은 여러 벡터를 이어 붙인다는 뜻입니다.",
                     "This sentence describes representation construction, not just a vocabulary word.",
+                ),
+                (
+                    "When integrating contextual word embeddings",
+                    "When integrating A with B, C advances the state of the art for D.",
+                    "The authors state where ELMo works: contextual embeddings are added to task-specific architectures.",
+                    "'When integrating'은 어떤 조건이나 사용 방식에서 결과가 나타나는지 여는 표현입니다.",
+                    "The sentence is long because it combines method setup, model name, benchmark claim, and task examples.",
+                ),
+                (
+                    "Similar to ELMo",
+                    "Similar to A, B is C and not D.",
+                    "The authors compare a prior model with ELMo and then mark its limitation.",
+                    "'Similar to' 다음에는 공통점이 오고, 'not' 이후에는 한계가 나옵니다.",
+                    "The sentence is easy to misread if the learner saves only 'bidirectional' instead of the full limitation.",
+                ),
+                (
+                    "few parameters need to be learned from scratch",
+                    "The advantage of A is that B.",
+                    "The authors explain why fine-tuning is practically useful.",
+                    "'The advantage of these approaches is that'는 방법의 장점을 명시하는 문헌리뷰 표현입니다.",
+                    "The key content is in the that-clause after the evaluation phrase.",
                 ),
             ]
         elif self._is_attention_text(document_text):
@@ -4048,6 +4123,23 @@ class AnalysisNormalizationService:
                         "ELMo matters here because it is contextual and bidirectional, but still feature-based.",
                     ],
                 }
+            if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
+                return {
+                    "one_line": "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning.",
+                    "simple": (
+                        "The authors first show that ELMo-style contextual embeddings work well when added to task-specific models. "
+                        "Then they shift to fine-tuning approaches such as OpenAI GPT, where a pre-trained encoder is adapted to labeled downstream tasks."
+                    ),
+                    "academic": (
+                        "The section bridges two strands of related work: feature-based contextual embeddings, including ELMo and cloze-style context prediction, "
+                        "and unsupervised fine-tuning approaches exemplified by OpenAI GPT's GLUE performance."
+                    ),
+                    "study_notes": [
+                        "Read this as a transition from feature-based baselines to fine-tuning baselines.",
+                        "Do not memorize 'bidirectional' alone; the useful contrast is shallow bidirectionality versus deep bidirectional pre-training.",
+                        "Track why GPT matters: strong fine-tuning baseline, but still left-to-right.",
+                    ],
+                }
             return {
                 "one_line": "The paper introduces BERT, a bidirectional Transformer representation model for language understanding.",
                 "simple": "BERT learns from both left and right context during pre-training, then can be fine-tuned for many NLP tasks.",
@@ -4097,6 +4189,7 @@ class AnalysisNormalizationService:
             "feature-based",
             "embeddings",
             "language modeling objectives",
+            "bidirectional",
         }
         if key == "phrase":
             blocked = {*blocked, "feature-based"}
@@ -4168,6 +4261,146 @@ class AnalysisNormalizationService:
         ]
         return [*promoted, *rest][:8]
 
+    def _prefer_bert_elmo_finetuning_transition_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"bidirectional", "bert", "left-to-right language model"}
+        preferred = [
+            (
+                "contextual word embeddings",
+                "Word embeddings that change with the sentence context.",
+                "field_term",
+                "hard",
+                "This is the feature-based representation family being evaluated through ELMo.",
+            ),
+            (
+                "cloze task",
+                "A task where a model predicts a missing word from context.",
+                "field_term",
+                "medium",
+                "The section uses cloze-style prediction as a bridge toward BERT-style pre-training.",
+            ),
+            (
+                "fine-tuning approaches",
+                "Methods that pre-train representations and then adapt them to a labeled downstream task.",
+                "field_term",
+                "medium",
+                "This marks the transition from feature-based related work to GPT-style fine-tuning.",
+            ),
+            (
+                "contextual token representations",
+                "Token vectors whose meaning depends on surrounding text.",
+                "field_term",
+                "hard",
+                "This is the representation type shared by GPT-style encoders and BERT.",
+            ),
+            (
+                "supervised downstream task",
+                "A labeled target task used after unsupervised pre-training.",
+                "useful",
+                "medium",
+                "This explains what fine-tuning adapts the pre-trained encoder for.",
+            ),
+            (
+                "OpenAI GPT",
+                "A prior left-to-right Transformer model used as the fine-tuning baseline for BERT.",
+                "field_term",
+                "medium",
+                "This is the concrete prior system BERT is positioned against.",
+            ),
+            (
+                "GLUE benchmark",
+                "A benchmark suite for evaluating language-understanding models.",
+                "useful",
+                "medium",
+                "This is the benchmark evidence used for GPT's prior state-of-the-art result.",
+            ),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            lowered = term.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                promoted.append(
+                    {
+                        "term": term,
+                        "meaning": meaning,
+                        "domain_relevance": "high" if priority == "field_term" else "medium",
+                        "difficulty": difficulty,
+                        "source_sentence": self._source_sentence(None, term, document_text),
+                        "should_save": True,
+                        "learning_priority": priority,
+                        "reason": reason,
+                        "context_meaning": meaning,
+                        "general_meaning": meaning,
+                        "confidence": 0.9,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [row for row in rows if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}]
+        return [*promoted, *rest][:12]
+
+    def _prefer_bert_elmo_finetuning_transition_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"contextual word embeddings", "bidirectional", "cloze task"}
+        preferred = {
+            "ELMo benchmark integration": (
+                "ELMo improves several NLP benchmarks when its contextual embeddings are integrated into task-specific architectures.",
+                "This explains the strength of the feature-based baseline before BERT.",
+                "advances the state of the art",
+            ),
+            "shallow bidirectionality limitation": (
+                "Some prior models use both left and right context, but are still feature-based and not deeply bidirectional.",
+                "This is the limitation BERT will target with deep bidirectional pre-training.",
+                "not deeply bidirectional",
+            ),
+            "cloze-style context prediction": (
+                "The cloze task predicts a missing word from surrounding context.",
+                "This is a related self-supervised idea that foreshadows masked language modeling.",
+                "cloze task",
+            ),
+            "unsupervised fine-tuning approach": (
+                "A model is pre-trained on unlabeled text and then fine-tuned for a supervised downstream task.",
+                "This is the GPT-style strategy BERT improves rather than abandoning.",
+                "Fine-tuning Approaches",
+            ),
+            "parameter-efficient transfer": (
+                "Fine-tuning is attractive because few parameters need to be learned from scratch.",
+                "This explains why pre-training is useful in practice, not just as a benchmark trick.",
+                "few parameters need to be learned from scratch",
+            ),
+            "GPT as fine-tuning baseline": (
+                "OpenAI GPT is the left-to-right fine-tuning baseline that achieved strong GLUE results before BERT.",
+                "This anchors the upcoming contrast between GPT's left-to-right objective and BERT's bidirectional objective.",
+                "OpenAI GPT",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            lowered = concept.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                promoted.append(
+                    {
+                        "concept": concept,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [concept],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.86,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -4205,6 +4438,8 @@ class AnalysisNormalizationService:
         if "two existing strategies" in lowered and "feature-based" in lowered and ("fine-tuning" in lowered or "ﬁne-tuning" in lowered):
             return True
         if "feature-based approaches" in lowered and "elmo" in lowered and "context-sensitive features" in lowered:
+            return True
+        if self._is_bert_elmo_finetuning_transition_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -4460,6 +4695,8 @@ class AnalysisNormalizationService:
         lowered = document_text.lower()
         if self._is_bert_feature_based_related_work_section(document_text):
             return True
+        if self._is_bert_elmo_finetuning_transition_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -4467,6 +4704,10 @@ class AnalysisNormalizationService:
     def _is_bert_feature_based_related_work_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "feature-based approaches" in lowered and "elmo" in lowered and "context-sensitive features" in lowered
+
+    def _is_bert_elmo_finetuning_transition_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "contextual word embeddings" in lowered and "openai gpt" in lowered and "fine-tuning approaches" in lowered
 
     def _is_attention_text(self, document_text: str) -> bool:
         lowered = document_text.lower()
