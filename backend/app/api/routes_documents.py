@@ -122,7 +122,7 @@ def get_document_file(document_id: str, db: Session = Depends(get_db)):
         raise not_found("Document not found")
     if not document.original_file_path:
         raise not_found("Original file not stored")
-    path = Path(document.original_file_path)
+    path = _resolve_original_file_path(document.original_file_path)
     if not path.exists() or not path.is_file():
         raise not_found("Original file not found")
     return FileResponse(path, media_type=document.original_mime_type or "application/octet-stream", filename=document.title)
@@ -175,6 +175,21 @@ def _read_document(document) -> DocumentRead:
         original_mime_type=document.original_mime_type,
         created_at=document.created_at,
     )
+
+
+def _resolve_original_file_path(raw_path: str) -> Path:
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path
+    candidates = [
+        Path.cwd() / path,
+        Path.cwd() / "backend" / path,
+        Path(__file__).resolve().parents[2] / path,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
 
 
 def _document_sections(content: str):

@@ -77,6 +77,42 @@ def test_normalizer_repairs_common_model_output_typos():
     assert result.summaries.simple.startswith("Although previous studies")
 
 
+def test_normalizer_replaces_non_korean_support_glosses_when_korean_requested():
+    text = (
+        "It is important to note a subtlety in our definition of convex optimization problem. "
+        "This problem is not a convex optimization problem in standard form since the equality constraint is not affine."
+    )
+    payload = {
+        "terms": [
+            {
+                "term": "convex optimization problem",
+                "meaning": "A mathematical optimization problem with convex objective and constraints.",
+                "support_language_meaning": "It is important to note a subtlety in our definition of convex optimization problem.",
+            },
+            {
+                "term": "affine",
+                "meaning": "A function or constraint that is linear plus a constant shift.",
+                "support_language_meaning": "This problem is not a convex optimization problem in standard form.",
+            },
+        ],
+        "phrases": [
+            {
+                "phrase": "It is important to note",
+                "explanation": "Introduces a subtle definition issue.",
+                "support_language_explanation": "Introduces a subtle definition issue.",
+            }
+        ],
+        "sentences": [],
+        "summaries": {"one_line": "The section explains a subtle convex optimization definition issue."},
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "doc-1", text, support_language="Korean")
+
+    assert "최적화 문제" in result.terms[0].support_language_meaning
+    assert "선형식" in result.terms[1].support_language_meaning
+    assert re.search(r"[가-힣]", result.phrases[0].support_language_explanation)
+
+
 def test_markdown_wrapped_json_can_be_extracted_and_normalized():
     raw = """
 ```json

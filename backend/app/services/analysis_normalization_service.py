@@ -438,11 +438,22 @@ class AnalysisNormalizationService:
                 "multi-head attention": "여러 attention head가 서로 다른 관계를 병렬로 보게 하는 구조입니다.",
                 "encoder-decoder": "입력을 표현으로 바꾸는 encoder와 출력을 생성하는 decoder의 조합입니다.",
                 "sequence transduction": "한 sequence를 다른 sequence로 바꾸는 작업입니다. 예: 번역.",
+                "convex": "두 점 사이를 이은 선분이 함수나 집합의 조건 안에 머무르는 성질을 뜻합니다.",
+                "convex optimization problem": "목적함수와 제약식이 볼록성 조건을 만족하는 최적화 문제입니다.",
+                "objective function": "최적화에서 최소화하거나 최대화하려는 기준 함수입니다.",
+                "constraint": "해가 반드시 만족해야 하는 조건입니다.",
+                "affine": "선형식에 상수항을 더한 형태를 뜻하며, 등식 제약에서 자주 쓰입니다.",
                 "batch normalization": "mini-batch 통계로 layer 입력을 정규화해 학습을 안정화하는 방법입니다.",
                 "internal covariate shift": "학습 중 layer 입력 분포가 계속 바뀐다는 문제의식입니다.",
                 "mini-batch": "한 번의 업데이트에 함께 쓰는 작은 데이터 묶음입니다.",
                 "residual learning": "입력 전체가 아니라 보정해야 할 잔차를 학습하게 하는 방식입니다.",
                 "shortcut connections": "입력을 몇 layer 뒤로 바로 전달해 깊은 네트워크 학습을 돕는 연결입니다.",
+                "pre-training": "대규모 비라벨 텍스트로 먼저 모델 표현을 학습하는 단계입니다.",
+                "fine-tuning": "사전학습된 모델을 특정 과제 데이터로 조정하는 단계입니다.",
+                "output layers": "공유 모델 위에 붙는 과제별 출력층입니다.",
+                "pre-trained model parameters": "사전학습 단계에서 배운 뒤 downstream task 초기값으로 재사용되는 가중치입니다.",
+                "[cls]": "입력 맨 앞에 붙어 전체 sequence 표현을 만들 때 쓰는 특수 토큰입니다.",
+                "[sep]": "두 문장이나 segment를 구분할 때 쓰는 특수 토큰입니다.",
                 "masked language model": "가려진 단어를 주변 문맥으로 예측하는 pre-training 과제입니다.",
                 "next sentence prediction": "두 문장이 실제로 이어지는지 맞히는 BERT pre-training 과제입니다.",
                 "we propose": "논문의 새 기여를 제시할 때 쓰는 표현입니다.",
@@ -453,7 +464,9 @@ class AnalysisNormalizationService:
             }
             if key in known:
                 return known[key]
-            return ""
+            if kind == "phrase":
+                return f"이 표현은 문장에서 '{meaning}' 역할을 합니다."
+            return f"이 용어는 이 문맥에서 '{meaning}'라는 뜻으로 쓰입니다."
         if not language or language in {"english", "en"}:
             return meaning
         return f"{support_language}: {meaning}"
@@ -465,7 +478,7 @@ class AnalysisNormalizationService:
         updated: list[dict[str, Any]] = []
         for row in rows:
             row = dict(row)
-            if not str(row.get(support_key) or "").strip():
+            if not self._is_valid_support_language_gloss(str(row.get(support_key) or ""), support_language):
                 row[support_key] = self._support_language_gloss(
                     str(row.get(text_key) or ""),
                     str(row.get(meaning_key) or ""),
@@ -474,6 +487,22 @@ class AnalysisNormalizationService:
                 )
             updated.append(row)
         return updated
+
+    def _is_valid_support_language_gloss(self, value: str, support_language: str) -> bool:
+        normalized = normalize_pdf_ligatures(value).strip()
+        if not normalized:
+            return False
+        language = (support_language or "").strip().lower()
+        if language in {"korean", "ko", "한국어"}:
+            if not re.search(r"[가-힣]", normalized):
+                return False
+            generic_fallbacks = (
+                "새로 분석하면 더 구체적인 한국어 gloss",
+                "이 섹션을 읽을 때 확인해야 하는 핵심 용어입니다",
+                "논문 문장에서 재사용할 수 있는 표현입니다",
+            )
+            return not any(fragment in normalized for fragment in generic_fallbacks)
+        return True
 
     def _concepts(self, value: Any, document_text: str, terms: list[dict[str, Any]]) -> list[dict[str, Any]]:
         rows = value if isinstance(value, list) else []

@@ -18,8 +18,8 @@ export function GlobalStatusDock() {
   const [alive, setAlive] = useState<boolean | null>(null);
   const [model, setModel] = useState<ModelStatus | null>(null);
   const [activity, setActivity] = useState<GlobalActivity | null>(null);
-  const [expanded, setExpanded] = useState(true);
-  const idleDetail = model ? `${model.provider} runtime` : "No active document, video, or translation task";
+  const [expanded, setExpanded] = useState(false);
+  const idleDetail = "No active document, video, or translation task";
   const aliveTone = alive === null ? "text-neutral-500" : alive ? "text-green-700" : "text-red-700";
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export function GlobalStatusDock() {
   return (
     <aside
       className={`fixed bottom-3 right-3 z-40 rounded-lg border border-line bg-panel/95 text-[11px] shadow-material backdrop-blur ${
-        expanded ? "w-[min(260px,calc(100vw-1.5rem))]" : "w-[min(156px,calc(100vw-1.5rem))]"
+        expanded ? "w-[min(240px,calc(100vw-1.5rem))]" : "w-[min(108px,calc(100vw-1.5rem))]"
       }`}
     >
       <div className="flex items-center justify-between gap-2 px-3 py-2">

@@ -54,6 +54,8 @@ export function DocumentPageReader({
   const progressStorageKey = `gemmalens:auto-study:${documentId}`;
   const sectionGroups = groupSectionsByPdfPage(sections);
   const currentPdfPage = pdfPageFromLabel(currentSection?.source_label ?? null);
+  const visibleSectionGroups = getVisibleSectionGroups(sectionGroups, currentPdfPage);
+  const hiddenSectionGroupCount = Math.max(sectionGroups.length - visibleSectionGroups.length, 0);
   const currentPageSectionNumber = currentSection ? sectionNumberWithinPdfPage(sections, pageIndex) : null;
   const previousPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, -1);
   const nextPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, 1);
@@ -377,7 +379,7 @@ export function DocumentPageReader({
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Current section</p>
           <h2 className="mt-1 text-lg font-semibold">
-            PDF page {currentPdfPage ?? "?"} · S{currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1}
+            Source p.{currentPdfPage ?? "?"} · S{currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1}
           </h2>
           <p className="mt-1 text-xs font-semibold text-neutral-600">
             Document section {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
@@ -470,13 +472,14 @@ export function DocumentPageReader({
             <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Paper sections</p>
             <div className="flex items-center gap-3 text-[11px] font-semibold text-neutral-600">
               <span>{analyzedCount} ready</span>
+              {hiddenSectionGroupCount ? <span>{sectionGroups.length} source pages · nearby only</span> : null}
               <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-accent" /> Current</span>
               <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" /> Ready</span>
               <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-neutral-300" /> Not ready</span>
             </div>
           </div>
           <div className="flex gap-2 overflow-x-auto">
-          {sectionGroups.map((group) => {
+          {visibleSectionGroups.map((group) => {
             const isCurrentPageGroup = group.pdfPage === currentPdfPage;
             return (
             <div
@@ -762,15 +765,16 @@ function MiniList({
           {rows.map((row) => {
             const key = `${row.item_type}:${row.text}`;
             const isSaved = saved.has(key);
+            const supportMeaning = usefulSupportMeaning(row.supportMeaning);
             return (
             <div key={row.text} className="rounded-md border border-line bg-panel p-3">
               <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-ink">{row.text}</p>
-                {row.supportMeaning ? (
+                {supportMeaning ? (
                   <div className="mt-2 rounded-md bg-blue-50 px-3 py-2">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">{supportLabel}</p>
-                    <p className="mt-1 text-sm leading-5 text-ink">{row.supportMeaning}</p>
+                    <p className="mt-1 text-sm leading-5 text-ink">{supportMeaning}</p>
                   </div>
                 ) : null}
                 <div className="mt-2 rounded-md bg-surface px-3 py-2">
@@ -845,10 +849,21 @@ function groupSectionsByPdfPage(sections: DocumentSection[]) {
       groups.push(group);
     }
     group.items.push({ section, index, localNumber: group.items.length + 1 });
-    group.label = pdfPage ? `PDF page ${pdfPage}` : "PDF page unknown";
+    group.label = pdfPage ? `Source p.${pdfPage}` : "Source page unknown";
   });
 
   return groups;
+}
+
+function getVisibleSectionGroups<T extends { pdfPage: number | null }>(groups: T[], currentPdfPage: number | null) {
+  if (groups.length <= 14) return groups;
+  const currentIndex = Math.max(
+    0,
+    groups.findIndex((group) => group.pdfPage === currentPdfPage)
+  );
+  const start = Math.max(0, currentIndex - 4);
+  const end = Math.min(groups.length, currentIndex + 5);
+  return groups.slice(start, end);
 }
 
 function sectionNumberWithinPdfPage(sections: DocumentSection[], index: number) {
@@ -900,10 +915,23 @@ function buildSectionLessonSelection(analysis: AnalysisResult, sections: Documen
 function formatSectionLabel(section: DocumentSection | undefined, pdfPage: number | null, localSection: number | null) {
   const global = section?.section_number ?? null;
   const total = section?.total_sections ?? null;
-  const pageLabel = pdfPage ? `PDF page ${pdfPage}` : "PDF page unknown";
+  const pageLabel = pdfPage ? `Source p.${pdfPage}` : "Source page unknown";
   const localLabel = localSection ? `S${localSection} on this page` : "section on page unknown";
   const globalLabel = global && total ? `document section ${global} / ${total}` : "document section unknown";
   return `${pageLabel} · ${localLabel} · ${globalLabel}`;
+}
+
+function usefulSupportMeaning(value: string | undefined) {
+  const normalized = value?.trim();
+  if (!normalized) return null;
+  if (
+    normalized.includes("새로 분석하면 더 구체적인 한국어 gloss") ||
+    normalized.includes("새로 분석하면 더 구체적인 한국어")
+  ) {
+    return null;
+  }
+  if (!/[가-힣]/.test(normalized) && normalized.length > 60) return null;
+  return normalized;
 }
 
 function nextUnanalyzedSectionIndices(sections: DocumentSection[], currentIndex: number, limit: number) {

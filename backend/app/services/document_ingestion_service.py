@@ -69,7 +69,7 @@ class DocumentIngestionService:
         safe_extension = "".join(ch for ch in extension.lower() if ch.isalnum())[:12] or "bin"
         path = storage_dir / f"{uuid4()}.{safe_extension}"
         path.write_bytes(raw)
-        return str(path)
+        return str(path.resolve())
 
     def _decode_text(self, raw: bytes) -> str:
         for encoding in ("utf-8-sig", "utf-8", "cp949", "euc-kr", "latin-1"):
