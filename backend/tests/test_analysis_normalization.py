@@ -512,3 +512,46 @@ def test_resnet_ligature_phrase_is_normalized_for_learning_output():
     assert "more difficult to train" in {phrase.phrase for phrase in result.phrases}
     assert "more difﬁcult to train" not in {phrase.phrase for phrase in result.phrases}
     assert all("ﬁ" not in term.source_sentence for term in result.terms)
+
+
+def test_resnet_depth_motivation_section_rejects_fragments():
+    document = (
+        "Recent evidence reveals that network depth is of crucial importance, and the leading results on the challenging ImageNet dataset "
+        "all exploit very deep models. Driven by the significance of depth, a question arises: Is learning better networks as easy as stacking "
+        "more layers? An obstacle to answering this question was the notorious problem of vanishing/exploding gradients, which hamper convergence "
+        "from the beginning. This problem, however, has been largely addressed by normalized initialization and intermediate normalization layers, "
+        "which enable networks with tens of layers to start converging for stochastic gradient descent (SGD) with backpropagation. When deeper "
+        "networks are able to start converging, a degradation problem has been exposed: with the network depth increasing, accuracy gets saturated "
+        "and then degrades rapidly. Unexpectedly, such degradation is not caused by overfitting, and adding more layers to a suitably deep model "
+        "leads to higher training error."
+    )
+    payload = {
+        "terms": [
+            {"term": "reveals that network", "meaning": "bad fragment"},
+            {"term": "deeper network", "meaning": "bad fragment"},
+            {"term": "has higher training", "meaning": "bad fragment"},
+        ],
+        "concepts": [
+            {"concept": "reveals that network", "explanation": "bad fragment"},
+            {"concept": "has higher training", "explanation": "bad fragment"},
+        ],
+        "summaries": {"one_line": document.split(".")[0] + ".", "simple": document.split(".")[0] + ".", "academic": document.split(".")[0] + "."},
+        "sentences": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-depth", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "reveals that network" not in terms
+    assert "deeper network" not in terms
+    assert "has higher training" not in terms
+    assert "reveals that network" not in concepts
+    assert "has higher training" not in concepts
+    assert {"very deep models", "degradation problem", "vanishing/exploding gradients", "higher training error"}.issubset(terms)
+    assert {"very deep models", "degradation problem", "higher training error"}.issubset(concepts)
+    assert {"as easy as stacking more layers", "not caused by overfitting", "leads to higher training error"}.issubset(phrases)
+    assert "very deep models" not in phrases
+    assert result.summaries.one_line == "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize."
+    assert result.sentences[0].core_structure == "Is learning better X as easy as doing Y?"

@@ -448,6 +448,20 @@ class AnalysisNormalizationService:
         elif self._is_resnet_text(document_text):
             known = [
                 (
+                    "network depth",
+                    "The number of layers in a neural network, treated as a major driver of representation power.",
+                    "field_term",
+                    "medium",
+                    "This section motivates why depth matters before explaining why plain depth can fail.",
+                ),
+                (
+                    "very deep models",
+                    "Neural networks with many stacked layers, such as the 16- to 30-layer ImageNet models cited here.",
+                    "useful",
+                    "medium",
+                    "This is the empirical background for asking whether simply stacking layers is enough.",
+                ),
+                (
                     "residual learning framework",
                     "A training framework that makes very deep networks easier to optimize by learning residual functions.",
                     "field_term",
@@ -467,6 +481,48 @@ class AnalysisNormalizationService:
                     "field_term",
                     "hard",
                     "This is the problem ResNet is designed to solve.",
+                ),
+                (
+                    "vanishing/exploding gradients",
+                    "Training failures where gradients become too small or too large for effective optimization.",
+                    "field_term",
+                    "hard",
+                    "The paper separates this older obstacle from the degradation problem.",
+                ),
+                (
+                    "normalized initialization",
+                    "An initialization method that helps deep networks start training without unstable gradient scale.",
+                    "useful",
+                    "medium",
+                    "This is cited as one reason vanishing/exploding gradients had become less central.",
+                ),
+                (
+                    "intermediate normalization layers",
+                    "Normalization layers inside the network that help stabilize training.",
+                    "useful",
+                    "medium",
+                    "This connects the ResNet motivation to earlier normalization work.",
+                ),
+                (
+                    "stochastic gradient descent",
+                    "An optimization method that updates network parameters from sampled gradient estimates.",
+                    "useful",
+                    "medium",
+                    "The section explains which training process is able to start converging.",
+                ),
+                (
+                    "backpropagation",
+                    "The algorithm used to compute gradients through the network during training.",
+                    "useful",
+                    "medium",
+                    "This names the training mechanism behind the optimization discussion.",
+                ),
+                (
+                    "higher training error",
+                    "A worse fit on the training set, used here to show that the degradation problem is not simply overfitting.",
+                    "field_term",
+                    "hard",
+                    "This is the key evidence that deeper plain networks can be harder to optimize.",
                 ),
                 (
                     "identity mapping",
@@ -644,6 +700,14 @@ class AnalysisNormalizationService:
         elif self._is_resnet_text(document_text):
             phrase_specs = [
                 ("more difficult to train", "limitation", "Introduces the practical problem caused by increasing network depth."),
+                ("of crucial importance", "claim", "Signals that depth is a major factor before the paper explains its optimization problem."),
+                ("Driven by the significance of", "claim", "Moves from prior evidence to the research question."),
+                ("a question arises", "limitation", "Introduces the problem the paper will answer."),
+                ("as easy as stacking more layers", "limitation", "Frames the naive assumption that the paper challenges."),
+                ("has been largely addressed by", "claim", "Marks an older obstacle as mostly handled by prior methods."),
+                ("has been exposed", "limitation", "Introduces the degradation problem as a newly visible obstacle."),
+                ("not caused by overfitting", "contrast", "Separates optimization degradation from a common explanation."),
+                ("leads to higher training error", "result", "States the evidence that added depth can hurt optimization."),
                 ("to ease the training of", "method", "States the purpose of the proposed residual learning framework."),
                 ("substantially deeper than", "claim", "Signals the scale of the architecture compared with previous models."),
                 ("explicitly reformulate", "method", "Signals that the paper changes the learning target, not only the model size."),
@@ -767,6 +831,16 @@ class AnalysisNormalizationService:
         elif self._is_resnet_text(document_text):
             specs = [
                 (
+                    "network depth",
+                    "The paper treats depth as important for representation power, but not automatically easy to optimize.",
+                    "This is the motivation path from previous ImageNet success to the ResNet problem.",
+                ),
+                (
+                    "very deep models",
+                    "Prior successful image-recognition models that use many layers.",
+                    "This explains why the authors care about depth rather than only architecture novelty.",
+                ),
+                (
                     "residual learning framework",
                     "The paper's proposed way to train much deeper image-recognition networks.",
                     "This is the core method; vocabulary around residual functions and shortcut connections depends on it.",
@@ -775,6 +849,16 @@ class AnalysisNormalizationService:
                     "degradation problem",
                     "A depth-related optimization failure where deeper networks can have worse training accuracy.",
                     "This is the motivation for residual learning and should not be confused with overfitting.",
+                ),
+                (
+                    "vanishing/exploding gradients",
+                    "An older optimization obstacle for deep networks.",
+                    "The paper says this problem had been largely addressed, so degradation needs a different explanation.",
+                ),
+                (
+                    "higher training error",
+                    "The sign that deeper plain networks are harder to optimize, not merely overfitting.",
+                    "This is the evidence that motivates residual learning.",
                 ),
                 (
                     "residual functions",
@@ -938,6 +1022,20 @@ class AnalysisNormalizationService:
             ]
         elif self._is_resnet_text(document_text):
             specs = [
+                (
+                    "as easy as stacking more layers",
+                    "Is learning better X as easy as doing Y?",
+                    "The authors turn prior success with depth into the central research question.",
+                    "'as easy as'는 어떤 단순한 가정이 정말 맞는지 묻는 비교 표현입니다.",
+                    "The sentence is a rhetorical research question; it sets up the problem rather than giving the answer.",
+                ),
+                (
+                    "not caused by overfitting",
+                    "X is not caused by Y, and doing Z leads to W.",
+                    "The authors distinguish optimization degradation from overfitting.",
+                    "'not caused by'는 흔한 설명을 배제하고 다른 원인을 찾게 만드는 표현입니다.",
+                    "The sentence is dense because it rejects one explanation and states the evidence in the same move.",
+                ),
                 (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
@@ -1407,6 +1505,10 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"networks", "of networks", "ease the training", "to ease the training"}:
             return ""
+        if lowered in {"reveals that network", "has higher training", "higher training", "deeper network"}:
+            return ""
+        if lowered.startswith(("reveals that ", "shows that ", "has ", "have ", "is ", "are ")):
+            return ""
         if re.fullmatch(r"(?:inputs?|outputs?|models?|networks?)\s+\w+(?:\s+\w+){0,3}", lowered):
             return ""
         if lowered.startswith(("introduction ", "conclusion ", "abstract ", "references ")):
@@ -1452,6 +1554,9 @@ class AnalysisNormalizationService:
             or ("residual learning framework" in lowered and "image recognition" in lowered)
             or ("residual learning framework" in lowered and "residual functions" in lowered)
             or ("degradation problem" in lowered and "residual" in lowered)
+            or ("degradation problem" in lowered and "training error" in lowered)
+            or ("network depth" in lowered and "higher training error" in lowered)
+            or ("very deep" in lowered and "stacking more layers" in lowered)
             or ("identity mapping" in lowered and "residual functions" in lowered)
         )
 
