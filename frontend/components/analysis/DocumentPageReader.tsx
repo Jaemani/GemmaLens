@@ -44,6 +44,7 @@ export function DocumentPageReader({
   const sectionDrivenPdfPageRef = useRef<number | null>(null);
   const autoAnalyzeStartedRef = useRef(false);
   const stopPreparationRef = useRef(false);
+  const currentPageGroupRef = useRef<HTMLDivElement | null>(null);
   const currentSection = sections[pageIndex];
   const page = currentSection?.text ?? "";
   const analyzedCount = sections.filter((section) => section.analyzed).length;
@@ -124,6 +125,14 @@ export function DocumentPageReader({
     onSourcePageChange?.(currentPdfPage);
     sectionDrivenPdfPageRef.current = currentPdfPage;
   }, [currentPdfPage, onSourcePageChange]);
+
+  useEffect(() => {
+    currentPageGroupRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center"
+    });
+  }, [currentPdfPage]);
 
   useEffect(() => {
     if (!requestedSourcePage || !sections.length) return;
@@ -385,6 +394,7 @@ export function DocumentPageReader({
             return (
             <div
               key={group.key}
+              ref={isCurrentPageGroup ? currentPageGroupRef : null}
               className={`shrink-0 rounded-md border px-2 py-1.5 transition ${
                 isCurrentPageGroup ? "border-accent bg-blue-50 shadow-sm" : "border-line bg-surface"
               }`}
