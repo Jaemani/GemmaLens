@@ -1028,3 +1028,43 @@ def test_resnet_projection_shortcut_option_section_rejects_table_fragments():
     assert {"Next we investigate", "we compare three options", "considerably better than", "not essential for addressing"}.issubset(phrases)
     assert result.summaries.one_line == "This section compares shortcut options and concludes projection shortcuts are useful but not essential."
     assert result.sentences[0].core_structure == "Next we investigate X."
+
+
+def test_resnet_bottleneck_section_recovers_efficiency_argument():
+    document = (
+        "The three layers are 1x1, 3x3, and 1x1 convolutions, where the 1x1 layers are responsible for reducing and then increasing "
+        "dimensions, leaving the 3x3 layer a bottleneck with smaller input/output dimensions. "
+        "The parameter-free identity shortcuts are particularly important for the bottleneck architectures. "
+        "If the identity shortcut is replaced with projection, one can show that the time complexity and model size are doubled. "
+        "So identity shortcuts lead to more efficient models for the bottleneck designs. "
+        "Deeper non-bottleneck ResNets also gain accuracy from increased depth, but are not as economical as the bottleneck ResNets. "
+        "So the usage of bottleneck designs is mainly due to practical considerations."
+    )
+    payload = {
+        "terms": [
+            {"term": "time complexity and model", "meaning": "bad fragment"},
+            {"term": "more efficient models", "meaning": "too broad"},
+        ],
+        "concepts": [
+            {"concept": "time complexity and model", "explanation": "bad fragment"},
+            {"concept": "more efficient models", "explanation": "too broad"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": document.split(".")[0] + "."},
+        "sentences": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-bottleneck", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "time complexity and model" not in terms
+    assert "more efficient models" not in terms
+    assert "time complexity and model" not in concepts
+    assert {"bottleneck", "bottleneck architectures", "1x1 convolutions", "time complexity", "time complexity and model size", "practical considerations"}.issubset(terms)
+    assert {"bottleneck", "bottleneck architectures", "practical considerations"}.issubset(concepts)
+    assert {"are responsible for", "particularly important for", "lead to more efficient models", "mainly due to practical considerations"}.issubset(phrases)
+    assert "show that" not in phrases
+    assert result.summaries.one_line == "This section explains why bottleneck blocks make very deep ResNets computationally practical."
+    assert result.sentences[0].core_structure == "The three layers are A, B, and C, where A is responsible for D."

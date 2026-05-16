@@ -142,6 +142,7 @@ class AnalysisNormalizationService:
                 "shortcut connections",
                 "residual network",
                 "we compare",
+                "show that",
             }:
                 continue
             if "weight decay" in phrase.lower() and "momentum" in phrase.lower():
@@ -722,6 +723,41 @@ class AnalysisNormalizationService:
                     "This is option B for dimension matching.",
                 ),
                 (
+                    "bottleneck",
+                    "A lower-dimensional middle layer that reduces computation inside a residual block.",
+                    "field_term",
+                    "hard",
+                    "This is the core efficiency idea in the 1x1-3x3-1x1 block design.",
+                ),
+                (
+                    "bottleneck architectures",
+                    "Deep ResNet architectures that use bottleneck blocks for efficiency.",
+                    "field_term",
+                    "hard",
+                    "This explains how 50/101/152-layer ResNets stay computationally practical.",
+                ),
+                (
+                    "time complexity",
+                    "The computational cost of running the model.",
+                    "field_term",
+                    "medium",
+                    "This section uses it to explain why identity shortcuts are efficient.",
+                ),
+                (
+                    "time complexity and model size",
+                    "The combined computation and parameter/storage cost of the model.",
+                    "field_term",
+                    "medium",
+                    "Projection shortcuts can increase this cost in bottleneck designs.",
+                ),
+                (
+                    "practical considerations",
+                    "Engineering constraints such as compute and model size that shape the architecture choice.",
+                    "useful",
+                    "medium",
+                    "This explains why bottleneck designs are used even when non-bottleneck ResNets can also gain accuracy.",
+                ),
+                (
                     "zero-padding shortcuts",
                     "Parameter-free shortcuts that pad extra dimensions with zeros when dimensions increase.",
                     "field_term",
@@ -1063,7 +1099,6 @@ class AnalysisNormalizationService:
                 ("We evaluate our method", "method", "Introduces the benchmark evaluation setting."),
                 ("We first evaluate", "method", "Signals the first experiment in a sequence."),
                 ("The results in Table 2 show that", "result", "Turns table data into the section's main experimental claim."),
-                ("show that", "result", "Introduces the experimental finding."),
                 ("To reveal the reasons", "method", "Explains why the authors inspect training and validation curves."),
                 ("unlikely to be caused by", "contrast", "Rejects a tempting explanation for the observed optimization difficulty."),
                 ("ensures forward propagated signals", "claim", "Explains why Batch Normalization makes vanishing forward signals unlikely."),
@@ -1073,6 +1108,10 @@ class AnalysisNormalizationService:
                 ("Next we evaluate", "method", "Moves from plain-network diagnosis to residual-network experiments."),
                 ("Next we investigate", "method", "Moves from residual-net evaluation to shortcut-option analysis."),
                 ("we compare three options", "method", "Introduces an A/B/C design comparison."),
+                ("are responsible for", "general", "Explains the role assigned to a component inside an architecture."),
+                ("particularly important for", "claim", "Signals that a component matters more in this specific design."),
+                ("lead to more efficient models", "result", "States the efficiency benefit of identity shortcuts."),
+                ("mainly due to practical considerations", "claim", "Explains that an architecture choice is driven by engineering cost."),
                 ("considerably better than", "result", "States that all residual shortcut options beat the plain counterpart."),
                 ("slightly better than", "result", "Compares two shortcut options with a small performance difference."),
                 ("marginally better than", "result", "Marks a very small advantage in the comparison."),
@@ -1437,6 +1476,31 @@ class AnalysisNormalizationService:
                     "1x1 convolutions",
                     "Projection shortcut layers used to match dimensions.",
                     "This is option B in the shortcut-design discussion.",
+                ),
+                (
+                    "bottleneck",
+                    "The smaller middle representation created by the 1x1-3x3-1x1 block.",
+                    "This is the efficient block used by deeper ResNets.",
+                ),
+                (
+                    "bottleneck architectures",
+                    "Architectures that use bottleneck blocks to keep very deep networks efficient.",
+                    "This connects depth to practical compute constraints.",
+                ),
+                (
+                    "time complexity",
+                    "The computation cost of the model.",
+                    "This explains why replacing identity shortcuts with projections can be expensive.",
+                ),
+                (
+                    "time complexity and model size",
+                    "The combined compute and parameter cost of the model.",
+                    "This is one reason identity shortcuts matter for bottleneck designs.",
+                ),
+                (
+                    "practical considerations",
+                    "Engineering concerns such as computation and parameter cost.",
+                    "This explains why bottleneck designs are chosen in deeper ResNets.",
                 ),
                 (
                     "zero-padding shortcuts",
@@ -1808,6 +1872,34 @@ class AnalysisNormalizationService:
                     "This is important because it separates the core residual idea from an optional shortcut variant.",
                 ),
                 (
+                    "The three layers are",
+                    "The three layers are A, B, and C, where A is responsible for D.",
+                    "The authors define the bottleneck block by explaining the role of each convolution.",
+                    "'where' 절은 앞의 구조를 다시 풀어서 각 부분의 역할을 설명합니다.",
+                    "The sentence is dense because it mixes architecture shape with dimensionality changes.",
+                ),
+                (
+                    "are particularly important for",
+                    "A are particularly important for B.",
+                    "The authors explain why identity shortcuts matter more in bottleneck architectures.",
+                    "'particularly important for'는 특정 조건에서 중요성이 커진다는 신호입니다.",
+                    "The phrase ties a general design choice to a specific architecture family.",
+                ),
+                (
+                    "lead to more efficient models",
+                    "A lead to more efficient models for B.",
+                    "The authors connect identity shortcuts to lower compute and model size.",
+                    "'lead to'는 원인과 결과를 연결하는 논문식 표현입니다.",
+                    "This sentence turns an engineering detail into an efficiency claim.",
+                ),
+                (
+                    "mainly due to practical considerations",
+                    "The usage of A is mainly due to B.",
+                    "The authors clarify that bottleneck designs are chosen for practicality, not because non-bottleneck residual nets fail.",
+                    "'mainly due to'는 선택의 주된 이유를 설명하는 표현입니다.",
+                    "The phrase helps separate empirical capability from engineering constraints.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -2024,6 +2116,23 @@ class AnalysisNormalizationService:
                         "Read this as an ablation comparison, not as a new architecture proposal.",
                         "Separate the core claim from the option details: residual shortcuts matter more than projections everywhere.",
                         "Use 'not essential for addressing' as the reusable expression for a limited negative conclusion.",
+                    ],
+                }
+            if "the three layers are" in compact_lower and "bottleneck architectures" in compact_lower:
+                return {
+                    "one_line": "This section explains why bottleneck blocks make very deep ResNets computationally practical.",
+                    "simple": (
+                        "A bottleneck block uses 1x1, 3x3, and 1x1 convolutions. The 1x1 layers reduce and restore dimensions so the 3x3 layer is cheaper. "
+                        "Identity shortcuts are important because projection shortcuts would double time complexity and model size."
+                    ),
+                    "academic": (
+                        "The section motivates bottleneck residual blocks as an efficiency-driven architecture: dimensionality reduction around the 3x3 convolution "
+                        "keeps deeper ResNets economical, while identity shortcuts avoid projection costs at high-dimensional endpoints."
+                    ),
+                    "study_notes": [
+                        "Track the block role sequence: reduce dimensions -> process with 3x3 -> restore dimensions.",
+                        "The key claim is efficiency, not a new optimization problem.",
+                        "Use 'mainly due to practical considerations' to mark an engineering reason for an architecture choice.",
                     ],
                 }
             if "based on the above plain network" in compact_lower and "we insert shortcut connections" in compact_lower:
@@ -2378,6 +2487,8 @@ class AnalysisNormalizationService:
             return True
         if "next we investigate projection shortcuts" in compact_lower and "we compare three options" in compact_lower:
             return True
+        if "the three layers are" in compact_lower and "bottleneck architectures" in compact_lower:
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -2517,6 +2628,8 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"in table", "shortcuts help with training", "residual function"}:
             return ""
+        if lowered in {"time complexity and model", "more efficient models"}:
+            return ""
         if lowered.startswith(("we describe ", "we also note ", "we can also use ")):
             return ""
         if lowered in {"reveals that network", "has higher training", "higher training", "deeper network"}:
@@ -2602,6 +2715,7 @@ class AnalysisNormalizationService:
             or ("imagenet classification" in lowered and "34-layer plain net has higher validation error" in lowered)
             or ("34-layer plain net has higher training error" in lowered and "next we evaluate" in lowered)
             or ("next we investigate projection shortcuts" in lowered and "we compare three options" in lowered)
+            or ("the three layers are" in lowered and "bottleneck architectures" in lowered)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
