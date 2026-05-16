@@ -60,7 +60,10 @@ export default async function DashboardPage() {
                 <Link key={document.id} href={`/analysis/${document.id}`} className="block rounded-md py-3 text-sm hover:bg-surface">
                   <span className="flex items-center justify-between gap-3">
                     <span className="min-w-0 truncate font-semibold text-ink">{document.title}</span>
-                    <DocumentProgressLabel document={document} />
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <SourceTypeChip sourceType={document.source_type} />
+                      <DocumentProgressLabel document={document} />
+                    </span>
                   </span>
                   <span className="mt-1 line-clamp-1 block text-neutral-600">{cleanDocumentPreview(document)}</span>
                 </Link>
@@ -97,8 +100,18 @@ function DocumentProgressLabel({ document }: { document: DocumentListItem }) {
   const label = documentProgressText(document);
   const analyzed = document.analyzed_sections ?? 0;
   const total = document.total_sections ?? 0;
-  const tone = label === "Complete" || label === "Ready" ? "text-emerald-700" : analyzed > 0 && total > 1 ? "text-amber-700" : "text-neutral-500";
-  return <span className={`shrink-0 text-xs font-semibold ${tone}`}>{label === "Not ready" ? "New" : label}</span>;
+  const tone =
+    label === "Complete" || label === "Ready"
+      ? "bg-emerald-50 text-emerald-700"
+      : analyzed > 0 && total > 1
+        ? "bg-amber-50 text-amber-800"
+        : "bg-neutral-100 text-neutral-600";
+  return <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${tone}`}>{label === "Not ready" ? "New" : label}</span>;
+}
+
+function SourceTypeChip({ sourceType }: { sourceType: string }) {
+  const label = sourceType === "pdf" ? "PDF" : sourceType.toUpperCase();
+  return <span className="shrink-0 rounded-full bg-blue-50 px-2 py-1 text-[11px] font-semibold text-accent">{label}</span>;
 }
 
 function Signal({ icon, label }: { icon: React.ReactNode; label: string }) {

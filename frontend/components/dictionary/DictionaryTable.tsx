@@ -25,7 +25,7 @@ export function DictionaryTable({ items, onDeleted }: { items: DictionaryItem[];
             <article key={item.id} className="rounded-md border border-line bg-surface p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{item.item_type}</p>
+                  <TypeChip type={item.item_type} />
                   <h3 className="mt-1 break-words text-sm font-semibold text-ink">{item.text}</h3>
                 </div>
                 <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${reviewTone(state)}`}>
@@ -67,7 +67,9 @@ export function DictionaryTable({ items, onDeleted }: { items: DictionaryItem[];
             <tr key={item.id} className="border-t border-line">
               <td className="px-4 py-3">
                 <p className="font-medium">{item.text}</p>
-                <p className="text-xs uppercase text-neutral-500">{item.item_type}</p>
+                <div className="mt-1">
+                  <TypeChip type={item.item_type} />
+                </div>
               </td>
               <td className="px-4 py-3 text-neutral-700">{item.meaning}</td>
               <td className="px-4 py-3">
@@ -91,4 +93,15 @@ export function DictionaryTable({ items, onDeleted }: { items: DictionaryItem[];
       </table>
     </section>
   );
+}
+
+function TypeChip({ type }: { type: DictionaryItem["item_type"] }) {
+  const label = type === "phrase" ? "Expression" : type.charAt(0).toUpperCase() + type.slice(1);
+  const tone = {
+    concept: "bg-blue-50 text-accent",
+    term: "bg-emerald-50 text-emerald-700",
+    phrase: "bg-amber-50 text-amber-800",
+    sentence: "bg-violet-50 text-violet-700"
+  }[type];
+  return <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${tone}`}>{label}</span>;
 }
