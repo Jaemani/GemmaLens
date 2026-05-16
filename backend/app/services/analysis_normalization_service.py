@@ -7503,7 +7503,7 @@ class AnalysisNormalizationService:
             "term",
             profile["terms"],
             limit=12,
-            blocked={"gradient", "learning rate", "batch normalization"},
+            blocked={"gradient", "learning rate", "batch normalization", "top-5 error", "ensemble", "imagenet", "internal covariate shift", "gradient descent step"},
         )
 
     def _prefer_batchnorm_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
@@ -7527,6 +7527,16 @@ class AnalysisNormalizationService:
                 "vanishing gradients",
                 "internal covariate shift",
                 "batch normalization",
+                "top-5 error",
+                "ensemble",
+                "imagenet",
+                "normalization step",
+                "gradient flow",
+                "saturating nonlinearities",
+                "whitening",
+                "gradient descent optimization",
+                "normalization",
+                "activations",
             },
         )
 
@@ -8774,6 +8784,138 @@ class AnalysisNormalizationService:
                 "If layer-input distributions stayed stable, the optimizer would be less likely to get stuck in saturation.",
                 "'If, however, we could ensure...'는 문제를 해결하기 위한 가정적 조건을 제시하는 표현입니다.",
                 "The section mixes activation math, optimization failure, and the method introduction.",
+            )
+        if "beneficial effect on the gradient flow" in lowered and "towards reducing internal covariate shift" in lowered:
+            return profile(
+                "This section summarizes BatchNorm's benefits and starts the formal reduction of internal covariate shift.",
+                (
+                    "The paper says BatchNorm fixes means and variances of layer inputs, improves gradient flow, allows higher learning rates, "
+                    "regularizes the model, and helps with saturating nonlinearities. It then defines internal covariate shift and motivates whitening layer inputs."
+                ),
+                (
+                    "The passage bridges introduction and method: it lists practical benefits, reports ImageNet improvement claims, "
+                    "defines internal covariate shift as activation-distribution change, and frames whitening as the ideal but expensive stabilization target."
+                ),
+                [
+                    "This section is a benefit list plus the start of the formal method section.",
+                    "Separate empirical ImageNet claims from the definition of internal covariate shift.",
+                    "The phrase 'by fixing' explains the intended mechanism.",
+                ],
+                [
+                    ("normalization step", "Operation that fixes means and variances of layer inputs.", "normalization step"),
+                    ("gradient flow", "How gradients move through the network during training.", "gradient flow"),
+                    ("higher learning rates", "Larger optimization steps enabled by BatchNorm.", "higher learning rates"),
+                    ("Dropout", "Regularizer whose need may be reduced.", "Dropout"),
+                    ("saturating nonlinearities", "Nonlinearities made easier to use by preventing saturation.", "saturating nonlinearities"),
+                    ("top-5 error rate", "ImageNet metric improved by BatchNorm ensembles.", "top-5 error rate"),
+                    ("Internal Covariate Shift", "Change in network activation distributions during training.", "Internal Covariate Shift"),
+                    ("whitened", "Transformed to zero mean, unit variance, and decorrelated.", "whitened"),
+                ],
+                [
+                    ("benefit stack", "BatchNorm is presented as helping learning rate, initialization, regularization, and saturation.", "beneficial effect"),
+                    ("formal problem definition", "Internal Covariate Shift is defined as changing network activations during training.", "We define Internal Covariate Shift"),
+                    ("whitening ideal", "Whitening each layer's inputs would stabilize distributions but is not yet practical.", "inputs are whitened"),
+                ],
+                [
+                    ("It accomplishes this via", "method", "Explains the mechanism."),
+                    ("by reducing", "method", "States how a benefit happens."),
+                    ("This allows us to", "result", "Introduces a practical consequence."),
+                    ("Furthermore", "general", "Adds another benefit."),
+                    ("Finally", "general", "Adds the final benefit in a list."),
+                    ("We define", "claim", "Names the formal concept."),
+                    ("By fixing", "method", "States the stabilization strategy."),
+                ],
+                "By fixing the distribution of the layer inputs",
+                "By doing X, we expect to improve Y.",
+                "The authors expect stable layer-input distributions to improve training speed.",
+                "'By fixing'은 어떤 조작이 어떤 효과로 이어지는지 설명하는 방법 표현입니다.",
+                "The section rapidly moves from benefit claims to formal definition and whitening motivation.",
+            )
+        if "by whitening the inputs to each layer" in lowered and "computed outside the gradient descent step" in lowered:
+            return profile(
+                "This section explains why naive whitening or normalization can fail during gradient descent.",
+                (
+                    "The paper considers whitening activations during training, but shows a failure case: if normalization statistics are updated outside the gradient step, "
+                    "a bias update can be canceled by the subsequent normalization change."
+                ),
+                (
+                    "The passage motivates the need for differentiable normalization inside the optimization graph: whitening seems attractive, "
+                    "but ignoring how normalization statistics depend on parameters can nullify updates or make parameters diverge."
+                ),
+                [
+                    "The key lesson is not the algebra; it is that normalization must participate in backpropagation.",
+                    "The bias example shows why external normalization can cancel learning.",
+                    "Watch for 'However' and 'Thus' as the reasoning pivots.",
+                ],
+                [
+                    ("whitening", "Transforming inputs toward fixed zero-mean, decorrelated distributions.", "whitening"),
+                    ("fixed distributions", "Stable input distributions meant to reduce internal covariate shift.", "fixed distributions"),
+                    ("optimization steps", "Gradient-descent updates interleaved with normalization updates.", "optimization steps"),
+                    ("learned bias", "Bias parameter b in the failure example.", "learned bias"),
+                    ("training data", "Dataset over which the mean is computed.", "training data"),
+                    ("loss remains fixed", "Failure condition where the update does not change the objective.", "loss remains fixed"),
+                    ("normalization parameters", "Statistics computed outside gradient descent in the failure case.", "normalization parameters"),
+                ],
+                [
+                    ("naive-normalization failure", "Updating normalization outside gradient descent can erase parameter updates.", "no change in the output"),
+                    ("gradient-dependence problem", "The optimizer must account for the dependence of normalization statistics on parameters.", "dependence of E"),
+                    ("blow-up observation", "The authors observed models diverge when normalization statistics were external.", "model blows up"),
+                ],
+                [
+                    ("could consider", "method", "Introduces a possible approach."),
+                    ("However, if", "contrast", "Introduces a failure condition."),
+                    ("For example", "general", "Starts the illustrative derivation."),
+                    ("If a gradient descent step ignores", "limitation", "Names the mistake."),
+                    ("Thus", "claim", "Draws the consequence."),
+                    ("This problem can get worse", "claim", "Extends the failure case."),
+                    ("We have observed this empirically", "result", "Connects the derivation to experiment."),
+                ],
+                "However, if these modifications are interspersed with the optimization steps",
+                "However, if X, then Y may Z.",
+                "If normalization updates are interleaved badly with optimization, the gradient step can be canceled.",
+                "'However, if'는 가능해 보이는 방법의 실패 조건을 제시할 때 쓰입니다.",
+                "The section is difficult because the main insight is hidden inside a bias-normalization algebra example.",
+            )
+        if "the issue with the above approach" in lowered and "desired distribution" in lowered:
+            return profile(
+                "This section states that normalization must be accounted for by gradient descent.",
+                (
+                    "The paper says the problem with the previous approach is that gradient descent ignored normalization. "
+                    "The authors want activations to keep the desired distribution while gradients still account for the normalization."
+                ),
+                (
+                    "The passage sets the design constraint for BatchNorm: normalization should be part of the computation that gradients see, "
+                    "so its dependence on model parameters is not ignored."
+                ),
+                [
+                    "This is the design-requirement section before mini-batch statistics.",
+                    "The key is that normalization must be inside the computational graph.",
+                    "The next section explains why full whitening is too expensive and motivates mini-batch statistics.",
+                ],
+                [
+                    ("gradient descent optimization", "Optimization process that must account for normalization.", "gradient descent optimization"),
+                    ("desired distribution", "Target distribution for network activations.", "desired distribution"),
+                    ("model parameters", "Theta values that activations depend on.", "model parameters"),
+                    ("activations", "Layer outputs whose distribution should be controlled.", "activations"),
+                    ("normalization", "Transformation that must be included in gradient computation.", "normalization"),
+                ],
+                [
+                    ("normalization-in-graph requirement", "Gradients must account for normalization and its parameter dependence.", "account for the normalization"),
+                    ("distribution constraint", "The network should produce activations with the desired distribution for any parameters.", "desired distribution"),
+                    ("parameter-dependence requirement", "The loss gradient must account for the dependence on model parameters.", "dependence on the model parameters"),
+                ],
+                [
+                    ("The issue with", "claim", "Names the problem with the previous approach."),
+                    ("To address this issue", "method", "Introduces the desired fix."),
+                    ("Doing so would allow", "result", "States what the fix enables."),
+                    ("with respect to", "general", "Names the gradient target."),
+                    ("account for", "method", "States what the gradient must include."),
+                ],
+                "To address this issue, we would like to ensure",
+                "To address this issue, we would like to ensure that X.",
+                "The authors want normalization to be something the optimizer can account for.",
+                "'To address this issue'는 앞에서 제기한 문제를 해결하는 조건을 제시할 때 쓰입니다.",
+                "The section is short but abstract because it states a design constraint before showing the concrete mini-batch method.",
             )
         return None
 
