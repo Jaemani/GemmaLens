@@ -7585,6 +7585,9 @@ class AnalysisNormalizationService:
                 "batchnormalized networks",
                 "sigmoid nonlinearity",
                 "accuracy",
+                "convolutional layers",
+                "stochastic optimization methods",
+                "regularization",
             },
         )
 
@@ -9641,6 +9644,147 @@ class AnalysisNormalizationService:
                 "Using BatchNorm alone already matches the baseline in fewer training steps.",
                 "'By only using'은 어떤 효과가 특정 변경 하나만으로도 나타남을 강조합니다.",
                 "The section is dense because it interprets a table, compares multiple variants, and then shifts into ensemble results.",
+            )
+        if "the ensemble prediction was based on the arithmetic average" in lowered and "5 conclusion" in lowered:
+            return profile(
+                "This section finishes the ImageNet ensemble setup and begins the paper's conclusion.",
+                (
+                    "The ensemble is built from BN-x30-based networks and averages class probabilities. "
+                    "The authors claim BatchNorm sets a new ImageNet state of the art, then start the conclusion by restating the internal-covariate-shift premise."
+                ),
+                (
+                    "The passage connects final benchmark methodology to the paper thesis: modified BN-x30 networks are ensembled by probability averaging, "
+                    "and the conclusion frames BatchNorm as a mechanism for accelerating deep-network training by reducing internal covariate shift inside layers."
+                ),
+                [
+                    "This is a boundary section: first ensemble details, then conclusion thesis.",
+                    "Do not save `we demonstrate` as a vocabulary item; the useful expression is the state-of-the-art claim pattern.",
+                    "The conclusion starts by returning to the original premise: covariate shift applies inside networks.",
+                ],
+                [
+                    ("BN-x30", "High-learning-rate BN-Inception variant used as the ensemble base.", "BN-x30"),
+                    ("Dropout probability", "Dropout rate varied across ensemble members.", "Dropout probability"),
+                    ("per-activation Batch Normalization", "Non-convolutional BN variant used in some hidden layers.", "per-activation Batch Normalization"),
+                    ("ensemble prediction", "Prediction produced from multiple networks.", "ensemble prediction"),
+                    ("arithmetic average of class probabilities", "Method for combining ensemble outputs.", "arithmetic average"),
+                    ("multicrop inference", "Evaluation method using multiple crops of the same image.", "multicrop inference"),
+                    ("state-of-the-art", "Best reported benchmark performance at the time.", "state-of-the-art"),
+                    ("covariate shift", "Distribution shift premise extended to sub-networks and layers.", "covariate shift"),
+                ],
+                [
+                    ("ensemble construction", "The final system averages class probabilities from multiple BN-x30-based networks.", "arithmetic average"),
+                    ("state-of-the-art benchmark claim", "Figure 4 is used to claim a new ImageNet benchmark result.", "state-of-the-art"),
+                    ("conclusion thesis return", "The conclusion restates that covariate shift also applies inside deep networks.", "also ap-"),
+                ],
+                [
+                    ("based on", "method", "Explains how the ensemble prediction is formed."),
+                    ("similar to", "general", "Relates inference details to prior work."),
+                    ("We demonstrate", "result", "Introduces benchmark evidence."),
+                    ("allows us to", "result", "Connects the method to a result."),
+                    ("by a healthy margin", "result", "Emphasizes the size of improvement."),
+                    ("We have presented", "claim", "Starts the conclusion contribution statement."),
+                    ("is based on the premise that", "claim", "States the core assumption behind the method."),
+                ],
+                "We demonstrate in Fig. 4 that batch normalization allows us to set new state-of-the-art",
+                "We demonstrate that X allows us to Y.",
+                "The authors use Figure 4 to claim BatchNorm reaches a new ImageNet state of the art.",
+                "'We demonstrate that X allows us to Y'는 실험 결과가 방법의 효과를 뒷받침한다는 구조입니다.",
+                "The section is difficult because ensemble setup and conclusion thesis are joined by a page break.",
+            )
+        if "model resolution crops models top-1 error top-5 error" in lowered and "merely adding batch normalization" in lowered:
+            return profile(
+                "This section reads the Figure 4 ImageNet table and summarizes the main BatchNorm mechanism.",
+                (
+                    "Figure 4 compares BN-Inception against previous ImageNet systems. The conclusion explains that BatchNorm works by normalizing "
+                    "internal activations inside the architecture, training with mini-batch statistics, and backpropagating through normalization."
+                ),
+                (
+                    "The passage combines final benchmark evidence with the conclusion's method recap: BN-Inception ensemble reaches 4.9% validation top-5 error "
+                    "and 4.82% test top-5 error, while the method preserves representation ability with two parameters per activation and supports faster, more stable training."
+                ),
+                [
+                    "Treat the first table block as benchmark evidence, not normal prose.",
+                    "The conclusion body is a compact recap of the whole method: normalization in architecture, mini-batch statistics, learned scale/shift, inference algorithm.",
+                    "Separate speedup, saturating nonlinearities, learning rates, and Dropout as distinct benefits.",
+                ],
+                [
+                    ("Top-1 error", "ImageNet metric: top prediction is wrong.", "Top-1 error"),
+                    ("Top-5 error", "ImageNet metric: correct class absent from top five predictions.", "Top-5 error"),
+                    ("BN-Inception ensemble", "Six-model BatchNorm ensemble reported in Figure 4.", "BN-Inception ensemble"),
+                    ("test server", "ILSVRC server reporting 4.82% top-5 test error.", "test server"),
+                    ("internal activations", "Activations inside the network that BN normalizes.", "internal activations"),
+                    ("mini-batch", "Training batch used to compute normalization statistics.", "mini-batch"),
+                    ("normalization parameters", "Parameters through which gradients are backpropagated.", "normalization parameters"),
+                    ("saturating nonlinearities", "Nonlinearities made trainable by BatchNorm.", "saturating nonlinearities"),
+                ],
+                [
+                    ("Figure 4 benchmark reading", "The table compares BN-Inception with previous ImageNet state of the art.", "Figure 4"),
+                    ("architecture-integrated normalization", "BN draws power from normalization being part of the network.", "network architecture itself"),
+                    ("representation-preserving transform", "Two extra parameters preserve representation ability.", "two extra parameters per activation"),
+                    ("benefit recap", "BN supports saturating nonlinearities, higher learning rates, less Dropout, and training speedup.", "saturating nonlinearities"),
+                ],
+                [
+                    ("comparison with previous", "general", "Introduces benchmark comparison."),
+                    ("as reported by", "general", "Names the evaluation authority."),
+                    ("draws its power from", "claim", "Explains the source of the method's effect."),
+                    ("This ensures that", "result", "Connects architecture integration to optimizer handling."),
+                    ("To enable", "method", "Introduces why mini-batch normalization is used."),
+                    ("in doing so", "result", "Links added parameters to preserved representation ability."),
+                    ("Merely adding", "method", "Isolates the effect of adding BN alone."),
+                ],
+                "Our proposed method draws its power from normalizing activations",
+                "Our proposed method draws its power from X and Y.",
+                "BatchNorm's power comes from normalizing activations inside the network architecture itself.",
+                "'draws its power from'은 방법의 핵심 원천을 설명하는 강한 표현입니다.",
+                "The section is hard because a benchmark table and a compressed method recap are extracted together.",
+            )
+        if "by further increasing the learning rates" in lowered and "standardization layer" in lowered:
+            return profile(
+                "This conclusion section states the final ImageNet claims and distinguishes BatchNorm from a prior standardization layer.",
+                (
+                    "With higher learning rates and other BN-enabled changes, the authors match and beat prior ImageNet results. "
+                    "They then contrast BatchNorm with a prior standardization layer, emphasizing different goals, placement before the nonlinearity, "
+                    "learned scale/shift, convolutional handling, and deterministic inference."
+                ),
+                (
+                    "The passage closes the paper by combining final performance claims with method positioning: BatchNorm improves single-network and ensemble ImageNet performance, "
+                    "then distinguishes itself from prior standardization work by its training-stability goal and deployment properties."
+                ),
+                [
+                    "This is final-positioning prose: performance claim first, related-method contrast second.",
+                    "The important academic move is `though the two methods stem from very different goals`.",
+                    "This section is useful for learning how papers defend novelty against similar prior work.",
+                ],
+                [
+                    ("state of the art", "Best known benchmark performance at the time.", "state of the art"),
+                    ("single-network image classification", "One-model ImageNet performance setting.", "single-network image classification"),
+                    ("standardization layer", "Prior related method compared against BatchNorm.", "standardization layer"),
+                    ("stable distribution of activation values", "BatchNorm's stated goal throughout training.", "stable distribution of activation values"),
+                    ("before the nonlinearity", "Placement of BatchNorm in the authors' experiments.", "before the nonlinearity"),
+                    ("learned scale and shift", "Gamma/beta mechanism that can represent identity.", "learned scale and shift"),
+                    ("deterministic inference", "Inference behavior not dependent on the mini-batch.", "deterministic"),
+                    ("batchnormalizing each convolutional layer", "Applying BN to every convolutional layer.", "batchnormalizing each convolutional layer"),
+                ],
+                [
+                    ("final single-network claim", "BN-enabled modifications beat prior single-network image classification state of the art.", "single-network image classification"),
+                    ("final ensemble claim", "Combining BN-trained models beats the best known ImageNet system.", "combining multiple models"),
+                    ("prior-method differentiation", "BatchNorm is contrasted with a standardization layer by goal, placement, scale/shift, convolution handling, and inference.", "standardization layer"),
+                    ("novelty defense pattern", "The section explains similarity while listing important differences.", "different goals"),
+                ],
+                [
+                    ("By further increasing", "method", "Connects extra modifications to final performance."),
+                    ("Furthermore", "general", "Adds ensemble performance claim."),
+                    ("Interestingly", "general", "Introduces a related-method comparison."),
+                    ("though", "contrast", "Concedes similarity while preserving difference."),
+                    ("stem from very different goals", "contrast", "States conceptual difference."),
+                    ("On the contrary", "contrast", "Contrasts placement and resulting activations."),
+                    ("Other notable differentiating characteristics include", "claim", "Introduces a list of novelty points."),
+                ],
+                "though the two methods stem from very different goals",
+                "Though X and Y are similar, they stem from very different goals.",
+                "The authors acknowledge similarity to prior work but argue the goals and details differ.",
+                "'though ... stem from very different goals'는 유사한 선행연구와 자기 방법을 구분할 때 쓰는 표현입니다.",
+                "The section is dense because it combines benchmark claims, prior-work comparison, and implementation differences.",
             )
         return None
 

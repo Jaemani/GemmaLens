@@ -84,6 +84,7 @@ class AnalysisQualityService:
             "triviaqa fine-tuning data": "triviaqa",
             "feature-based approach": "featurebased approach",
             "conll-2003 named entity recognition": "conll",
+            "deterministic inference": "does not depend on the mini-batch",
         }
         alias = support_aliases.get(value_lower)
         if alias and alias in source_lower:
