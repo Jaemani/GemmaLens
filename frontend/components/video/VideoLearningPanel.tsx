@@ -32,6 +32,7 @@ export function VideoLearningPanel() {
   const [currentTime, setCurrentTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [busyLabel, setBusyLabel] = useState<string | null>(null);
   const [analysisElapsed, setAnalysisElapsed] = useState(0);
   const [analysisStep, setAnalysisStep] = useState(0);
   const [analysisLabel, setAnalysisLabel] = useState<string | null>(null);
@@ -102,6 +103,7 @@ export function VideoLearningPanel() {
 
   async function parseSubtitle() {
     setBusy(true);
+    setBusyLabel("Parsing pasted subtitles");
     setError(null);
     try {
       const result = await api.parseTranscript({ content: subtitleText, source_name: sourceName });
@@ -111,6 +113,7 @@ export function VideoLearningPanel() {
       setError(err instanceof Error ? err.message : "Could not parse subtitle.");
     } finally {
       setBusy(false);
+      setBusyLabel(null);
     }
   }
 
@@ -121,6 +124,7 @@ export function VideoLearningPanel() {
       return;
     }
     setBusy(true);
+    setBusyLabel("Fetching YouTube transcript");
     setError(null);
     try {
       setVideoId(id);
@@ -134,6 +138,7 @@ export function VideoLearningPanel() {
       setError(err instanceof Error ? err.message : "Could not fetch YouTube transcript.");
     } finally {
       setBusy(false);
+      setBusyLabel(null);
     }
   }
 
@@ -154,6 +159,7 @@ export function VideoLearningPanel() {
 
   async function analyzeText(title: string, content: string, sourceType: string) {
     setBusy(true);
+    setBusyLabel(null);
     setAnalysisElapsed(0);
     setAnalysisStep(0);
     setAnalysisLabel(sourceType === "video_segment" ? "Creating current-scene learning source" : "Creating transcript learning source");
@@ -195,10 +201,13 @@ export function VideoLearningPanel() {
               disabled={busy || !youtubeUrl.trim()}
               className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              <LinkIcon size={16} />
-              Fetch transcript
+              {busyLabel === "Fetching YouTube transcript" ? <Clock size={16} className="animate-spin" /> : <LinkIcon size={16} />}
+              {busyLabel === "Fetching YouTube transcript" ? "Fetching..." : "Fetch transcript"}
             </button>
           </div>
+          {busyLabel ? (
+            <p className="mt-3 rounded-md bg-blue-50 px-3 py-2 text-sm font-medium text-accent">{busyLabel}. This depends on caption availability and local network access.</p>
+          ) : null}
           {youtubeUrl.trim() && !pastedVideoId ? (
             <p className="mt-2 text-xs text-amber-700">This does not look like a supported YouTube URL yet.</p>
           ) : null}
@@ -240,7 +249,7 @@ export function VideoLearningPanel() {
                     disabled={busy || !subtitleText.trim()}
                     className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                   >
-                    Parse subtitle
+                    {busyLabel === "Parsing pasted subtitles" ? "Parsing..." : "Parse subtitle"}
                   </button>
                 </div>
               </>
@@ -322,7 +331,18 @@ export function VideoLearningPanel() {
               </button>
             ))
           ) : (
-            <p className="p-4 text-sm text-neutral-600">Fetch a transcript or parse subtitles to start timeline learning.</p>
+            <div className="space-y-3 p-4 text-sm leading-6 text-neutral-600">
+              <p className="font-semibold text-ink">No transcript loaded</p>
+              <p>Load captions to turn timeline segments into language lessons. You can analyze the full transcript or only the current scene.</p>
+              <div className="rounded-md bg-surface p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Learning flow</p>
+                <ol className="mt-2 space-y-1">
+                  <li>1. Fetch YouTube captions or paste subtitles.</li>
+                  <li>2. Click a timestamp to sync the scene.</li>
+                  <li>3. Analyze one scene or the whole transcript.</li>
+                </ol>
+              </div>
+            </div>
           )}
         </div>
       </aside>
@@ -333,9 +353,12 @@ export function VideoLearningPanel() {
 function EmptyPlayer() {
   return (
     <div className="flex h-full items-center justify-center text-sm font-semibold text-white">
-      <div className="flex items-center gap-2">
-        <Play size={18} />
-        Add a YouTube URL to load the player
+      <div className="px-6 text-center">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white/10">
+          <Play size={18} />
+        </div>
+        <p className="mt-3">Add a YouTube URL to load the player</p>
+        <p className="mt-1 text-xs font-medium text-white/70">Captions become timestamped learning segments.</p>
       </div>
     </div>
   );

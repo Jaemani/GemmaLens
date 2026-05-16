@@ -179,6 +179,7 @@ Local demo records currently include:
 - Multi-page UI audit exposed a first-impression failure on Dashboard/Documents: recent-document previews displayed raw extraction markers, author/email clutter, and duplicate partial uploads next to complete paper guides. The document lists now deduplicate by title/source type for display, keep the most complete version, and show study-state summaries instead of raw PDF extraction residue.
 - Mobile analysis audit exposed an excessive-scroll problem: complete papers expanded every section in the whole-paper argument flow before the current section lesson. The paper map now shows the first six argument-flow steps by default and lets the user expand the remaining sections on demand.
 - Translate page audit exposed a blank-output problem: the result panel looked like an empty card until translation finished. The page now has a purposeful empty state, a clearer local-model loading state, a copied state for the copy action, and labels model notes as learner notes.
+- Video page audit exposed a weak empty state and unclear transcript-fetch feedback. The page now explains the timeline-learning flow before captions are loaded, makes the player placeholder describe caption-to-segment behavior, and shows explicit fetch/parse progress labels.
 
 ## Still Weak
 
