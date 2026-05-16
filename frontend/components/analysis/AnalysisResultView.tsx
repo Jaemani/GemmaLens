@@ -20,7 +20,13 @@ import { SentenceDecompositionCard } from "./SentenceDecompositionCard";
 import { buildRows, TermTable } from "./TermTable";
 import { AnalysisProgress } from "./AnalysisProgress";
 import { ConceptMapPanel } from "./ConceptMapPanel";
-import { DocumentPageReader, SectionLessonCard, type SectionLessonSelection, type SectionPreparationStatus } from "./DocumentPageReader";
+import {
+  DocumentPageReader,
+  SectionLessonCard,
+  type SectionLessonSelection,
+  type SectionPreparationStatus,
+  type SectionReaderState
+} from "./DocumentPageReader";
 import { ExperimentSwitchPanel } from "./ExperimentSwitchPanel";
 import { PaperMapProgressPanel } from "./PaperMapProgressPanel";
 import { PdfSourcePane } from "./PdfSourcePane";
@@ -39,6 +45,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const [requestedPdfPage, setRequestedPdfPage] = useState<number | null>(null);
   const [sourceReady, setSourceReady] = useState(false);
   const [sectionLesson, setSectionLesson] = useState<SectionLessonSelection | null>(null);
+  const [sectionState, setSectionState] = useState<SectionReaderState | null>(null);
   const [sectionPreparation, setSectionPreparation] = useState<SectionPreparationStatus | null>(null);
   const [stopSectionPreparation, setStopSectionPreparation] = useState(false);
   const [continueSectionPreparationKey, setContinueSectionPreparationKey] = useState(0);
@@ -185,6 +192,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
             documentId={documentId}
             onSectionAnalyzed={() => setPaperMapRefreshKey((value) => value + 1)}
             onSectionLesson={setSectionLesson}
+            onSectionState={setSectionState}
             onPreparationStatus={setSectionPreparation}
             stopPreparation={stopSectionPreparation}
             continuePreparationKey={continueSectionPreparationKey}
@@ -201,6 +209,8 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
             sectionLabel={sectionLesson.sectionLabel}
             isAnalyzingNext={false}
           />
+        ) : isDocumentSource ? (
+          <SectionLessonPlaceholder state={sectionState} />
         ) : null}
       </div>
     );
@@ -268,6 +278,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           documentId={documentId}
           onSectionAnalyzed={() => setPaperMapRefreshKey((value) => value + 1)}
           onSectionLesson={setSectionLesson}
+          onSectionState={setSectionState}
           onPreparationStatus={setSectionPreparation}
           stopPreparation={stopSectionPreparation}
           continuePreparationKey={continueSectionPreparationKey}
@@ -284,6 +295,8 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           sectionLabel={sectionLesson.sectionLabel}
           isAnalyzingNext={false}
         />
+      ) : isDocumentSource ? (
+        <SectionLessonPlaceholder state={sectionState} />
       ) : null}
       {isVideoSource ? (
         <>
@@ -438,6 +451,35 @@ function SectionPreparationPanel({
       </div>
       <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white">
         <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${progress}%` }} />
+      </div>
+    </section>
+  );
+}
+
+function SectionLessonPlaceholder({ state }: { state: SectionReaderState | null }) {
+  if (!state) return null;
+  if (state.analyzed) {
+    return (
+      <section className="rounded-lg border border-line bg-panel p-5 text-sm leading-6 text-neutral-700 shadow-material">
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section lesson</p>
+        <h2 className="mt-1 text-lg font-semibold text-ink">Loading this section lesson...</h2>
+        {state.sectionLabel ? <p className="mt-1 text-xs font-semibold text-neutral-600">{state.sectionLabel}</p> : null}
+      </section>
+    );
+  }
+  return (
+    <section className="rounded-lg border border-line bg-panel p-5 shadow-material">
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section lesson</p>
+      <h2 className="mt-1 text-lg font-semibold text-ink">No lesson for this section yet.</h2>
+      {state.sectionLabel ? <p className="mt-1 text-xs font-semibold text-neutral-600">{state.sectionLabel}</p> : null}
+      <div className="mt-4 rounded-md border border-line bg-surface p-4 text-sm leading-6 text-neutral-700">
+        {state.isBatchAnalyzing ? (
+          <p>
+            GemmaLens is currently preparing sections in the background. Stop automatic preparation first, then analyze this page/section manually if you want this lesson immediately.
+          </p>
+        ) : (
+          <p>Analyze this section to build its lesson, then save useful words, expressions, and concepts for review.</p>
+        )}
       </div>
     </section>
   );

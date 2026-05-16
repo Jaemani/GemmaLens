@@ -9,6 +9,7 @@ export function DocumentPageReader({
   documentId,
   onSectionAnalyzed,
   onSectionLesson,
+  onSectionState,
   onPreparationStatus,
   stopPreparation = false,
   continuePreparationKey = 0,
@@ -20,6 +21,7 @@ export function DocumentPageReader({
   documentId: string;
   onSectionAnalyzed?: () => void;
   onSectionLesson?: (lesson: SectionLessonSelection | null) => void;
+  onSectionState?: (state: SectionReaderState | null) => void;
   onPreparationStatus?: (status: SectionPreparationStatus | null) => void;
   stopPreparation?: boolean;
   continuePreparationKey?: number;
@@ -100,6 +102,19 @@ export function DocumentPageReader({
     setError("");
     if (currentSection && !currentSection.analyzed) onSectionLesson?.(null);
   }, [currentSection?.analyzed, currentSection?.index, onSectionLesson, pageIndex]);
+
+  useEffect(() => {
+    if (!currentSection) {
+      onSectionState?.(null);
+      return;
+    }
+    onSectionState?.({
+      analyzed: currentSection.analyzed,
+      sectionNumber: currentSection.section_number,
+      sectionLabel: formatSectionLabel(currentSection, currentPdfPage, currentPageSectionNumber),
+      isBatchAnalyzing
+    });
+  }, [currentPageSectionNumber, currentPdfPage, currentSection, isBatchAnalyzing, onSectionState]);
 
   useEffect(() => {
     let cancelled = false;
@@ -432,11 +447,11 @@ export function DocumentPageReader({
           <button
             type="button"
             onClick={analyzePage}
-            disabled={isAnalyzing || !currentSection || !page.trim()}
+            disabled={isAnalyzing || isBatchAnalyzing || !currentSection || !page.trim()}
             className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
           >
             <ScanText size={16} />
-            {isAnalyzing ? "Analyzing..." : currentSection?.analyzed ? "Re-analyze section" : "Analyze section"}
+            {isAnalyzing ? "Analyzing..." : isBatchAnalyzing ? "Stop auto first" : currentSection?.analyzed ? "Re-analyze section" : "Analyze section"}
           </button>
         </div>
       </div>
@@ -695,6 +710,13 @@ export type SectionLessonSelection = {
   analysis: AnalysisResult;
   sectionNumber: number;
   sectionLabel?: string;
+};
+
+export type SectionReaderState = {
+  analyzed: boolean;
+  sectionNumber: number;
+  sectionLabel?: string;
+  isBatchAnalyzing: boolean;
 };
 
 export type SectionPreparationStatus = {
