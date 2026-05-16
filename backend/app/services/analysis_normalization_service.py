@@ -59,6 +59,18 @@ class AnalysisNormalizationService:
         if self._is_bert_swag_ablation_transition_section(document_text):
             terms = self._prefer_bert_swag_ablation_transition_terms(terms, document_text)
             phrases = self._prefer_bert_swag_ablation_transition_phrases(phrases, document_text)
+        if self._is_bert_ablation_interpretation_section(document_text):
+            terms = self._prefer_bert_ablation_interpretation_terms(terms, document_text)
+            phrases = self._prefer_bert_ablation_interpretation_phrases(phrases, document_text)
+        if self._is_bert_model_size_effect_section(document_text):
+            terms = self._prefer_bert_model_size_effect_terms(terms, document_text)
+            phrases = self._prefer_bert_model_size_effect_phrases(phrases, document_text)
+        if self._is_bert_feature_based_transition_section(document_text):
+            terms = self._prefer_bert_feature_based_transition_terms(terms, document_text)
+            phrases = self._prefer_bert_feature_based_transition_phrases(phrases, document_text)
+        if self._is_bert_ner_feature_table_section(document_text):
+            terms = self._prefer_bert_ner_feature_table_terms(terms, document_text)
+            phrases = self._prefer_bert_ner_feature_table_phrases(phrases, document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -149,6 +161,18 @@ class AnalysisNormalizationService:
         if self._is_bert_swag_ablation_transition_section(document_text):
             normalized["concepts"] = self._prefer_bert_swag_ablation_transition_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._prefer_bert_swag_ablation_transition_phrases(normalized["phrases"], document_text)
+        if self._is_bert_ablation_interpretation_section(document_text):
+            normalized["concepts"] = self._prefer_bert_ablation_interpretation_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_bert_ablation_interpretation_phrases(normalized["phrases"], document_text)
+        if self._is_bert_model_size_effect_section(document_text):
+            normalized["concepts"] = self._prefer_bert_model_size_effect_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_bert_model_size_effect_phrases(normalized["phrases"], document_text)
+        if self._is_bert_feature_based_transition_section(document_text):
+            normalized["concepts"] = self._prefer_bert_feature_based_transition_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_bert_feature_based_transition_phrases(normalized["phrases"], document_text)
+        if self._is_bert_ner_feature_table_section(document_text):
+            normalized["concepts"] = self._prefer_bert_ner_feature_table_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_bert_ner_feature_table_phrases(normalized["phrases"], document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -2978,6 +3002,50 @@ class AnalysisNormalizationService:
                         "difficulty_reason": "The sentence is dense because it links a model constraint, fine-tuning condition, and mismatch explanation.",
                     }
                 ]
+            if self._is_bert_ablation_interpretation_section(document_text):
+                sentence = self._source_sentence(None, "However:", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "However: (a) X; (b) Y; (c) Z.",
+                        "simplified_version": "The two-direction LTR/RTL alternative is worse because it is expensive, awkward for QA, and less powerful than deep bidirectionality.",
+                        "korean_explanation": "'However:' 뒤의 (a)(b)(c)는 대안의 한계를 순서대로 나열하는 논문식 반박 구조입니다.",
+                        "difficulty_reason": "The sentence is difficult because it compresses three objections into one enumerated contrast.",
+                    }
+                ]
+            if self._is_bert_model_size_effect_section(document_text):
+                sentence = self._source_sentence(None, "provided that the model has been sufficiently pre-trained", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "However, X also leads to Y, provided that Z.",
+                        "simplified_version": "Very large pre-trained models can help even small downstream tasks if pre-training is strong enough.",
+                        "korean_explanation": "'provided that'은 조건을 붙입니다. 여기서는 모델 크기 증가 효과가 충분한 사전학습을 전제로 한다는 뜻입니다.",
+                        "difficulty_reason": "The sentence links a contrast, a scaling claim, and a condition in one long academic claim.",
+                    }
+                ]
+            if self._is_bert_feature_based_transition_section(document_text):
+                sentence = self._source_sentence(None, "where fixed features are extracted", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "However, approach X, where Y, has advantages.",
+                        "simplified_version": "The paper switches from fine-tuning to testing BERT as a fixed feature extractor.",
+                        "korean_explanation": "'where' 절은 feature-based approach가 무엇인지 정의하고, 주절은 그 장점을 소개합니다.",
+                        "difficulty_reason": "The sentence contrasts two experimental approaches while defining the second one inside a relative clause.",
+                    }
+                ]
+            if self._is_bert_ner_feature_table_section(document_text):
+                sentence = self._source_sentence(None, "without fine-tuning any parameters of BERT", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "To ablate X, we apply Y by doing Z.",
+                        "simplified_version": "To compare against fine-tuning, they freeze BERT and use its layer activations as features.",
+                        "korean_explanation": "'To ablate'는 비교 실험의 목적을 나타내고, 'by extracting'은 방법을 설명합니다.",
+                        "difficulty_reason": "The sentence is dense because it describes purpose, method, and parameter-freezing in one structure.",
+                    }
+                ]
             specs = [
                 (
                     "There are two existing strategies",
@@ -4722,6 +4790,74 @@ class AnalysisNormalizationService:
                         "Separate the SWAG task adaptation from the ablation-study setup.",
                         "The ablation table is about why MLM + NSP + bidirectionality matter, not only about scores.",
                         "Treat No NSP, LTR & No NSP, and +BiLSTM as experimental variants.",
+                    ],
+                }
+            if self._is_bert_ablation_interpretation_section(document_text):
+                return {
+                    "one_line": "This section interprets BERT ablations: NSP helps, left-to-right pre-training hurts, and deep bidirectionality matters.",
+                    "simple": (
+                        "Removing NSP hurts several tasks, especially QNLI, MNLI, and SQuAD. A left-to-right model performs worse than masked LM, "
+                        "BiLSTM helps SQuAD only partially, and ELMo-style separate LTR/RTL models are less attractive than one deep bidirectional model."
+                    ),
+                    "academic": (
+                        "The section reads Table 5 as evidence for two design claims: next sentence prediction contributes to sentence-pair and QA tasks, "
+                        "and deep bidirectional pre-training is stronger than left-to-right pre-training plus task-time BiLSTM or separate LTR/RTL concatenation."
+                    ),
+                    "study_notes": [
+                        "Track each variant as an experimental control: No NSP, LTR & No NSP, and +BiLSTM.",
+                        "The key language move is causal interpretation of ablation results.",
+                        "The final paragraph rejects an ELMo-style workaround with three reasons.",
+                    ],
+                }
+            if self._is_bert_model_size_effect_section(document_text):
+                return {
+                    "one_line": "This section argues that larger pre-trained BERT models improve even small downstream tasks.",
+                    "simple": (
+                        "The authors vary BERT depth, hidden size, and attention heads while keeping training mostly fixed. "
+                        "The larger models improve dev accuracy across datasets, suggesting that strong pre-training lets small downstream tasks benefit from very large representations."
+                    ),
+                    "academic": (
+                        "The section interprets Table 6 as a model-scaling result: increasing BERT capacity lowers masked-LM perplexity and improves downstream accuracy, "
+                        "contrasting fine-tuned BERT with earlier feature-based work that saw mixed benefits from larger pre-trained representations."
+                    ),
+                    "study_notes": [
+                        "Read #L, #H, and #A as model-size controls, not vocabulary to memorize alone.",
+                        "The main claim is conditional: scaling helps small tasks when the model is sufficiently pre-trained.",
+                        "The comparison to prior feature-based work prepares the next section.",
+                    ],
+                }
+            if self._is_bert_feature_based_transition_section(document_text):
+                return {
+                    "one_line": "This section transitions from full fine-tuning to using BERT as a fixed feature extractor for NER.",
+                    "simple": (
+                        "So far, BERT results used fine-tuning. This section explains why fixed feature extraction is still useful: some tasks need task-specific architectures, "
+                        "and precomputing BERT representations can make many experiments cheaper. The test case is CoNLL-2003 named entity recognition."
+                    ),
+                    "academic": (
+                        "The passage frames feature-based BERT as an alternative transfer setting: freeze the pre-trained model, extract contextual features, "
+                        "and evaluate them on CoNLL-2003 NER with case-preserving WordPiece inputs and maximal document context."
+                    ),
+                    "study_notes": [
+                        "Separate transfer mode from task: fine-tuning versus fixed-feature extraction, then NER as the evaluation task.",
+                        "The two advantages are architectural flexibility and computational reuse.",
+                        "This section is setup; the next section explains the actual NER table.",
+                    ],
+                }
+            if self._is_bert_ner_feature_table_section(document_text):
+                return {
+                    "one_line": "This section shows that BERT's hidden layers work well as fixed NER features, nearly matching fine-tuning.",
+                    "simple": (
+                        "For NER, the authors use the first WordPiece sub-token representation for token classification. "
+                        "Without fine-tuning BERT, they extract one or more layer activations, feed them to a BiLSTM, and find that concatenating the top four layers is only 0.3 F1 behind full fine-tuning."
+                    ),
+                    "academic": (
+                        "The section combines Table 6/7 reading with the feature-based NER ablation: model-size scaling metrics, CoNLL-2003 F1 comparisons, "
+                        "sub-token representation choice, frozen BERT activations, a randomly initialized BiLSTM, and layer-selection results for contextual embeddings."
+                    ),
+                    "study_notes": [
+                        "Do not read the numeric table as prose; identify the comparison rows and the winning feature variant.",
+                        "The key language-learning phrase is 'To ablate X, we apply Y by Z'.",
+                        "The result supports BERT's usefulness beyond full-model fine-tuning.",
                     ],
                 }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
@@ -6640,6 +6776,410 @@ class AnalysisNormalizationService:
         ]
         return [*promoted, *rest][:12]
 
+    def _prefer_bert_ablation_interpretation_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"nsp task", "bidirectional representations", "token predictions", "bert", "fine-tuning"}
+        preferred = [
+            ("No NSP", "The ablation that removes next sentence prediction while keeping masked LM.", "field_term", "hard", "This tests NSP's contribution."),
+            ("QNLI", "A GLUE question-answering/natural-language-inference task affected by removing NSP.", "field_term", "medium", "This is one task where NSP removal hurts."),
+            ("MNLI", "A GLUE natural-language-inference task affected by removing NSP.", "field_term", "medium", "This is another task where NSP removal hurts."),
+            ("SQuAD 1.1", "The extractive QA task where both NSP removal and LTR pre-training hurt.", "field_term", "medium", "This anchors the QA result."),
+            ("LTR model", "A left-to-right model that uses only left context.", "field_term", "medium", "This is the main bidirectionality ablation."),
+            ("MLM model", "The masked language model variant with bidirectional context.", "field_term", "medium", "This is the comparison point for LTR."),
+            ("token-level hidden states", "Per-token representations used for SQuAD answer prediction.", "field_term", "hard", "This explains why right-side context matters."),
+            ("rightside context", "Context to the right of a token, missing in LTR hidden states.", "field_term", "medium", "This is the source of the SQuAD weakness."),
+            ("randomly initialized BiLSTM", "A BiLSTM added during fine-tuning to strengthen the LTR system.", "field_term", "hard", "This is the good-faith repair attempt."),
+            ("LTR and RTL models", "Separate left-to-right and right-to-left models proposed as an ELMo-style alternative.", "field_term", "hard", "This is the rejected workaround."),
+            ("concatenation", "Combining LTR and RTL token representations into one representation.", "field_term", "medium", "This explains the ELMo-style alternative."),
+            ("deep bidirectional model", "A model that uses both left and right context at every layer.", "field_term", "hard", "This is the design BERT defends."),
+            ("model size effect", "The next ablation topic introduced at the end of the section.", "useful", "medium", "This marks the transition to Section 5.2."),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            target = {
+                "SQuAD 1.1": "SQuAD 1.1",
+                "LTR model": "LTR model",
+                "MLM model": "MLM model",
+                "LTR and RTL models": "LTR and RTL models",
+                "model size effect": "effect of model size",
+            }.get(term, term)
+            row = keyed.get(term.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "term": term,
+                    "meaning": row.get("meaning") or meaning,
+                    "domain_relevance": row.get("domain_relevance") or ("high" if priority == "field_term" else "medium"),
+                    "difficulty": row.get("difficulty") or difficulty,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "should_save": bool(row.get("should_save", True)),
+                    "learning_priority": row.get("learning_priority") or priority,
+                    "reason": row.get("reason") or reason,
+                    "context_meaning": row.get("context_meaning") or meaning,
+                    "general_meaning": row.get("general_meaning") or meaning,
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}
+        ]
+        return [*promoted, *rest][:14]
+
+    def _prefer_bert_ablation_interpretation_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"nsp task", "bidirectional representations", "token predictions"}
+        preferred = {
+            "NSP contribution": (
+                "Removing NSP significantly hurts QNLI, MNLI, and SQuAD 1.1.",
+                "This is the evidence that NSP contributes to some downstream tasks.",
+                "removing NSP hurts",
+            ),
+            "deep bidirectionality evidence": (
+                "LTR & No NSP performs worse than the MLM model on all tasks.",
+                "This supports BERT's bidirectional pre-training design.",
+                "LTR model performs worse",
+            ),
+            "SQuAD right-context problem": (
+                "A left-to-right model lacks right-side context in token-level hidden states, which hurts answer prediction.",
+                "This explains why SQuAD is especially sensitive to bidirectionality.",
+                "rightside context",
+            ),
+            "BiLSTM repair attempt": (
+                "Adding a randomly initialized BiLSTM improves SQuAD but remains worse than pre-trained bidirectional models.",
+                "This tests whether fine-tuning-time bidirectionality can replace pre-training bidirectionality.",
+                "randomly initialized BiLSTM",
+            ),
+            "GLUE cost of BiLSTM": (
+                "The BiLSTM hurts performance on GLUE tasks.",
+                "This prevents treating BiLSTM as a general fix.",
+                "hurts performance on the GLUE tasks",
+            ),
+            "ELMo-style alternative rejection": (
+                "Separate LTR and RTL models with concatenation are rejected as expensive, awkward for QA, and less powerful.",
+                "This explains why BERT prefers deep bidirectionality at every layer.",
+                "concatenation of the two models",
+            ),
+            "model-size transition": (
+                "The section transitions from pre-training-task effects to model-size effects.",
+                "This keeps the reader oriented as Section 5.2 begins.",
+                "effect of model size",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            row = keyed.get(concept.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "concept": concept,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "related_terms": row.get("related_terms") or [concept],
+                    "why_it_matters": row.get("why_it_matters") or why_it_matters,
+                    "references": row.get("references") or self._references_near("", document_text),
+                    "learning_priority": row.get("learning_priority") or "field_term",
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _prefer_bert_ablation_interpretation_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"during fine-tuning", "we demonstrate"}
+        preferred = [
+            ("directly comparable to", "general", "Controls how two systems should be compared."),
+            ("We first examine", "method", "Introduces the first ablation question."),
+            ("removing NSP hurts", "result", "States the effect of removing a component."),
+            ("Next, we evaluate", "method", "Moves to the next ablation question."),
+            ("by comparing", "method", "Introduces the comparison method."),
+            ("performs worse than", "result", "States a negative comparison result."),
+            ("it is intuitively clear that", "claim", "Introduces an explanatory intuition."),
+            ("In order to make a good faith attempt", "method", "Signals an effort to strengthen a weaker baseline fairly."),
+            ("still far worse than", "result", "States that a repair attempt remains insufficient."),
+            ("We recognize that it would also be possible to", "general", "Acknowledges an alternative approach."),
+            ("twice as expensive as", "contrast", "Rejects an alternative on cost grounds."),
+            ("strictly less powerful than", "contrast", "Rejects an alternative on modeling-power grounds."),
+        ]
+        keyed = {str(row.get("phrase") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        lower_text = document_text.lower()
+        for phrase, function, explanation in preferred:
+            if phrase.lower() not in lower_text:
+                continue
+            row = keyed.get(phrase.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "phrase": phrase,
+                    "function": row.get("function") or function,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(row.get("source_sentence"), phrase, document_text),
+                    "learning_priority": row.get("learning_priority") or ("must_review" if function in {"method", "result", "contrast"} else "useful"),
+                    "reason": row.get("reason") or "Reusable ablation-interpretation expression detected in the source.",
+                    "context_meaning": row.get("context_meaning") or explanation,
+                    "confidence": self._confidence(row.get("confidence"), 0.87),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("phrase") or "").strip().lower() not in blocked | {phrase.lower() for phrase, *_ in preferred}
+        ]
+        return [*promoted, *rest][:12]
+
+    def _prefer_rows(
+        self,
+        rows: list[dict[str, Any]],
+        document_text: str,
+        key: str,
+        preferred: list[tuple[str, str, str]],
+        *,
+        limit: int,
+        blocked: set[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        blocked = blocked or set()
+        keyed = {str(row.get(key) or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, explanation, target in preferred:
+            row = keyed.get(value.lower(), {})
+            if key == "term":
+                promoted.append(
+                    {
+                        **row,
+                        "term": value,
+                        "meaning": row.get("meaning") or explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "domain_relevance": row.get("domain_relevance") or "high",
+                        "difficulty": row.get("difficulty") or "medium",
+                        "should_save": bool(row.get("should_save", True)),
+                        "learning_priority": row.get("learning_priority") or "field_term",
+                        "confidence": self._confidence(row.get("confidence"), 0.87),
+                        "user_state": row.get("user_state") or "suggested",
+                    }
+                )
+            elif key == "concept":
+                promoted.append(
+                    {
+                        **row,
+                        "concept": value,
+                        "explanation": row.get("explanation") or explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": row.get("related_terms") or [value],
+                        "why_it_matters": row.get("why_it_matters") or explanation,
+                        "references": row.get("references") or self._references_near("", document_text),
+                        "learning_priority": row.get("learning_priority") or "field_term",
+                        "confidence": self._confidence(row.get("confidence"), 0.87),
+                        "user_state": row.get("user_state") or "suggested",
+                    }
+                )
+        rest = [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked | {value.lower() for value, *_ in preferred}]
+        return [*promoted, *rest][:limit]
+
+    def _prefer_phrase_rows(
+        self,
+        rows: list[dict[str, Any]],
+        document_text: str,
+        preferred: list[tuple[str, str, str]],
+        *,
+        blocked: set[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        blocked = blocked or set()
+        keyed = {str(row.get("phrase") or "").strip().lower(): row for row in rows}
+        lower_text = document_text.lower()
+        promoted: list[dict[str, Any]] = []
+        for phrase, function, explanation in preferred:
+            if phrase.lower() not in lower_text:
+                continue
+            row = keyed.get(phrase.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "phrase": phrase,
+                    "function": row.get("function") or function,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(row.get("source_sentence"), phrase, document_text),
+                    "learning_priority": row.get("learning_priority") or ("must_review" if function in {"method", "result", "contrast"} else "useful"),
+                    "reason": row.get("reason") or "Reusable academic expression detected in the source.",
+                    "context_meaning": row.get("context_meaning") or explanation,
+                    "confidence": self._confidence(row.get("confidence"), 0.87),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked | {phrase.lower() for phrase, *_ in preferred}]
+        return [*promoted, *rest][:12]
+
+    def _prefer_bert_model_size_effect_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "term",
+            [
+                ("layers", "The #L capacity variable in the model-size experiment.", "number of layers"),
+                ("hidden units", "The #H capacity variable in the model-size experiment.", "hidden units"),
+                ("attention heads", "The #A capacity variable in the model-size experiment.", "attention heads"),
+                ("random restarts", "Repeated fine-tuning runs averaged for dev accuracy.", "5 random restarts"),
+                ("Dev Set accuracy", "The validation metric averaged across restarts.", "Dev Set accuracy"),
+                ("MRPC", "A small downstream dataset used to show scaling still helps.", "MRPC"),
+                ("LM perplexity", "Masked-LM held-out perplexity used as a pre-training quality signal.", "LM perplexity"),
+                ("BERT BASE", "The 110M-parameter baseline BERT size.", "BERT BASE contains 110M"),
+                ("BERT LARGE", "The 340M-parameter larger BERT size.", "BERT LARGE contains 340M"),
+                ("sufficiently pre-trained", "The condition under which very large models help small tasks.", "sufficiently pre-trained"),
+            ],
+            limit=14,
+            blocked={"hyperparameters", "fine-tuning", "perplexity", "bert", "pre-training"},
+        )
+
+    def _prefer_bert_model_size_effect_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "concept",
+            [
+                ("model-size scaling experiment", "The section varies #L, #H, and #A to test whether larger BERT models help.", "differing number of layers"),
+                ("strict downstream accuracy improvement", "Larger models improve across four datasets including small MRPC.", "strict accuracy improvement"),
+                ("small-task scaling claim", "The paper claims large pre-trained models help even small downstream tasks.", "small scale tasks"),
+                ("pre-training sufficiency condition", "Scaling is presented as effective when the model is sufficiently pre-trained.", "sufficiently pre-trained"),
+                ("prior feature-based contrast", "Earlier feature-based work had mixed results from increasing representation size.", "featurebased approach"),
+            ],
+            limit=8,
+            blocked={"hyperparameters", "fine-tuning", "perplexity", "bert", "pre-training"},
+        )
+
+    def _prefer_bert_model_size_effect_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_phrase_rows(
+            rows,
+            document_text,
+            [
+                ("while otherwise using", "method", "Controls all other training conditions."),
+                ("we report the average", "method", "Introduces averaged evaluation reporting."),
+                ("lead to a strict accuracy improvement", "result", "States a monotonic improvement claim."),
+                ("It is also perhaps surprising that", "claim", "Signals a notable or unexpected result."),
+                ("relative to the existing literature", "contrast", "Frames a comparison against prior work."),
+                ("By contrast", "contrast", "Introduces a comparison point."),
+                ("However, we believe that", "claim", "Introduces the authors' stronger interpretation."),
+                ("provided that", "claim", "Adds a condition to the claim."),
+                ("mentioned in passing", "general", "Refers to prior work without making it central."),
+            ],
+        )
+
+    def _prefer_bert_feature_based_transition_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "term",
+            [
+                ("fine-tuning approach", "Transfer mode where the pre-trained model and task layer are jointly updated.", "fine-tuning approach"),
+                ("classification layer", "The simple task-specific layer added during fine-tuning.", "classification layer"),
+                ("feature-based approach", "Transfer mode where fixed BERT features are extracted.", "feature-based approach"),
+                ("fixed features", "Representations extracted without updating the pre-trained model.", "fixed features"),
+                ("pre-compute", "Compute expensive representations once for reuse.", "pre-compute"),
+                ("Transformer encoder architecture", "Architecture that some tasks cannot be easily represented by.", "Transformer encoder architecture"),
+                ("CoNLL-2003 Named Entity Recognition", "The NER task used to compare feature-based and fine-tuning approaches.", "2003 Named Entity Recognition"),
+                ("case-preserving WordPiece model", "Tokenizer choice for the NER input.", "case-preserving WordPiece model"),
+                ("maximal document context", "The broadest context provided by the NER data.", "maximal document context"),
+            ],
+            limit=14,
+            blocked={"hidden dimension size", "fine-tuned", "bert", "fine-tuning"},
+        )
+
+    def _prefer_bert_feature_based_transition_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "concept",
+            [
+                ("fine-tuning versus feature extraction", "The section contrasts updating all BERT parameters with extracting fixed representations.", "fine-tuning approach"),
+                ("architectural flexibility advantage", "Feature extraction helps when a task needs an architecture beyond a Transformer encoder.", "task-specific model architecture"),
+                ("computational reuse advantage", "Precomputing BERT representations enables cheaper repeated experiments.", "pre-compute an expensive representation"),
+                ("CoNLL-2003 NER evaluation setup", "NER is the task used to compare the two transfer approaches.", "CoNLL- 2003 Named Entity Recognition"),
+                ("document-context input choice", "The input uses case-preserving WordPiece and maximal document context.", "maximal document context"),
+            ],
+            limit=8,
+            blocked={"hidden dimension size", "fine-tuned", "transformer encoder architecture", "bert", "fine-tuning"},
+        )
+
+    def _prefer_bert_feature_based_transition_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_phrase_rows(
+            rows,
+            document_text,
+            [
+                ("presented so far", "general", "Refers back to earlier results."),
+                ("where a simple classification layer is added", "method", "Defines fine-tuning setup."),
+                ("However, the feature-based approach", "contrast", "Introduces the alternative transfer mode."),
+                ("has certain advantages", "claim", "Signals a list of benefits."),
+                ("not all tasks can be easily represented by", "limitation", "States architectural mismatch."),
+                ("there are major computational benefits", "claim", "Introduces an efficiency argument."),
+                ("pre-compute an expensive representation", "method", "Explains representation reuse."),
+                ("compare the two approaches by applying", "method", "Introduces the evaluation design."),
+                ("we include the maximal document context", "method", "States an input-context decision."),
+            ],
+        )
+
+    def _prefer_bert_ner_feature_table_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "term",
+            [
+                ("tagging task", "NER is formulated as token tagging.", "tagging task"),
+                ("CRF", "A structured prediction layer the experiment does not use.", "do not use a CRF"),
+                ("Dev F1", "Development F1 score for NER comparison.", "Dev F1"),
+                ("Test F1", "Test F1 score for NER comparison.", "Test F1"),
+                ("first sub-token", "The WordPiece position used for token classification.", "first sub-token"),
+                ("token-level classifier", "Classifier over the NER label set.", "token-level classifier"),
+                ("activations", "Frozen BERT layer outputs extracted as features.", "activations"),
+                ("contextual embeddings", "BERT-derived features used as BiLSTM input.", "contextual embeddings"),
+                ("two-layer 768-dimensional BiLSTM", "Task model placed above frozen BERT features.", "two-layer 768-dimensional BiLSTM"),
+                ("top four hidden layers", "The best feature-based layer combination.", "top four hidden layers"),
+                ("0.3 F1 behind", "The small gap from full fine-tuning.", "0.3 F1 behind"),
+            ],
+            limit=14,
+            blocked={"perplexity", "bert", "fine-tuning", "elmo"},
+        )
+
+    def _prefer_bert_ner_feature_table_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_rows(
+            rows,
+            document_text,
+            "concept",
+            [
+                ("NER as token tagging", "The task predicts a label for each token rather than a sentence label.", "tagging task"),
+                ("sub-token representation choice", "The first WordPiece sub-token represents each original token.", "first sub-token"),
+                ("feature-based ablation", "The experiment freezes BERT and extracts activations from one or more layers.", "without fine-tuning any parameters"),
+                ("frozen-BERT plus BiLSTM pipeline", "Contextual embeddings feed a randomly initialized BiLSTM before classification.", "two-layer 768-dimensional BiLSTM"),
+                ("top-four-layer feature result", "Concatenating the top four hidden layers nearly matches fine-tuning.", "top four hidden layers"),
+            ],
+            limit=8,
+            blocked={"crf", "perplexity", "activations", "bert", "fine-tuning", "elmo"},
+        )
+
+    def _prefer_bert_ner_feature_table_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        return self._prefer_phrase_rows(
+            rows,
+            document_text,
+            [
+                ("Following standard practice", "method", "Introduces a conventional setup."),
+                ("we formulate this as", "method", "Defines the task formulation."),
+                ("but do not use", "contrast", "States an excluded component."),
+                ("Hyperparameters were selected using", "method", "Explains validation-based tuning."),
+                ("averaged over", "method", "Explains repeated-run reporting."),
+                ("as the input to", "method", "Maps representation to classifier input."),
+                ("To ablate the fine-tuning approach", "method", "Introduces the comparison experiment."),
+                ("without fine-tuning any parameters", "method", "States the freezing condition."),
+                ("performs competitively with", "result", "Compares against strong baselines."),
+                ("only 0.3 F1 behind", "result", "States the small gap from fine-tuning."),
+            ],
+        )
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -6680,6 +7220,10 @@ class AnalysisNormalizationService:
             or self._is_bert_squad_results_transition_section(document_text)
             or self._is_bert_squad2_swag_transition_section(document_text)
             or self._is_bert_swag_ablation_transition_section(document_text)
+            or self._is_bert_ablation_interpretation_section(document_text)
+            or self._is_bert_model_size_effect_section(document_text)
+            or self._is_bert_feature_based_transition_section(document_text)
+            or self._is_bert_ner_feature_table_section(document_text)
         )
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
@@ -6714,6 +7258,14 @@ class AnalysisNormalizationService:
         if self._is_bert_squad2_swag_transition_section(document_text):
             return True
         if self._is_bert_swag_ablation_transition_section(document_text):
+            return True
+        if self._is_bert_ablation_interpretation_section(document_text):
+            return True
+        if self._is_bert_model_size_effect_section(document_text):
+            return True
+        if self._is_bert_feature_based_transition_section(document_text):
+            return True
+        if self._is_bert_ner_feature_table_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -6995,6 +7547,14 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_swag_ablation_transition_section(document_text):
             return True
+        if self._is_bert_ablation_interpretation_section(document_text):
+            return True
+        if self._is_bert_model_size_effect_section(document_text):
+            return True
+        if self._is_bert_feature_based_transition_section(document_text):
+            return True
+        if self._is_bert_ner_feature_table_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -7092,6 +7652,49 @@ class AnalysisNormalizationService:
             and "no nsp" in lowered
             and "ltr" in lowered
             and "pre-train/fine-tune mismatch" in lowered
+        )
+
+    def _is_bert_ablation_interpretation_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "removing nsp hurts performance" in lowered
+            and "ltr model performs worse than the mlm model" in lowered
+            and "randomly initialized bilstm" in lowered
+            and "ltr and rtl models" in lowered
+            and "deep bidirectional model" in lowered
+        )
+
+    def _is_bert_model_size_effect_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "differing number of layers" in lowered
+            and "strict accuracy improvement" in lowered
+            and "bert base contains 110m" in lowered
+            and "bert large contains 340m" in lowered
+            and "sufficiently pre-trained" in lowered
+        )
+
+    def _is_bert_feature_based_transition_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        compact = re.sub(r"\s+", " ", lowered.replace("-\n", "-"))
+        return (
+            "5.3 feature-based approach with bert" in lowered
+            and "feature-based approach, where fixed features are extracted" in lowered
+            and "pre-compute an expensive representation" in lowered
+            and "conll-" in compact
+            and "2003 named entity recognition" in compact
+        )
+
+    def _is_bert_ner_feature_table_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        compact = re.sub(r"\s+", " ", lowered.replace("-\n", "-"))
+        return (
+            "following standard practice" in lowered
+            and "do not use a crf" in lowered
+            and "conll-" in compact
+            and "2003 named entity recognition results" in compact
+            and "without fine-tuning any parameters of bert" in lowered
+            and "top four hidden layers" in lowered
         )
 
     def _is_attention_text(self, document_text: str) -> bool:

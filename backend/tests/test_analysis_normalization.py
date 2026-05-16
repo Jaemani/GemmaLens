@@ -2869,3 +2869,89 @@ def test_bert_swag_ablation_section_recovers_choice_scoring_and_ablation_setup()
     assert result.summaries.one_line == "This section finishes the SWAG setup/results and starts ablations that test which BERT pre-training tasks matter."
     assert result.sentences[0].core_structure == "X was also applied at Y, because removing it introduced Z."
     assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)
+
+
+def test_bert_ablation_interpretation_section_recovers_design_claims():
+    document = (
+        "Additionally, this model was pre-trained without the NSP task. "
+        "This is directly comparable to OpenAI GPT, but using our larger training dataset, our input representation, and our fine-tuning scheme. "
+        "We first examine the impact brought by the NSP task. "
+        "In Table 5, we show that removing NSP hurts performance significantly on QNLI, MNLI, and SQuAD 1.1. "
+        "Next, we evaluate the impact of training bidirectional representations by comparing “No NSP” to “LTR & No NSP”. "
+        "The LTR model performs worse than the MLM model on all tasks, with large drops on MRPC and SQuAD. "
+        "For SQuAD it is intuitively clear that a LTR model will perform poorly at token predictions, since the token-level hidden states have no rightside context. "
+        "In order to make a good faith attempt at strengthening the LTR system, we added a randomly initialized BiLSTM on top. "
+        "This does significantly improve results on SQuAD, but the results are still far worse than those of the pretrained bidirectional models. "
+        "The BiLSTM hurts performance on the GLUE tasks. "
+        "We recognize that it would also be possible to train separate LTR and RTL models and represent each token as the concatenation of the two models, as ELMo does. "
+        "However: (a) this is twice as expensive as a single bidirectional model; (b) this is non-intuitive for tasks like QA, "
+        "since the RTL model would not be able to condition the answer on the question; (c) this it is strictly less powerful than a deep bidirectional model, "
+        "since it can use both left and right context at every layer. "
+        "5.2 Effect of Model Size In this section, we explore the effect of model size on fine-tuning task accuracy."
+    )
+    payload = {
+        "terms": [
+            {"term": "NSP task", "meaning": "generic task"},
+            {"term": "bidirectional representations", "meaning": "too broad"},
+            {"term": "token predictions", "meaning": "too broad"},
+        ],
+        "concepts": [
+            {"concept": "NSP task", "explanation": "term duplicated as concept"},
+            {"concept": "bidirectional representations", "explanation": "term duplicated as concept"},
+            {"concept": "token predictions", "explanation": "term duplicated as concept"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "Additionally, this model was pre-trained without the NSP task."},
+        "sentences": [{"sentence": "Additionally, this model was pre-trained without the NSP task.", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:0"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-ablation-interpretation", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "No NSP",
+        "QNLI",
+        "MNLI",
+        "SQuAD 1.1",
+        "LTR model",
+        "MLM model",
+        "token-level hidden states",
+        "rightside context",
+        "randomly initialized BiLSTM",
+        "LTR and RTL models",
+        "concatenation",
+        "deep bidirectional model",
+        "model size effect",
+    }.issubset(terms)
+    assert not {"NSP task", "bidirectional representations", "token predictions"} & terms
+    assert {
+        "NSP contribution",
+        "deep bidirectionality evidence",
+        "SQuAD right-context problem",
+        "BiLSTM repair attempt",
+        "GLUE cost of BiLSTM",
+        "ELMo-style alternative rejection",
+        "model-size transition",
+    }.issubset(concepts)
+    assert not {"NSP task", "bidirectional representations", "token predictions"} & concepts
+    assert {
+        "directly comparable to",
+        "We first examine",
+        "removing NSP hurts",
+        "Next, we evaluate",
+        "by comparing",
+        "performs worse than",
+        "it is intuitively clear that",
+        "In order to make a good faith attempt",
+        "still far worse than",
+        "We recognize that it would also be possible to",
+        "twice as expensive as",
+        "strictly less powerful than",
+    }.issubset(phrases)
+    assert result.summaries.one_line == "This section interprets BERT ablations: NSP helps, left-to-right pre-training hurts, and deep bidirectionality matters."
+    assert result.sentences[0].core_structure == "However: (a) X; (b) Y; (c) Z."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings
+    assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)

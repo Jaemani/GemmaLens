@@ -82,6 +82,8 @@ class AnalysisQualityService:
             "softmax over paragraph tokens": "softmax over all of the words",
             "swag dataset": "situations with adversarial generations",
             "triviaqa fine-tuning data": "triviaqa",
+            "feature-based approach": "featurebased approach",
+            "conll-2003 named entity recognition": "conll",
         }
         alias = support_aliases.get(value_lower)
         if alias and alias in source_lower:
