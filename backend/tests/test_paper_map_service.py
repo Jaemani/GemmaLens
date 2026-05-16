@@ -107,6 +107,9 @@ def test_complete_paper_map_keeps_all_section_summaries_and_complete_copy():
 
     assert paper_map.analyzed_sections == list(range(1, 29))
     assert paper_map.guide.coverage_note == "28 of 28 sections analyzed. This is a complete section-level reading guide."
+    assert paper_map.guide.thesis_so_far.startswith("Across the paper")
+    assert not any("Latest section signal" in item for item in paper_map.guide.reading_focus)
+    assert any("Whole-paper path" in item for item in paper_map.guide.reading_focus)
     assert "Analyze the next unstudied section" not in " ".join(paper_map.guide.next_steps)
     assert len(paper_map.section_summaries) == 28
     assert paper_map.section_summaries[-1].text == "Section 28"

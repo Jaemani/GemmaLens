@@ -230,14 +230,22 @@ class PaperMapService:
         phrase_names = [str(item["text"]) for item in top_phrases[:3]]
         first_summary = str(summaries[0]["meaning"]) if summaries else ""
         latest_summary = str(summaries[-1]["meaning"]) if summaries else first_summary
-        if concept_names:
-            thesis = f"So far, the paper is organized around {', '.join(concept_names)}."
-            if first_summary:
-                thesis = f"{thesis} First analyzed signal: {first_summary}"
-        else:
-            thesis = latest_summary or "Analyzed sections are available, but no stable concept anchor has emerged yet."
-
         complete = bool(total_sections and analyzed_count >= total_sections)
+        if concept_names:
+            if complete:
+                thesis = f"Across the paper, the main learning anchors are {', '.join(concept_names)}."
+                if first_summary:
+                    thesis = f"{thesis} Opening signal: {first_summary}"
+            else:
+                thesis = f"So far, the paper is organized around {', '.join(concept_names)}."
+                if first_summary:
+                    thesis = f"{thesis} First analyzed signal: {first_summary}"
+        else:
+            if complete and first_summary:
+                thesis = f"Across the paper, use the section-by-section argument flow as the main study path. Opening signal: {first_summary}"
+            else:
+                thesis = latest_summary or "Analyzed sections are available, but no stable concept anchor has emerged yet."
+
         if complete:
             coverage = f"{analyzed_count} of {total_sections} sections analyzed. This is a complete section-level reading guide."
         elif total_sections:
@@ -252,7 +260,9 @@ class PaperMapService:
             focus.append(f"Vocabulary path: save recurring/high-signal terms such as {', '.join(term_names[:3])}.")
         if phrase_names:
             focus.append(f"Academic-expression path: notice how phrases like {', '.join(phrase_names[:2])} move the argument.")
-        if latest_summary and latest_summary != first_summary:
+        if complete and first_summary and latest_summary and latest_summary != first_summary:
+            focus.append("Whole-paper path: compare the opening claim with the final section before reviewing saved terms.")
+        elif latest_summary and latest_summary != first_summary:
             focus.append(f"Latest section signal: {latest_summary}")
 
         next_steps = [
