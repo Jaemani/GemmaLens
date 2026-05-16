@@ -53,7 +53,7 @@ export function SettingsClient({
           <p className="text-sm font-semibold text-accent">Local learner profile</p>
           <h1 className="mt-2 text-2xl font-semibold text-ink">Settings</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-700">
-            Choose the language you are learning, the language used for explanations, and the level GemmaLens should assume when it builds reading support.
+            Choose the language you are learning, the language used for explanations, the reading level, and how aggressively GemmaLens prepares section lessons.
           </p>
         </div>
 
@@ -101,6 +101,28 @@ export function SettingsClient({
               </Field>
               <div className="mt-5 rounded-lg bg-surface p-4 text-sm leading-6 text-neutral-700">
                 The analysis should surface unfamiliar high-value terms, sentence structure, and domain cues without treating every unknown word as equally important.
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-line bg-panel p-5 shadow-material xl:col-span-2">
+              <h2 className="text-xl font-semibold">Paper preparation</h2>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-lg bg-surface p-4">
+                <div className="max-w-3xl">
+                  <p className="text-sm font-semibold text-ink">Automatically prepare all sections</p>
+                  <p className="mt-1 text-sm leading-6 text-neutral-700">
+                    Default on. The first page appears immediately, then GemmaLens analyzes the remaining page sections in the background so lessons are ready before you select them.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => save({ auto_analyze_documents: !profile.auto_analyze_documents })}
+                  disabled={busy}
+                  className={`min-w-24 rounded-md border px-4 py-2 text-sm font-semibold ${
+                    profile.auto_analyze_documents ? "border-accent bg-blue-50 text-accent" : "border-line bg-white text-neutral-700"
+                  } disabled:opacity-50`}
+                >
+                  {profile.auto_analyze_documents ? "On" : "Off"}
+                </button>
               </div>
             </section>
           </div>

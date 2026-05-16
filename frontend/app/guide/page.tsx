@@ -14,8 +14,8 @@ const workflow = [
   },
   {
     icon: ScanText,
-    title: "Study section by section",
-    detail: "One PDF page can contain several text sections. Analyze a section, then continue through the paper."
+    title: "Read while it prepares",
+    detail: "The first page appears immediately. By default, GemmaLens prepares every page section in the background to reduce waiting."
   },
   {
     icon: Map,
@@ -50,9 +50,24 @@ const learningObjects = [
 
 const expectations = [
   "The PDF pane is the visual source. The section text is extracted text that the model can read, so equations and columns may be imperfect.",
-  "A complete paper guide is built from section lessons, not from one huge summary call.",
+  "A complete paper guide is built from section lessons, not from one huge summary call. This keeps latency low and lets fast local models prepare the rest while you read.",
   "Translation is a support tool for short passages. Full-paper learning should stay in the document reader.",
   "Video learning uses transcripts as timestamped text sections; it is useful only when captions or subtitles are available."
+];
+
+const runtimes = [
+  {
+    title: "ThinkPad / small local model",
+    detail: "Runs the same section pipeline with lower memory pressure; background preparation hides per-section delay."
+  },
+  {
+    title: "Mac M1 Max",
+    detail: "Fast local inference can prepare many sections while the learner reads the visible page."
+  },
+  {
+    title: "Mobile / edge demo",
+    detail: "The product story still works on constrained devices because work is split into small page-section jobs."
+  }
 ];
 
 const levels = [
@@ -101,6 +116,18 @@ export default function GuidePage() {
                 </div>
               );
             })}
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
+          <h2 className="text-xl font-semibold">Why it feels fast</h2>
+          <p className="mt-2 text-sm leading-6 text-neutral-600">
+            GemmaLens does not wait for a whole-paper pass before becoming useful. It shows the first page, then analyzes page sections as small jobs. This is the demo advantage for Gemma 4 Good: the same product shape works from ThinkPad-class local models to Mac M1 Max and future mobile edge runtimes.
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {runtimes.map((item) => (
+              <GuideItem key={item.title} title={item.title} detail={item.detail} accent />
+            ))}
           </div>
         </section>
 

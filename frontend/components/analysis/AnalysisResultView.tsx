@@ -37,6 +37,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
   const [rerunning, setRerunning] = useState(false);
   const [paperMapRefreshKey, setPaperMapRefreshKey] = useState(0);
   const [requestedPdfPage, setRequestedPdfPage] = useState<number | null>(null);
+  const [sourceReady, setSourceReady] = useState(false);
   const [sectionLesson, setSectionLesson] = useState<SectionLessonSelection | null>(null);
   const [showDetailedOutput, setShowDetailedOutput] = useState(false);
   const [analysisMissing, setAnalysisMissing] = useState(false);
@@ -67,6 +68,13 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           if (!cancelled) setDocument(loadedDocument);
         } catch {
           if (!cancelled) setDocument(null);
+        }
+        if (loadedDocument && shouldOpenSectionWorkspaceWithoutBaseAnalysis(loadedDocument)) {
+          if (!cancelled) {
+            setAnalysisMissing(true);
+            setStep(4);
+          }
+          return;
         }
         try {
           const existing = await api.getAnalysis(documentId);
@@ -181,18 +189,29 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
             onSectionLesson={setSectionLesson}
             onSourcePageChange={setRequestedPdfPage}
             requestedSourcePage={requestedPdfPage}
+            sourceReady={!hasPdfViewer || sourceReady}
             hideInlineLesson
           />
         ) : null}
         {sectionLesson ? (
-          <SectionLessonCard
-            analysis={sectionLesson.analysis}
-            sectionNumber={sectionLesson.sectionNumber}
-            sectionLabel={sectionLesson.sectionLabel}
-            isAnalyzingNext={false}
-          />
+          <>
+            <button
+              type="button"
+              onClick={() => setSectionLesson(null)}
+              className="rounded-md border border-line bg-panel px-3 py-2 text-xs font-semibold text-ink shadow-material hover:bg-surface"
+            >
+              Back to paper overview
+            </button>
+            <SectionLessonCard
+              analysis={sectionLesson.analysis}
+              sectionNumber={sectionLesson.sectionNumber}
+              sectionLabel={sectionLesson.sectionLabel}
+              isAnalyzingNext={false}
+            />
+          </>
+        ) : isDocumentSource ? (
+          <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} />
         ) : null}
-        {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
       </div>
     );
     return (
@@ -218,7 +237,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
         {hasPdfViewer ? (
           <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
             <div className="min-w-0 xl:sticky xl:top-4">
-              <PdfSourcePane document={document} requestedPage={requestedPdfPage} onPageChange={setRequestedPdfPage} />
+              <PdfSourcePane document={document} requestedPage={requestedPdfPage} onPageChange={setRequestedPdfPage} onReady={() => setSourceReady(true)} />
             </div>
             {workspaceContent}
           </div>
@@ -268,17 +287,28 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           onSectionLesson={setSectionLesson}
           onSourcePageChange={setRequestedPdfPage}
           requestedSourcePage={requestedPdfPage}
+          sourceReady={!hasPdfViewer || sourceReady}
           hideInlineLesson
         />
       ) : null}
-      {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
       {sectionLesson ? (
-        <SectionLessonCard
-          analysis={sectionLesson.analysis}
-          sectionNumber={sectionLesson.sectionNumber}
-          sectionLabel={sectionLesson.sectionLabel}
-          isAnalyzingNext={false}
-        />
+        <>
+          <button
+            type="button"
+            onClick={() => setSectionLesson(null)}
+            className="rounded-md border border-line bg-panel px-3 py-2 text-xs font-semibold text-ink shadow-material hover:bg-surface"
+          >
+            Back to paper overview
+          </button>
+          <SectionLessonCard
+            analysis={sectionLesson.analysis}
+            sectionNumber={sectionLesson.sectionNumber}
+            sectionLabel={sectionLesson.sectionLabel}
+            isAnalyzingNext={false}
+          />
+        </>
+      ) : isDocumentSource ? (
+        <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} />
       ) : null}
       {isVideoSource ? (
         <>
@@ -340,7 +370,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       {hasPdfViewer && document ? (
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
           <div className="min-w-0 xl:sticky xl:top-4">
-            <PdfSourcePane document={document} requestedPage={requestedPdfPage} onPageChange={setRequestedPdfPage} />
+            <PdfSourcePane document={document} requestedPage={requestedPdfPage} onPageChange={setRequestedPdfPage} onReady={() => setSourceReady(true)} />
           </div>
           <div className="min-w-0 xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto xl:pr-1">{guideContent}</div>
         </div>

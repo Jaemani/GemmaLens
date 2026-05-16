@@ -8,23 +8,30 @@ import type { DocumentRead } from "@/lib/types";
 export function PdfSourcePane({
   document,
   requestedPage,
-  onPageChange
+  onPageChange,
+  onReady
 }: {
   document: DocumentRead;
   requestedPage?: number | null;
   onPageChange?: (page: number) => void;
+  onReady?: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
   const lastNotifiedPageRef = useRef<number | null>(null);
+  const onPageChangeRef = useRef<typeof onPageChange>(onPageChange);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
-  const [zoom, setZoom] = useState(1.2);
+  const [zoom, setZoom] = useState(1);
   const [status, setStatus] = useState("Loading PDF...");
   const [failed, setFailed] = useState(false);
 
   if (document.source_type !== "pdf" || !document.has_original_file) return null;
   const fileUrl = api.documentFileUrl(document.id);
+
+  useEffect(() => {
+    onPageChangeRef.current = onPageChange;
+  }, [onPageChange]);
 
   useEffect(() => {
     if (!requestedPage || requestedPage <= 0 || !Number.isFinite(requestedPage)) return;
@@ -35,9 +42,9 @@ export function PdfSourcePane({
   useEffect(() => {
     if (lastNotifiedPageRef.current !== pageNumber) {
       lastNotifiedPageRef.current = pageNumber;
-      onPageChange?.(pageNumber);
+      onPageChangeRef.current?.(pageNumber);
     }
-  }, [pageNumber, onPageChange]);
+  }, [pageNumber]);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,8 +81,12 @@ export function PdfSourcePane({
         const renderTask = page.render({ canvas, canvasContext: context, viewport });
         renderTaskRef.current = renderTask;
         await renderTask.promise;
-        if (!cancelled) setStatus("");
+        if (!cancelled) {
+          setStatus("");
+          onReady?.();
+        }
       } catch (err) {
+        if (err instanceof Error && err.name === "RenderingCancelledException") return;
         if (!cancelled) {
           setFailed(true);
           setStatus(err instanceof Error ? err.message : "Could not render this PDF.");
@@ -88,7 +99,7 @@ export function PdfSourcePane({
       cancelled = true;
       renderTaskRef.current?.cancel();
     };
-  }, [fileUrl, pageNumber, zoom]);
+  }, [fileUrl, onReady, pageNumber, zoom]);
 
   return (
     <section className="overflow-hidden rounded-lg border border-line bg-panel shadow-material">

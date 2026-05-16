@@ -1,6 +1,6 @@
 "use client";
 
-import { BookmarkPlus, CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Paperclip, ScanText, SkipForward } from "lucide-react";
+import { BookmarkPlus, CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Paperclip, ScanText } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { AnalysisResult, DocumentRead, DocumentSection } from "@/lib/types";
@@ -11,13 +11,15 @@ export function DocumentPageReader({
   onSectionLesson,
   onSourcePageChange,
   requestedSourcePage,
+  sourceReady = true,
   hideInlineLesson = false
 }: {
   documentId: string;
   onSectionAnalyzed?: () => void;
-  onSectionLesson?: (lesson: SectionLessonSelection) => void;
+  onSectionLesson?: (lesson: SectionLessonSelection | null) => void;
   onSourcePageChange?: (page: number | null) => void;
   requestedSourcePage?: number | null;
+  sourceReady?: boolean;
   hideInlineLesson?: boolean;
 }) {
   const [document, setDocument] = useState<DocumentRead | null>(null);
@@ -28,18 +30,17 @@ export function DocumentPageReader({
   const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
   const [batchStatus, setBatchStatus] = useState("");
   const [isAttaching, setIsAttaching] = useState(false);
+  const [autoAnalyzeAll, setAutoAnalyzeAll] = useState(false);
   const [sectionAnalysis, setSectionAnalysis] = useState<AnalysisResult | null>(null);
   const [sectionAnalysisIndex, setSectionAnalysisIndex] = useState<number | null>(null);
   const [error, setError] = useState("");
   const attachInputRef = useRef<HTMLInputElement>(null);
+  const sectionDrivenPdfPageRef = useRef<number | null>(null);
+  const autoAnalyzeStartedRef = useRef(false);
   const currentSection = sections[pageIndex];
   const page = currentSection?.text ?? "";
   const analyzedCount = sections.filter((section) => section.analyzed).length;
   const allSectionsAnalyzed = Boolean(sections.length && analyzedCount >= sections.length);
-  const nextUnanalyzedIndex = sections.findIndex((section, index) => index > pageIndex && !section.analyzed);
-  const fallbackUnanalyzedIndex = sections.findIndex((section) => !section.analyzed);
-  const targetUnanalyzedIndex = nextUnanalyzedIndex >= 0 ? nextUnanalyzedIndex : fallbackUnanalyzedIndex;
-  const plannedBatchIndices = nextUnanalyzedSectionIndices(sections, pageIndex, 3);
   const remainingBatchIndices = nextUnanalyzedSectionIndices(sections, pageIndex, sections.length);
   const progressStorageKey = `gemmalens:auto-study:${documentId}`;
   const sectionGroups = groupSectionsByPdfPage(sections);
@@ -48,11 +49,12 @@ export function DocumentPageReader({
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([api.getDocument(documentId), api.listDocumentSections(documentId)])
-      .then(([loaded, loadedSections]) => {
+    Promise.all([api.getDocument(documentId), api.listDocumentSections(documentId), api.getProfile().catch(() => null)])
+      .then(([loaded, loadedSections, profile]) => {
         if (!cancelled) {
           setDocument(loaded);
           setSections(loadedSections);
+          setAutoAnalyzeAll(profile?.auto_analyze_documents ?? true);
         }
       })
       .catch(() => {
@@ -64,10 +66,22 @@ export function DocumentPageReader({
   }, [documentId]);
 
   useEffect(() => {
+    if (!autoAnalyzeAll || !sourceReady || autoAnalyzeStartedRef.current || !document || !sections.length || isBatchAnalyzing) return;
+    const remaining = sections.filter((section) => !section.analyzed).length;
+    if (!remaining) return;
+    autoAnalyzeStartedRef.current = true;
+    const timer = window.setTimeout(() => {
+      autoStudySections(sections.length);
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [autoAnalyzeAll, document, isBatchAnalyzing, sections, sourceReady]);
+
+  useEffect(() => {
     setSectionAnalysis(null);
     setSectionAnalysisIndex(null);
     setError("");
-  }, [pageIndex]);
+    if (currentSection && !currentSection.analyzed) onSectionLesson?.(null);
+  }, [currentSection?.analyzed, currentSection?.index, onSectionLesson, pageIndex]);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,10 +107,12 @@ export function DocumentPageReader({
 
   useEffect(() => {
     onSourcePageChange?.(currentPdfPage);
+    sectionDrivenPdfPageRef.current = currentPdfPage;
   }, [currentPdfPage, onSourcePageChange]);
 
   useEffect(() => {
     if (!requestedSourcePage || !sections.length) return;
+    if (requestedSourcePage === sectionDrivenPdfPageRef.current) return;
     if (currentPdfPage === requestedSourcePage) return;
     const matchingIndex = sections.findIndex((section) => pdfPageFromLabel(section.source_label) === requestedSourcePage);
     if (matchingIndex >= 0 && matchingIndex !== pageIndex) setPageIndex(matchingIndex);
@@ -109,17 +125,19 @@ export function DocumentPageReader({
     }
   }, [batchStatus, progressStorageKey]);
 
-  async function analyzeSectionAt(index: number, options: { keepBusy?: boolean } = {}) {
+  async function analyzeSectionAt(index: number, options: { keepBusy?: boolean; stayOnCurrent?: boolean; showLesson?: boolean } = {}) {
     const section = sections[index];
     if (!document || !section || !section.text.trim()) return;
-    setPageIndex(index);
+    if (!options.stayOnCurrent) goToSection(index);
     setIsAnalyzing(true);
     setError("");
     try {
       const created = await api.analyzeDocumentSection(document.id, section.index);
-      setSectionAnalysis(created);
-      setSectionAnalysisIndex(section.index);
-      onSectionLesson?.(buildSectionLessonSelection(created, sections, index));
+      if (options.showLesson !== false && (!options.stayOnCurrent || index === pageIndex)) {
+        setSectionAnalysis(created);
+        setSectionAnalysisIndex(section.index);
+        onSectionLesson?.(buildSectionLessonSelection(created, sections, index));
+      }
       setSections((current) =>
         current.map((currentSection) => (currentSection.index === section.index ? { ...currentSection, analyzed: true } : currentSection))
       );
@@ -160,25 +178,29 @@ export function DocumentPageReader({
   }
   if (document.source_type === "transcript" || document.source_type === "video_segment") return null;
 
-  function goToNextUnanalyzed() {
-    if (targetUnanalyzedIndex >= 0) setPageIndex(targetUnanalyzedIndex);
+  function goToSection(index: number) {
+    const nextSection = sections[index];
+    const pdfPage = pdfPageFromLabel(nextSection?.source_label ?? null);
+    sectionDrivenPdfPageRef.current = pdfPage;
+    onSourcePageChange?.(pdfPage);
+    setPageIndex(index);
   }
 
   async function autoStudySections(sectionCount: number) {
     const plannedIndices = nextUnanalyzedSectionIndices(sections, pageIndex, sectionCount);
     if (!plannedIndices.length || isBatchAnalyzing) return;
     setIsBatchAnalyzing(true);
-    setIsAnalyzing(true);
     setBatchStatus("");
     const plannedCount = plannedIndices.length;
     writeAutoStudyProgress(progressStorageKey, {
-      status: `Starting server-side auto-study for ${plannedCount} sections...`,
+      status: `Starting analysis for ${plannedCount} section(s)...`,
       completed: 0,
       planned: plannedCount,
       updatedAt: Date.now()
     });
+    let completed = 0;
     try {
-      const runningStatus = `Server is analyzing ${plannedCount} section(s). This can take time on local models.`;
+      const runningStatus = `Preparing paper in the background: 0 / ${plannedCount} sections ready.`;
       setBatchStatus(runningStatus);
       writeAutoStudyProgress(progressStorageKey, {
         status: runningStatus,
@@ -186,44 +208,51 @@ export function DocumentPageReader({
         planned: plannedCount,
         updatedAt: Date.now()
       });
-      const result = await api.stagedAnalyzeDocument(documentId, { max_sections: plannedCount });
+      for (const index of plannedIndices) {
+        const result = await api.analyzeDocumentSection(documentId, sections[index].index);
+        completed += 1;
+        setSections((current) =>
+          current.map((section) => (section.index === sections[index].index ? { ...section, analyzed: true } : section))
+        );
+        if (index === pageIndex) {
+          setSectionAnalysis(result);
+          setSectionAnalysisIndex(sections[index].index);
+          onSectionLesson?.(buildSectionLessonSelection(result, sections, index));
+        }
+        const status = `Preparing paper in the background: ${completed} / ${plannedCount} sections ready.`;
+        setBatchStatus(status);
+        writeAutoStudyProgress(progressStorageKey, {
+          status,
+          completed,
+          planned: plannedCount,
+          updatedAt: Date.now()
+        });
+      }
       const updatedSections = await api.listDocumentSections(documentId);
       setSections(updatedSections);
-      const lastAnalyzed = result.analyzed_sections.at(-1);
-      if (lastAnalyzed) setPageIndex(Math.max(0, lastAnalyzed - 1));
       onSectionAnalyzed?.();
-      const status =
-        result.status === "nothing_to_do"
-          ? "All available sections are already analyzed."
-          : `Finished ${result.analyzed_sections.length} section(s). Paper map updated.`;
+      const status = `Paper prepared: ${completed} section${completed === 1 ? "" : "s"} ready.`;
       setBatchStatus(status);
       writeAutoStudyProgress(progressStorageKey, {
         status,
-        completed: result.analyzed_sections.length,
+        completed,
         planned: plannedCount,
         updatedAt: Date.now()
       });
     } catch {
-      const status = "Auto-study stopped. The last section needs attention. Continue with a smaller batch.";
+      const status = completed
+        ? `Paper prepared through ${completed} section${completed === 1 ? "" : "s"}. Retry to continue.`
+        : "Could not analyze this section. Retry when the local model is ready.";
       setBatchStatus(status);
       writeAutoStudyProgress(progressStorageKey, {
         status,
-        completed: sections.filter((section) => section.analyzed).length,
+        completed,
         planned: plannedCount,
         updatedAt: Date.now()
       });
     } finally {
       setIsBatchAnalyzing(false);
-      setIsAnalyzing(false);
     }
-  }
-
-  async function autoStudyNextSections() {
-    await autoStudySections(3);
-  }
-
-  async function autoStudyRemainingSections() {
-    await autoStudySections(sections.length);
   }
 
   return (
@@ -231,12 +260,9 @@ export function DocumentPageReader({
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line p-5">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section study</p>
-          <h2 className="mt-1 text-lg font-semibold">Move through PDF pages and page sections</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">
-            PDF pages are the visual source on the left. Sections are backend-cleaned text chunks sent to the model; one PDF page can contain several sections.
-          </p>
-          <p className="mt-1 text-xs leading-5 text-neutral-600">
-            Page groups below show PDF boundaries. Inside each group, S1, S2, and S3 mean sections within that PDF page, not global document sections.
+          <h2 className="mt-1 text-lg font-semibold">Page {currentPdfPage ?? "?"} · Section {currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-700">
+            {currentSection?.preview || "Choose a section from the strip below."}
           </p>
           <p className="mt-2 text-xs font-semibold text-neutral-600">
             {analyzedCount} / {sections.length || 1} sections analyzed
@@ -248,37 +274,6 @@ export function DocumentPageReader({
           ) : null}
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
-          {!allSectionsAnalyzed ? (
-            <>
-              <button
-                type="button"
-                onClick={goToNextUnanalyzed}
-                disabled={targetUnanalyzedIndex < 0 || isBatchAnalyzing}
-                className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
-              >
-                <SkipForward size={16} />
-                Next unstudied
-              </button>
-              <button
-                type="button"
-                onClick={autoStudyNextSections}
-                disabled={!plannedBatchIndices.length || isBatchAnalyzing || isAnalyzing}
-                className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-3 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-40"
-              >
-                <ScanText size={16} />
-                {isBatchAnalyzing ? "Auto-studying..." : "Auto-study next 3"}
-              </button>
-              <button
-                type="button"
-                onClick={autoStudyRemainingSections}
-                disabled={!remainingBatchIndices.length || isBatchAnalyzing || isAnalyzing}
-                className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
-              >
-                <ScanText size={16} />
-                Study remaining {remainingBatchIndices.length}
-              </button>
-            </>
-          ) : null}
           {document.source_type === "pdf" && !document.has_original_file ? (
             <>
               <button
@@ -306,16 +301,18 @@ export function DocumentPageReader({
           <button
             type="button"
             onClick={analyzePage}
-            disabled={isAnalyzing || isBatchAnalyzing || !currentSection || !page.trim()}
+            disabled={isAnalyzing || !currentSection || !page.trim()}
             className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
           >
             <ScanText size={16} />
-            {isAnalyzing ? "Analyzing section..." : currentSection?.analyzed ? "Refresh section lesson" : "Analyze this section"}
+            {isAnalyzing ? "Analyzing..." : currentSection?.analyzed ? "Refresh lesson" : "Analyze section"}
           </button>
         </div>
       </div>
       {batchStatus ? (
-        <div className="border-b border-line bg-blue-50 px-5 py-3 text-sm font-medium text-accent">{batchStatus}</div>
+        <div className="border-b border-line bg-blue-50 px-5 py-2 text-xs font-semibold text-accent">
+          {allSectionsAnalyzed ? "All section lessons are ready." : batchStatus}
+        </div>
       ) : null}
       {sections.length ? (
         <div className="flex gap-3 overflow-x-auto border-b border-line px-5 py-3">
@@ -330,7 +327,7 @@ export function DocumentPageReader({
                   <button
                     key={section.index}
                     type="button"
-                    onClick={() => setPageIndex(index)}
+                    onClick={() => goToSection(index)}
                     className={`flex h-8 min-w-12 items-center justify-center rounded-md border px-2 text-[11px] font-semibold ${
                       index === pageIndex
                         ? "border-accent bg-accent text-white"
@@ -354,7 +351,7 @@ export function DocumentPageReader({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
         <button
           type="button"
-          onClick={() => setPageIndex((value) => Math.max(0, value - 1))}
+          onClick={() => goToSection(Math.max(0, pageIndex - 1))}
           disabled={pageIndex === 0}
           className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-40"
         >
@@ -370,11 +367,13 @@ export function DocumentPageReader({
             {currentPageSectionNumber ? ` · S${currentPageSectionNumber} on this page` : ""}
           </p>
           <p className="text-xs text-neutral-500">{(currentSection?.char_count ?? page.length).toLocaleString()} chars from backend-cleaned text</p>
-          {currentSection?.analyzed ? <p className="text-xs font-semibold text-green-700">Analyzed</p> : null}
+          <p className={`text-xs font-semibold ${currentSection?.analyzed ? "text-green-700" : "text-neutral-500"}`}>
+            {currentSection?.analyzed ? "Lesson ready" : "No lesson yet"}
+          </p>
         </div>
         <button
           type="button"
-          onClick={() => setPageIndex((value) => Math.min(sections.length - 1, value + 1))}
+          onClick={() => goToSection(Math.min(sections.length - 1, pageIndex + 1))}
           disabled={!sections.length || pageIndex >= sections.length - 1}
           className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-40"
         >
@@ -386,7 +385,9 @@ export function DocumentPageReader({
         <div className="max-w-2xl space-y-1">
           {currentSection?.preview ? <p className="text-sm font-medium leading-6 text-ink">{currentSection.preview}</p> : null}
           <p className="text-xs leading-5 text-neutral-600">
-            The left PDF is the visual source. This section text is what the model can read; it may lose equations, columns, or line breaks.
+            {currentSection?.analyzed
+              ? "Open the lesson from this section, then save words and expressions worth reviewing."
+              : "No lesson has been built for this section yet. By default, GemmaLens prepares all sections in the background while the first page stays readable."}
           </p>
         </div>
         <button
@@ -411,8 +412,6 @@ export function DocumentPageReader({
           analysis={sectionAnalysis}
           sectionNumber={pageIndex + 1}
           sectionLabel={formatSectionLabel(currentSection, currentPdfPage, currentPageSectionNumber)}
-          onAnalyzeNext={targetUnanalyzedIndex >= 0 ? () => analyzeSectionAt(targetUnanalyzedIndex) : undefined}
-          isAnalyzingNext={isAnalyzing}
           embedded
         />
       ) : null}
@@ -424,23 +423,20 @@ export function SectionLessonCard({
   analysis,
   sectionNumber,
   sectionLabel,
-  onAnalyzeNext,
-  isAnalyzingNext,
   embedded = false
 }: {
   analysis: AnalysisResult;
   sectionNumber: number;
   sectionLabel?: string;
-  onAnalyzeNext?: () => void;
-  isAnalyzingNext: boolean;
+  isAnalyzingNext?: boolean;
   embedded?: boolean;
 }) {
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState<string | null>(null);
-  const concepts = (analysis.concepts ?? []).slice(0, 6);
-  const terms = analysis.terms.slice(0, 8);
-  const phrases = analysis.phrases.filter((phrase) => isUsefulExpression(phrase.phrase)).slice(0, 6);
-  const studyNotes = analysis.summaries.study_notes.slice(0, 4);
+  const concepts = (analysis.concepts ?? []).slice(0, 4);
+  const terms = analysis.terms.slice(0, 6);
+  const phrases = analysis.phrases.filter((phrase) => isUsefulExpression(phrase.phrase)).slice(0, 5);
+  const studyNotes = analysis.summaries.study_notes.slice(0, 3);
   const className = embedded
     ? "border-t border-line p-5"
     : "rounded-lg border border-line bg-panel p-5 shadow-material";
@@ -472,6 +468,38 @@ export function SectionLessonCard({
         </p>
       </div>
       <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.summaries.simple}</p>
+      <div className="mt-5 grid gap-4">
+        <MiniList
+          title="Words and terms"
+          supportLabel="Native gloss"
+          meaningLabel="English meaning"
+          rows={terms.map((term) => ({
+            item_type: "term" as const,
+            text: term.term,
+            meaning: term.meaning,
+            supportMeaning: term.support_language_meaning,
+            source_sentence: term.source_sentence
+          }))}
+          saved={saved}
+          saving={saving}
+          onSave={saveItem}
+        />
+        <MiniList
+          title="Academic expressions"
+          supportLabel="Native usage"
+          meaningLabel="English function"
+          rows={phrases.map((phrase) => ({
+            item_type: "phrase" as const,
+            text: phrase.phrase,
+            meaning: phrase.explanation,
+            supportMeaning: phrase.support_language_explanation,
+            source_sentence: phrase.source_sentence
+          }))}
+          saved={saved}
+          saving={saving}
+          onSave={saveItem}
+        />
+      </div>
       <div className="mt-4 rounded-md border border-line bg-surface p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">How to read this section</p>
         <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.summaries.academic}</p>
@@ -527,32 +555,6 @@ export function SectionLessonCard({
           </div>
         </div>
       ) : null}
-      <div className="mt-5 grid gap-4">
-        <MiniList
-          title="Terms to save if unfamiliar"
-          rows={terms.map((term) => ({
-            item_type: "term" as const,
-            text: term.term,
-            meaning: term.meaning,
-            source_sentence: term.source_sentence
-          }))}
-          saved={saved}
-          saving={saving}
-          onSave={saveItem}
-        />
-        <MiniList
-          title="Reusable academic expressions"
-          rows={phrases.map((phrase) => ({
-            item_type: "phrase" as const,
-            text: phrase.phrase,
-            meaning: phrase.explanation,
-            source_sentence: phrase.source_sentence
-          }))}
-          saved={saved}
-          saving={saving}
-          onSave={saveItem}
-        />
-      </div>
       {analysis.sentences[0] ? (
         <div className="mt-5 rounded-md border border-line bg-surface p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Hard sentence pattern</p>
@@ -564,19 +566,6 @@ export function SectionLessonCard({
           </p>
         </div>
       ) : null}
-      {onAnalyzeNext ? (
-        <div className="mt-5 flex justify-end border-t border-line pt-4">
-          <button
-            type="button"
-            onClick={onAnalyzeNext}
-            disabled={isAnalyzingNext}
-            className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
-          >
-            <SkipForward size={16} />
-            {isAnalyzingNext ? "Analyzing next section..." : "Analyze next unstudied"}
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -585,6 +574,7 @@ type LessonSaveItem = {
   item_type: "term" | "phrase" | "sentence" | "concept";
   text: string;
   meaning?: string;
+  supportMeaning?: string;
   source_sentence?: string;
 };
 
@@ -596,12 +586,16 @@ export type SectionLessonSelection = {
 
 function MiniList({
   title,
+  supportLabel,
+  meaningLabel,
   rows,
   saved,
   saving,
   onSave
 }: {
   title: string;
+  supportLabel: string;
+  meaningLabel: string;
   rows: LessonSaveItem[];
   saved: Set<string>;
   saving: string | null;
@@ -610,17 +604,33 @@ function MiniList({
   return (
     <div className="rounded-md border border-line bg-surface p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-neutral-600">Use these as quick glosses while reading; save only items worth reviewing later.</p>
       {rows.length ? (
         <div className="mt-3 space-y-3">
           {rows.map((row) => {
             const key = `${row.item_type}:${row.text}`;
             const isSaved = saved.has(key);
             return (
-            <div key={row.text} className="flex items-start justify-between gap-3 border-t border-line pt-3 first:border-t-0 first:pt-0">
-              <div>
+            <div key={row.text} className="rounded-md border border-line bg-panel p-3">
+              <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-ink">{row.text}</p>
-                <p className="mt-1 text-xs leading-5 text-neutral-600">{row.meaning}</p>
-                {row.source_sentence ? <p className="mt-1 text-xs leading-5 text-neutral-500">{truncateText(row.source_sentence, 220)}</p> : null}
+                {row.supportMeaning ? (
+                  <div className="mt-2 rounded-md bg-blue-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">{supportLabel}</p>
+                    <p className="mt-1 text-sm leading-5 text-ink">{row.supportMeaning}</p>
+                  </div>
+                ) : null}
+                <div className="mt-2 rounded-md bg-surface px-3 py-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{meaningLabel}</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-700">{row.meaning}</p>
+                </div>
+                {row.source_sentence ? (
+                  <div className="mt-2 border-l-2 border-line pl-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Source</p>
+                    <p className="mt-1 text-xs leading-5 text-neutral-500">{truncateText(row.source_sentence, 220)}</p>
+                  </div>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -631,6 +641,7 @@ function MiniList({
                 {isSaved ? <CheckCircle2 size={13} /> : <BookmarkPlus size={13} />}
                 {isSaved ? "Saved" : saving === key ? "Saving" : "Save"}
               </button>
+              </div>
             </div>
             );
           })}

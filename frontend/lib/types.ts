@@ -48,6 +48,7 @@ export type AnalysisResult = {
   terms: Array<{
     term: string;
     meaning: string;
+    support_language_meaning?: string;
     domain_relevance: string;
     difficulty: string;
     source_sentence: string;
@@ -57,6 +58,7 @@ export type AnalysisResult = {
     phrase: string;
     function: string;
     explanation: string;
+    support_language_explanation?: string;
     source_sentence: string;
   }>;
   concepts?: Array<{
@@ -147,6 +149,7 @@ export type UserProfile = {
   target_level: "B1" | "B2" | "C1" | "C2" | "domain-heavy" | "unknown";
   support_language: string;
   learning_language: string;
+  auto_analyze_documents: boolean;
   onboarding_completed: boolean;
   created_at: string;
 };

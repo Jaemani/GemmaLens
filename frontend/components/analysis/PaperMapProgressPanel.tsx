@@ -154,6 +154,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
 
 function SynthesisPanel({ synthesis, complete }: { synthesis: NonNullable<PaperMap["synthesis"]>; complete: boolean }) {
   const [showFullFlow, setShowFullFlow] = useState(false);
+  const [showStudyLists, setShowStudyLists] = useState(false);
   const visibleFlow = showFullFlow ? synthesis.argument_flow : synthesis.argument_flow.slice(0, 6);
   const hiddenFlowCount = Math.max(0, synthesis.argument_flow.length - visibleFlow.length);
   const title = complete ? "Complete paper learning guide" : "Whole-paper learning draft";
@@ -182,12 +183,29 @@ function SynthesisPanel({ synthesis, complete }: { synthesis: NonNullable<PaperM
           Collapse argument flow
         </button>
       ) : null}
-      <div className="mt-4 grid gap-4">
+      <div className="mt-4">
         <SynthesisList title="Priority concepts" rows={synthesis.priority_concepts} limit={6} />
-        <SynthesisList title="Priority terms" rows={synthesis.priority_terms} limit={8} />
-        <SynthesisList title="Reusable expressions" rows={synthesis.reusable_expressions} limit={6} />
       </div>
-      <GuideList title="Review plan" rows={synthesis.review_plan} />
+      <div className="mt-4 rounded-md border border-line bg-panel p-3">
+        <button
+          type="button"
+          onClick={() => setShowStudyLists((value) => !value)}
+          className="flex w-full items-center justify-between gap-3 text-left"
+        >
+          <span>
+            <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">Vocabulary and review plan</span>
+            <span className="mt-1 block text-xs leading-5 text-neutral-600">Open when organizing saved terms and expressions.</span>
+          </span>
+          {showStudyLists ? <ChevronDown size={16} className="shrink-0 text-neutral-500" /> : <ChevronRight size={16} className="shrink-0 text-neutral-500" />}
+        </button>
+      </div>
+      {showStudyLists ? (
+        <div className="mt-4 grid gap-4">
+          <SynthesisList title="Priority terms" rows={synthesis.priority_terms} limit={8} />
+          <SynthesisList title="Reusable expressions" rows={synthesis.reusable_expressions} limit={6} />
+          <GuideList title="Review plan" rows={synthesis.review_plan} />
+        </div>
+      ) : null}
     </div>
   );
 }
