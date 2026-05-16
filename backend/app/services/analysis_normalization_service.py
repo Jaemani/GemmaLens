@@ -7488,6 +7488,10 @@ class AnalysisNormalizationService:
             "queries",
             "dimensionality",
             "convolutional layers",
+            "flops",
+            "hyperparameters",
+            "dropout",
+            "byte-pair encoding",
             "transduction",
             "desiderata",
             "extrapolate",
@@ -7538,6 +7542,12 @@ class AnalysisNormalizationService:
             "byte-pair encoding",
             "hyperparameters",
             "adam optimizer",
+            "dropout",
+            "bleu scores",
+            "bleu score",
+            "flops",
+            "dropout rate",
+            "attention heads",
         }
         return self._prefer_rows(
             rows,
@@ -9061,6 +9071,143 @@ class AnalysisNormalizationService:
                 "The formula means the learning rate first warms up linearly, then decays with the inverse square root of the step number.",
                 "'This corresponds to'는 수식이나 설정의 의미를 prose로 다시 설명할 때 쓰는 표현입니다.",
                 "The section is dense because dataset, tokenization, hardware, optimizer, and schedule details are compressed into one passage.",
+            )
+        if "table 2:" in lowered and "better bleu scores" in lowered and "label smoothing" in lowered:
+            return profile(
+                "This section combines Table 2 result reading with regularization and the start of machine-translation results.",
+                (
+                    "Table 2 compares BLEU scores and training cost across prior systems and Transformer variants. The surrounding text then explains residual dropout, "
+                    "label smoothing, and the English-to-German result where Transformer big reaches 28.4 BLEU."
+                ),
+                (
+                    "The passage is a results-and-regularization section: it reports quality/cost comparisons, describes dropout on sub-layer outputs and embeddings, "
+                    "explains label smoothing's effect on perplexity versus BLEU, and states the WMT 2014 English-to-German state-of-the-art claim."
+                ),
+                [
+                    "Read the table as evidence for quality per training cost, not as vocabulary.",
+                    "Separate regularization methods from result claims.",
+                    "Useful academic language here includes 'at a fraction of' and 'outperforms'.",
+                ],
+                [
+                    ("BLEU scores", "Translation-quality metric used in Table 2.", "BLEU scores"),
+                    ("training cost", "FLOP-based cost used to compare systems.", "training cost"),
+                    ("Residual Dropout", "Dropout applied before residual addition and normalization.", "Residual Dropout"),
+                    ("label smoothing", "Regularization that makes the model less overconfident.", "Label Smoothing"),
+                    ("perplexity", "Metric hurt by label smoothing in this section.", "perplexity"),
+                    ("English-to-German translation task", "WMT task where Transformer big reports 28.4 BLEU.", "English-to-German translation task"),
+                    ("state-of-the-art BLEU score", "Claimed best reported BLEU result.", "state-of-the-art BLEU score"),
+                    ("Pdrop", "Dropout rate notation used for the base model.", "Pdrop"),
+                ],
+                [
+                    ("quality-cost comparison", "Table 2 argues the Transformer improves BLEU at lower training cost.", "fraction of the training cost"),
+                    ("regularization setup", "Dropout and label smoothing are training choices before reporting results.", "Residual Dropout"),
+                    ("German translation result claim", "Transformer big beats prior models and ensembles by more than 2 BLEU.", "outperforms the best previously reported models"),
+                ],
+                [
+                    ("at a fraction of", "claim", "Claims lower cost relative to competitors."),
+                    ("we apply dropout to", "method", "States where dropout is used."),
+                    ("In addition", "general", "Adds another location or method."),
+                    ("During training, we employed", "method", "Introduces a training technique."),
+                    ("This hurts..., but improves", "contrast", "States a tradeoff."),
+                    ("outperforms the best previously reported", "result", "States a benchmark result."),
+                    ("establishing a new", "result", "Claims state-of-the-art status."),
+                ],
+                "This hurts perplexity, as the model learns to be more unsure, but improves accuracy and BLEU score.",
+                "This hurts A, but improves B.",
+                "Label smoothing can worsen perplexity while improving accuracy and BLEU.",
+                "'This hurts..., but improves...'는 한 방법의 trade-off를 설명하는 데 유용한 표현입니다.",
+                "The section is hard because table rows, regularization details, and benchmark claims are interleaved.",
+            )
+        if "english-to-french translation task" in lowered and "model variations" in lowered:
+            return profile(
+                "This section finishes machine-translation results and introduces model-variation ablations.",
+                (
+                    "The paper reports the English-to-French BLEU result, explains checkpoint averaging, beam search, length penalty, and training-cost estimation, "
+                    "then transitions to varying Transformer components for ablation experiments."
+                ),
+                (
+                    "The passage moves from result reporting to inference protocol and ablation setup: it states the French single-model comparison, lists decoding and checkpoint choices, "
+                    "defines cost estimation, and frames model variations as tests of component importance."
+                ),
+                [
+                    "This is a bridge from main results to ablations.",
+                    "Separate inference settings from architecture claims.",
+                    "The phrase 'To evaluate the importance of' signals an ablation section.",
+                ],
+                [
+                    ("English-to-French translation task", "WMT task where the big model reports 41.0 BLEU in this text.", "English-to-French translation task"),
+                    ("BLEU score", "Translation quality score used for comparison.", "BLEU score"),
+                    ("dropout rate", "Pdrop value adjusted for the English-to-French big model.", "dropout rate"),
+                    ("checkpoint averaging", "Averaging recent checkpoints for final model evaluation.", "averaging the last"),
+                    ("beam search", "Decoding method used during inference.", "beam search"),
+                    ("length penalty", "Beam-search setting controlling output length.", "length penalty"),
+                    ("floating point operations", "Estimated cost unit for model training.", "floating point operations"),
+                    ("Model Variations", "Ablation section testing Transformer components.", "Model Variations"),
+                ],
+                [
+                    ("French translation result claim", "Transformer big outperforms prior single models at lower training cost.", "outperforming all of the previously published single models"),
+                    ("inference protocol", "Checkpoint averaging, beam size, and length penalty define evaluation decoding.", "beam search"),
+                    ("ablation setup", "The next section varies components to measure importance.", "To evaluate the importance"),
+                ],
+                [
+                    ("outperforming all of", "result", "States benchmark superiority."),
+                    ("at less than", "claim", "States lower resource cost."),
+                    ("For the base models", "comparison", "Introduces settings for one model scale."),
+                    ("For the big models", "comparison", "Introduces settings for the larger model scale."),
+                    ("chosen after experimentation", "method", "Explains development-set tuning."),
+                    ("To evaluate the importance of", "method", "Introduces an ablation purpose."),
+                ],
+                "To evaluate the importance of different components of the Transformer",
+                "To evaluate the importance of X, we varied Y and measured Z.",
+                "The authors vary components to measure how each design choice affects translation performance.",
+                "'To evaluate the importance of'는 ablation experiment 목적을 알리는 전형적인 표현입니다.",
+                "The passage mixes result claims, inference hyperparameters, cost estimation, and a new ablation objective.",
+            )
+        if "unlisted values are identical" in lowered and "single-head attention" in lowered:
+            return profile(
+                "This section interprets Transformer model-variation ablations in Table 3.",
+                (
+                    "Table 3 varies attention heads, key/value dimensions, model size, dropout, and positional encoding. The prose explains that single-head attention is worse, "
+                    "small key size hurts, bigger models help, dropout prevents overfitting, and learned positional embeddings perform almost the same as sinusoids."
+                ),
+                (
+                    "The passage is an ablation-reading section: rows A-E isolate design dimensions and connect numeric changes in perplexity/BLEU "
+                    "to architectural conclusions about heads, compatibility dimensions, capacity, regularization, and positional encoding."
+                ),
+                [
+                    "Read rows A-E as controlled comparisons against the base model.",
+                    "Do not save raw table column names unless they explain an ablation.",
+                    "The reusable language is 'This suggests that' and 'as expected'.",
+                ],
+                [
+                    ("base model", "Reference model used for controlled ablation comparisons.", "base model"),
+                    ("attention heads", "Number of heads varied in Table 3 rows A.", "attention heads"),
+                    ("attention key size", "dk size whose reduction hurts quality.", "attention key size"),
+                    ("compatibility function", "Function judging query-key match quality.", "compatibility function"),
+                    ("dropout", "Regularization found helpful against overfitting.", "dropout"),
+                    ("over-fitting", "Problem reduced by dropout.", "over-fitting"),
+                    ("sinusoidal positional encoding", "Original position encoding compared with learned embeddings.", "sinusoidal positional encoding"),
+                    ("learned positional embeddings", "Alternative to sinusoidal positional encoding.", "learned positional embeddings"),
+                ],
+                [
+                    ("attention-head ablation", "Quality drops with one head and with too many heads.", "single-head attention"),
+                    ("key-size ablation", "Reducing dk hurts quality, suggesting dot-product compatibility is hard.", "reducing the attention key size"),
+                    ("capacity and regularization finding", "Bigger models improve results and dropout helps avoid overfitting.", "bigger models are better"),
+                    ("positional-encoding comparison", "Learned positional embeddings perform nearly identically to sinusoids.", "nearly identical results"),
+                ],
+                [
+                    ("Unlisted values are identical to", "method", "Explains table shorthand."),
+                    ("should not be compared to", "limitation", "Warns against invalid metric comparison."),
+                    ("keeping the amount of computation constant", "method", "States controlled comparison condition."),
+                    ("This suggests that", "claim", "Introduces interpretation from results."),
+                    ("as expected", "claim", "Signals a predicted result."),
+                    ("observe nearly identical results", "result", "Reports ablation comparison."),
+                ],
+                "This suggests that determining compatibility is not easy",
+                "This suggests that X is not easy and that Y may be beneficial.",
+                "The ablation implies that query-key compatibility may need more capacity than simple dot products provide.",
+                "'This suggests that'은 table result에서 해석을 조심스럽게 끌어낼 때 쓰는 표현입니다.",
+                "The section is difficult because the useful lesson is in prose interpretation, not the raw numeric table.",
             )
         return None
 
