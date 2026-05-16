@@ -446,3 +446,82 @@ def test_paper_map_reusable_expressions_include_latest_section_signals():
 
     assert "Instead of hoping" in expressions
     assert "is recast into" in expressions
+
+
+def test_paper_map_reusable_expression_candidates_keep_later_sections():
+    base_text = "The early section says one generic result."
+    latest_text = "We show that residual nets are easy to optimize, exhibit higher training error in plain nets, and accuracy gains from depth."
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-11",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [],
+            "phrases": [
+                {"phrase": f"early phrase {index}", "function": "result", "explanation": "early", "source_sentence": f"early phrase {index}"}
+                for index in range(14)
+            ],
+            "concepts": [],
+            "sentences": [],
+            "summaries": {"one_line": "The first section gives early evidence.", "simple": "The first section gives early evidence.", "academic": "The first section gives early evidence.", "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+    latest = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "phrases": [
+                {"phrase": "We show that", "function": "result", "explanation": "opens result list", "source_sentence": latest_text},
+                {"phrase": "exhibit higher training error", "function": "result", "explanation": "states baseline failure", "source_sentence": latest_text},
+            ],
+            "summaries": {**base.summaries.model_dump(), "one_line": "The latest section states experiment claims."},
+        }
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows([(4, latest)])).build(
+        "doc-11", [base_text, "two", "three", "four", latest_text]
+    )
+    expressions = [item.text for item in paper_map.synthesis.reusable_expressions]
+
+    assert "We show that" in expressions
+    assert "exhibit higher training error" in expressions
+
+
+def test_paper_map_promotes_resnet_result_expressions():
+    latest_text = "We show that residual nets are easy to optimize, exhibit higher training error in plain nets, and accuracy gains from depth."
+    base = AnalysisResult.model_validate(
+        {
+            "document_id": "doc-12",
+            "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
+            "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
+            "terms": [],
+            "phrases": [
+                {"phrase": "as easy as stacking more layers", "function": "limitation", "explanation": "old", "source_sentence": "as easy as stacking more layers"},
+                {"phrase": "not caused by overfitting", "function": "contrast", "explanation": "old", "source_sentence": "not caused by overfitting"},
+            ],
+            "concepts": [],
+            "sentences": [],
+            "summaries": {"one_line": "The early section frames the problem.", "simple": "The early section frames the problem.", "academic": "The early section frames the problem.", "study_notes": []},
+            "quality_warnings": [],
+        }
+    )
+    latest = AnalysisResult.model_validate(
+        {
+            **base.model_dump(),
+            "phrases": [
+                {"phrase": "We show that", "function": "result", "explanation": "opens result list", "source_sentence": latest_text},
+                {"phrase": "exhibit higher training error", "function": "result", "explanation": "baseline failure", "source_sentence": latest_text},
+                {"phrase": "accuracy gains from", "function": "result", "explanation": "accuracy claim", "source_sentence": "accuracy gains from depth"},
+            ],
+            "summaries": {**base.summaries.model_dump(), "one_line": "The latest section states empirical claims."},
+        }
+    )
+
+    paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows([(4, latest)])).build(
+        "doc-12", ["one", "two", "three", "four", latest_text]
+    )
+    expressions = [item.text for item in paper_map.synthesis.reusable_expressions]
+
+    assert "We show that" in expressions
+    assert "exhibit higher training error" in expressions
+    assert "accuracy gains from" in expressions

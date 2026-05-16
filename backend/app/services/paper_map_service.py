@@ -60,7 +60,7 @@ class PaperMapService:
 
         top_concepts = self._rank(concepts, 10)
         top_terms = self._rank(terms, 12)
-        top_phrases = self._rank(phrases, 12)
+        top_phrases = self._rank(phrases, 24)
 
         return PaperMapResponse(
             document_id=document_id,
@@ -115,6 +115,11 @@ class PaperMapService:
             "is recast into",
             "neither extra parameter nor computational complexity",
             "trained end-to-end",
+            "we show that",
+            "exhibit higher training error",
+            "accuracy gains from",
+            "this strong evidence shows that",
+            "while still having lower complexity than",
         }
         demoted = {
             "deeper neural networks",

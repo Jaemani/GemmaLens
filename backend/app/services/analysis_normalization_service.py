@@ -595,6 +595,34 @@ class AnalysisNormalizationService:
                     "They implement the residual block without extra parameters or computational complexity.",
                 ),
                 (
+                    "plain nets",
+                    "Baseline networks that simply stack layers without residual shortcut structure.",
+                    "field_term",
+                    "medium",
+                    "They are the comparison point used to show residual nets optimize better.",
+                ),
+                (
+                    "accuracy gains",
+                    "Improved accuracy obtained by making residual networks deeper.",
+                    "field_term",
+                    "hard",
+                    "This separates the accuracy claim from the optimization claim.",
+                ),
+                (
+                    "top-5 error",
+                    "An ImageNet metric where a prediction is correct if the true label appears in the model's five highest-scoring classes.",
+                    "useful",
+                    "medium",
+                    "This explains the reported 3.57% ImageNet result.",
+                ),
+                (
+                    "generalization performance",
+                    "How well a learned representation works beyond the training setup or original task.",
+                    "useful",
+                    "medium",
+                    "This supports the claim that residual learning is broadly useful.",
+                ),
+                (
                     "ImageNet",
                     "A large image recognition benchmark used to evaluate the paper's models.",
                     "useful",
@@ -685,7 +713,7 @@ class AnalysisNormalizationService:
         rows: list[dict[str, Any]] = []
         for term, meaning, priority, difficulty, reason in known:
             sentence = self._source_sentence(None, term, document_text)
-            if not sentence or term.lower() not in sentence.lower():
+            if not sentence or not self._appears_in_text(term, sentence):
                 continue
             rows.append(
                 {
@@ -777,6 +805,17 @@ class AnalysisNormalizationService:
                 ("skipping one or more layers", "general", "Defines shortcut connections in plain architectural terms."),
                 ("neither extra parameter nor computational complexity", "result", "States that identity shortcuts are cheap to add."),
                 ("trained end-to-end", "method", "Signals that the whole network remains trainable as one model."),
+                ("We show that", "result", "Introduces a list of empirical claims."),
+                ("easy to optimize", "result", "States the optimization benefit of residual networks."),
+                ("counterpart plain nets", "contrast", "Introduces the non-residual comparison baseline."),
+                ("exhibit higher training error", "result", "States the evidence that plain deeper nets optimize worse."),
+                ("accuracy gains from", "result", "States that extra depth improves accuracy for residual nets."),
+                ("substantially better than previous networks", "result", "Compares results against earlier architectures."),
+                ("not just akin to a particular dataset", "general", "Signals that the result is not dataset-specific."),
+                ("obtain excellent results", "result", "Introduces strong benchmark performance."),
+                ("while still having lower complexity than", "contrast", "Compares depth and complexity against a baseline."),
+                ("won the 1st place", "result", "Reports competition-level empirical validation."),
+                ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("to ease the training of", "method", "States the purpose of the proposed residual learning framework."),
                 ("substantially deeper than", "claim", "Signals the scale of the architecture compared with previous models."),
                 ("explicitly reformulate", "method", "Signals that the paper changes the learning target, not only the model size."),
@@ -955,6 +994,21 @@ class AnalysisNormalizationService:
                     "This is how the residual mapping is implemented in a feedforward network.",
                 ),
                 (
+                    "plain nets",
+                    "Non-residual baseline networks that simply stack layers.",
+                    "They let the learner see what residual connections improve over.",
+                ),
+                (
+                    "accuracy gains",
+                    "The claim that deeper residual networks improve accuracy instead of only becoming trainable.",
+                    "This is the second major empirical claim after easier optimization.",
+                ),
+                (
+                    "generalization performance",
+                    "Evidence that residual representations transfer to other recognition tasks.",
+                    "This supports the broader claim that the principle is generic.",
+                ),
+                (
                     "shallower architecture",
                     "The smaller comparison network used to define what the deeper counterpart should be able to match.",
                     "This anchors the argument that degradation is an optimization issue.",
@@ -1011,7 +1065,7 @@ class AnalysisNormalizationService:
         rows: list[dict[str, Any]] = []
         for concept, explanation, why in specs:
             sentence = self._source_sentence(None, concept, document_text)
-            if not sentence or concept.lower() not in sentence.lower():
+            if not sentence or not self._appears_in_text(concept, sentence):
                 continue
             rows.append(
                 {
@@ -1162,6 +1216,20 @@ class AnalysisNormalizationService:
                     "The authors define shortcut connections as links that skip one or more layers.",
                     "'are those ~ing'은 앞의 용어를 정의하는 논문식 구조입니다.",
                     "The sentence is a definition; it should be saved as concept support, not as a random phrase.",
+                ),
+                (
+                    "We show that",
+                    "We show that: 1) A, but B; 2) C.",
+                    "The authors organize the evidence into optimization and accuracy claims.",
+                    "'We show that'은 실험으로 뒷받침할 핵심 주장 목록을 여는 표현입니다.",
+                    "The sentence is difficult because it contains two numbered empirical claims and a contrast.",
+                ),
+                (
+                    "This strong evidence shows that",
+                    "This strong evidence shows that X is Y.",
+                    "The authors move from benchmark results to a general principle claim.",
+                    "'This strong evidence shows that'은 여러 실험 결과를 더 큰 주장으로 연결하는 표현입니다.",
+                    "The sentence is an evidence-to-principle move, not just a result sentence.",
                 ),
                 (
                     "We present a residual learning framework",
@@ -1331,6 +1399,23 @@ class AnalysisNormalizationService:
                 ],
             }
         if self._is_resnet_text(document_text):
+            if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
+                return {
+                    "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
+                    "simple": (
+                        "The authors report two main results. Plain deep networks get higher training error as they get deeper, while residual networks "
+                        "remain easy to optimize and can improve accuracy with much greater depth."
+                    ),
+                    "academic": (
+                        "The section summarizes experimental evidence across CIFAR-10, ImageNet, and recognition competitions to argue that residual "
+                        "learning improves optimization, enables depth-driven accuracy gains, and generalizes beyond one dataset."
+                    ),
+                    "study_notes": [
+                        "Separate the two claims: easier optimization and better accuracy from depth.",
+                        "Read plain nets as the non-residual baseline.",
+                        "Benchmark names support the evidence; they are not the main concept.",
+                    ],
+                }
             if "residual mapping" in compact_lower and "shortcut connections" in compact_lower:
                 return {
                     "one_line": "This section defines the residual block: learn F(x), add back x, and implement it with shortcut connections.",
@@ -1644,7 +1729,12 @@ class AnalysisNormalizationService:
         return excerpt
 
     def _appears_in_text(self, value: str, text: str) -> bool:
-        return " ".join(normalize_pdf_ligatures(value).lower().split()) in " ".join(normalize_pdf_ligatures(text).lower().split())
+        return self._match_text(value) in self._match_text(text)
+
+    def _match_text(self, value: str) -> str:
+        normalized = normalize_pdf_ligatures(value).lower()
+        normalized = re.sub(r"[\"'“”‘’`]", "", normalized)
+        return " ".join(normalized.split())
 
     def _priority_from_relevance(self, value: Any) -> str:
         value = str(value or "").lower()
@@ -1678,7 +1768,18 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"reveals that network", "has higher training", "higher training", "deeper network"}:
             return ""
-        if lowered in {"training", "degradation", "deeper model", "learned shallower model", "current solvers on hand", "by feedforward neural networks"}:
+        if lowered in {
+            "training",
+            "degradation",
+            "deeper model",
+            "learned shallower model",
+            "current solvers on hand",
+            "by feedforward neural networks",
+            "exhibit higher training",
+            "better than previous networks",
+            "effects of our method",
+            "present successfully trained models",
+        }:
             return ""
         if lowered.startswith(("reveals that ", "shows that ", "has ", "have ", "is ", "are ")):
             return ""
@@ -1735,6 +1836,8 @@ class AnalysisNormalizationService:
             or ("identity mapping" in lowered and "residual functions" in lowered)
             or ("residual mapping" in lowered and "shortcut connections" in lowered)
             or ("underlying mapping" in lowered and "residual mapping" in lowered)
+            or ("plain" in lowered and "higher training error" in lowered and "accuracy gains" in lowered)
+            or ("top-5 error" in lowered and "imagenet" in lowered)
         )
 
     def _score(self, value: Any, default: int) -> int:

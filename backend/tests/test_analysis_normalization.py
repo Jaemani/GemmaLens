@@ -651,3 +651,44 @@ def test_resnet_residual_block_section_recovers_method_structure():
     assert "shortcut connections" not in phrases
     assert result.summaries.one_line == "This section defines the residual block: learn F(x), add back x, and implement it with shortcut connections."
     assert result.sentences[0].core_structure == "Instead of hoping A directly fits B, we let A fit C."
+
+
+def test_resnet_experiment_claim_section_rejects_fragments():
+    document = (
+        "We show that: 1) Our extremely deep residual nets are easy to optimize, but the counterpart “plain” nets exhibit higher training error "
+        "when the depth increases; 2) Our deep residual nets can easily enjoy accuracy gains from greatly increased depth, producing results "
+        "substantially better than previous networks. Similar phenomena are also shown on the CIFAR-10 set, suggesting that the optimization "
+        "difficulties and the effects of our method are not just akin to a particular dataset. On the ImageNet classification dataset, we obtain "
+        "excellent results by extremely deep residual nets. Our 152-layer residual net is the deepest network ever presented on ImageNet, while "
+        "still having lower complexity than VGG nets. Our ensemble has 3.57% top-5 error on the ImageNet test set. This strong evidence shows "
+        "that the residual learning principle is generic and has excellent generalization performance."
+    )
+    payload = {
+        "terms": [
+            {"term": "exhibit higher training", "meaning": "bad fragment"},
+            {"term": "better than previous networks", "meaning": "bad fragment"},
+            {"term": "effects of our method", "meaning": "bad fragment"},
+            {"term": "present successfully trained models", "meaning": "bad fragment"},
+        ],
+        "concepts": [
+            {"concept": "exhibit higher training", "explanation": "bad fragment"},
+            {"concept": "effects of our method", "explanation": "bad fragment"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": document.split(".")[0] + "."},
+        "sentences": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-results", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "exhibit higher training" not in terms
+    assert "better than previous networks" not in terms
+    assert "effects of our method" not in concepts
+    assert {"plain nets", "accuracy gains", "top-5 error", "generalization performance"}.issubset(terms)
+    assert {"plain nets", "accuracy gains", "generalization performance"}.issubset(concepts)
+    assert {"We show that", "exhibit higher training error", "accuracy gains from", "This strong evidence shows that"}.issubset(phrases)
+    assert result.summaries.one_line == "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth."
+    assert result.sentences[0].core_structure == "We show that: 1) A, but B; 2) C."
