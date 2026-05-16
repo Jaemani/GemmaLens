@@ -47,6 +47,8 @@ Local demo records currently include:
 - The cumulative paper map refreshes after section analysis.
 - The cumulative paper map now starts with a reading guide: thesis so far, honest coverage note, reading focus, and next steps. This makes it behave more like a reading companion than three isolated lists.
 - The paper map now includes a deterministic whole-paper learning draft assembled from analyzed section caches: argument flow, priority concepts, priority terms, reusable expressions, and review plan. This is not model-backed final synthesis yet, but it gives users a study plan instead of raw lists only.
+- Completed papers now label the cumulative result as a complete section guide instead of continuing to call it a draft.
+- Completed reading guides now use whole-paper language such as `Across the paper...` and no longer show in-progress copy like `Latest section signal`.
 - The whole-paper learning draft appears before raw concept/term/expression lists, so the user sees a study plan before lower-level signals.
 - Raw source-grounded signal lists are collapsed by default. This reduces the long report-like page and lets the user inspect raw concepts/terms/expressions only when needed.
 - Whole-paper draft priority lists show only the top three compact items by default, so the paper-level study plan remains scannable.
@@ -56,6 +58,7 @@ Local demo records currently include:
 - Attention staged analysis exposed a real extraction problem: author-contribution and conference-note text was treated as section 2. Section splitting and paper-map synthesis now filter those attribution sections.
 - Attention staged analysis also exposed duplicate argument-flow entries. The paper map now groups repeated summaries, e.g. `S1, 3, 4`, and trims long flow text so the draft reads like a sequence instead of a repeated report.
 - Attention staged analysis exposed another quality problem: figure captions and equation residue were being promoted into the paper argument flow, for example `Figure 1: The Transformer - model architecture` and `The output is computed as a weighted sum 3`. The normalizer now replaces those weak summaries with architecture, scaled dot-product attention, and multi-head attention explanations, and short artifact-like fragments are filtered from sectioning and paper-map synthesis.
+- Paper-map synthesis now filters references-boundary summaries and bibliography venue markers from paper-level study lists. Real BERT and Transformer checks no longer promote `arXiv preprint`, `Proceedings`, `In Proceedings of`, `In ACL`, or conference names as priority language-learning items.
 - Updated stale scope copy so the analysis page explains the current staged section-analysis and paper-map draft behavior instead of implying full-paper staged analysis is still absent.
 - Already analyzed sections now load their cached lesson when selected, so the green analyzed state leads back to usable learning content rather than only acting as a status marker.
 - Analysis-column learning cards now stay single-column in the PDF workspace. The previous multi-column layout made concept and term cards too narrow on normal desktop widths.
