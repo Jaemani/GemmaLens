@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
 import { demoModeEnabled } from "@/lib/demoMode";
 import { demoDocuments } from "@/lib/demoData";
+import { displayableDocuments, isVideoSource } from "@/lib/documentDisplay";
 import type { DocumentListItem } from "@/lib/types";
 
 export default async function DocumentsPage() {
@@ -13,7 +14,7 @@ export default async function DocumentsPage() {
   } catch {
     documents = demoModeEnabled ? demoDocuments : [];
   }
-  const documentOnlyItems = documents.filter((document) => document.source_type !== "transcript" && document.source_type !== "video_segment");
+  const documentOnlyItems = displayableDocuments(documents.filter((document) => !isVideoSource(document.source_type)));
 
   return (
     <AppShell>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { cleanDocumentPreview, documentProgressText } from "@/lib/documentDisplay";
 import type { DocumentListItem } from "@/lib/types";
 
 export function DocumentPreview({ documents }: { documents: DocumentListItem[] }) {
@@ -45,7 +46,7 @@ export function DocumentPreview({ documents }: { documents: DocumentListItem[] }
                   <span className="text-xs uppercase text-neutral-500">{document.source_type}</span>
                 </div>
               </div>
-              <p className="mt-2 line-clamp-2 text-sm text-neutral-600">{document.preview}</p>
+              <p className="mt-2 line-clamp-2 text-sm text-neutral-600">{cleanDocumentPreview(document)}</p>
             </Link>
             <button
               type="button"
@@ -65,18 +66,14 @@ export function DocumentPreview({ documents }: { documents: DocumentListItem[] }
 }
 
 function AnalysisProgressBadge({ document }: { document: DocumentListItem }) {
-  const total = document.total_sections ?? 0;
-  const analyzed = document.analyzed_sections ?? 0;
-  if (total <= 1) {
-    return analyzed > 0 ? <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Ready</span> : null;
+  const label = documentProgressText(document);
+  if (label === "Complete" || label === "Ready") {
+    return <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">{label}</span>;
   }
-  if (analyzed >= total) {
-    return <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Complete</span>;
-  }
-  if (analyzed > 0) {
+  if (label.includes("/")) {
     return (
       <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">
-        {analyzed}/{total} studied
+        {label}
       </span>
     );
   }

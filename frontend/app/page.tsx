@@ -3,6 +3,7 @@ import { ArrowRight, BookMarked, Cpu, FileText, Languages, PlayCircle, Video, Wi
 import { ModelStatusCard } from "@/components/common/ModelStatusCard";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
+import { cleanDocumentPreview, displayableDocuments, documentProgressText, isVideoSource } from "@/lib/documentDisplay";
 import type { DocumentListItem, ModelStatus } from "@/lib/types";
 
 export default async function DashboardPage() {
@@ -18,7 +19,7 @@ export default async function DashboardPage() {
   } catch {
     documents = [];
   }
-  const recentDocuments = documents.filter((document) => !isVideoSource(document.source_type));
+  const recentDocuments = displayableDocuments(documents.filter((document) => !isVideoSource(document.source_type)));
 
   return (
     <AppShell>
@@ -61,7 +62,7 @@ export default async function DashboardPage() {
                     <span className="min-w-0 truncate font-semibold text-ink">{document.title}</span>
                     <DocumentProgressLabel document={document} />
                   </span>
-                  <span className="mt-1 line-clamp-1 block text-neutral-600">{document.preview}</span>
+                  <span className="mt-1 line-clamp-1 block text-neutral-600">{cleanDocumentPreview(document)}</span>
                 </Link>
               ))}
               {!recentDocuments.length ? (
@@ -92,17 +93,12 @@ export default async function DashboardPage() {
   );
 }
 
-function isVideoSource(sourceType: string) {
-  return sourceType === "transcript" || sourceType === "video_segment";
-}
-
 function DocumentProgressLabel({ document }: { document: DocumentListItem }) {
-  const total = document.total_sections ?? 0;
+  const label = documentProgressText(document);
   const analyzed = document.analyzed_sections ?? 0;
-  if (total <= 1) return analyzed > 0 ? <span className="shrink-0 text-xs font-semibold text-emerald-700">Ready</span> : null;
-  if (analyzed >= total) return <span className="shrink-0 text-xs font-semibold text-emerald-700">Complete</span>;
-  if (analyzed > 0) return <span className="shrink-0 text-xs font-semibold text-amber-700">{analyzed}/{total}</span>;
-  return <span className="shrink-0 text-xs font-semibold text-neutral-500">Not studied</span>;
+  const total = document.total_sections ?? 0;
+  const tone = label === "Complete" || label === "Ready" ? "text-emerald-700" : analyzed > 0 && total > 1 ? "text-amber-700" : "text-neutral-500";
+  return <span className={`shrink-0 text-xs font-semibold ${tone}`}>{label === "Not studied" ? "New" : label}</span>;
 }
 
 function Signal({ icon, label }: { icon: React.ReactNode; label: string }) {
