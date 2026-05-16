@@ -1068,3 +1068,53 @@ def test_resnet_bottleneck_section_recovers_efficiency_argument():
     assert "show that" not in phrases
     assert result.summaries.one_line == "This section explains why bottleneck blocks make very deep ResNets computationally practical."
     assert result.sentences[0].core_structure == "The three layers are A, B, and C, where A is responsible for D."
+
+
+def test_resnet_deep_bottleneck_results_section_recovers_imagenet_scaling_argument():
+    document = (
+        "34-layer net with this 3-layer bottleneck block, resulting in a 50-layer ResNet. "
+        "101-layer and 152-layer ResNets: We construct 101-layer and 152-layer ResNets by using more 3-layer blocks. "
+        "Remarkably, although the depth is significantly increased, the 152-layer ResNet still has lower complexity than VGG-16/19 nets. "
+        "The 50/101/152-layer ResNets are more accurate than the 34-layer ones by considerable margins. "
+        "We do not observe the degradation problem and thus enjoy significant accuracy gains from considerably increased depth. "
+        "Comparisons with State-of-the-art Methods. Our baseline 34-layer ResNets have achieved very competitive accuracy. "
+        "Our 152-layer ResNet has a single-model top-5 validation error of 4.49%. "
+        "We combine six models of different depth to form an ensemble. This entry won the 1st place in ILSVRC 2015. "
+        "CIFAR-10 and Analysis. Our focus is on the behaviors of extremely deep networks, but not on pushing the state-of-the-art results."
+    )
+    payload = {
+        "terms": [
+            {"term": "model", "meaning": "too generic"},
+            {"term": "we combine six models", "meaning": "bad clause"},
+        ],
+        "concepts": [
+            {"concept": "model", "explanation": "too generic"},
+            {"concept": "we combine six models", "explanation": "bad clause"},
+        ],
+        "phrases": [{"phrase": "as follows", "function": "general", "explanation": "too generic here"}],
+        "summaries": {
+            "one_line": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+            "simple": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+            "academic": "This section motivates ResNet through the degradation problem: deeper networks can be harder to optimize.",
+        },
+        "sentences": [],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-deep-results", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "model" not in terms
+    assert "we combine six models" not in terms
+    assert "feature maps" not in terms
+    assert "ResNet" not in terms
+    assert "model" not in concepts
+    assert "we combine six models" not in concepts
+    assert {"50/101/152-layer ResNets", "single-model top-5 validation error", "ensemble", "ILSVRC 2015", "state-of-the-art methods"}.issubset(terms)
+    assert {"lower complexity than VGG", "50/101/152-layer ResNets", "single-model top-5 validation error", "ensemble"}.issubset(concepts)
+    assert {"lower complexity than", "more accurate than", "by considerable margins", "We do not observe", "form an ensemble", "won the 1st place", "Our focus is on"}.issubset(phrases)
+    assert result.summaries.one_line == (
+        "This section shows very deep bottleneck ResNets outperform shallower ResNets and reach state-of-the-art ImageNet results."
+    )
+    assert result.sentences[0].core_structure == "Although A is significantly increased, B still has lower complexity than C."

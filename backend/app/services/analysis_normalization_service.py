@@ -25,6 +25,8 @@ class AnalysisNormalizationService:
             phrases = self._filter_bert_learning_rows(phrases, "phrase")
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
+        if self._is_resnet_deep_bottleneck_results_section(document_text):
+            terms = self._filter_resnet_deep_results_noise(terms, "term")
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -46,6 +48,8 @@ class AnalysisNormalizationService:
             normalized["concepts"] = self._filter_bert_learning_rows(normalized["concepts"], "concept")
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
+        if self._is_resnet_deep_bottleneck_results_section(document_text):
+            normalized["concepts"] = self._prefer_resnet_deep_results_concepts(normalized["concepts"], document_text)
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -143,6 +147,7 @@ class AnalysisNormalizationService:
                 "residual network",
                 "we compare",
                 "show that",
+                "as follows",
             }:
                 continue
             if "weight decay" in phrase.lower() and "momentum" in phrase.lower():
@@ -758,6 +763,41 @@ class AnalysisNormalizationService:
                     "This explains why bottleneck designs are used even when non-bottleneck ResNets can also gain accuracy.",
                 ),
                 (
+                    "50/101/152-layer ResNets",
+                    "Very deep residual networks built with bottleneck blocks.",
+                    "field_term",
+                    "hard",
+                    "These models show that residual learning can scale to much greater depth.",
+                ),
+                (
+                    "single-model top-5 validation error",
+                    "The ImageNet validation metric for one model before ensembling.",
+                    "field_term",
+                    "medium",
+                    "This tells the reader the result is a direct model score, not only an ensemble score.",
+                ),
+                (
+                    "ensemble",
+                    "A prediction system that combines several trained models.",
+                    "field_term",
+                    "medium",
+                    "The paper uses an ensemble for the ILSVRC 2015 winning entry.",
+                ),
+                (
+                    "ILSVRC 2015",
+                    "The ImageNet Large Scale Visual Recognition Challenge in 2015.",
+                    "useful",
+                    "medium",
+                    "This is the competition where the ResNet entry won first place.",
+                ),
+                (
+                    "state-of-the-art methods",
+                    "The best-performing methods available at the time of comparison.",
+                    "useful",
+                    "medium",
+                    "This marks the transition from architecture analysis to benchmark comparison.",
+                ),
+                (
                     "zero-padding shortcuts",
                     "Parameter-free shortcuts that pad extra dimensions with zeros when dimensions increase.",
                     "field_term",
@@ -1094,7 +1134,6 @@ class AnalysisNormalizationService:
                 ("is flexible", "claim", "States that the residual function can use different layer depths."),
                 ("applicable to convolutional layers", "method", "Extends the notation from fully connected layers to convolutional networks."),
                 ("To provide instances for discussion", "general", "Introduces concrete model instances after the formulation."),
-                ("as follows", "general", "Signals that a structured list or description follows."),
                 ("is worth noticing", "claim", "Flags an observation the authors want the reader to notice."),
                 ("We evaluate our method", "method", "Introduces the benchmark evaluation setting."),
                 ("We first evaluate", "method", "Signals the first experiment in a sequence."),
@@ -1126,7 +1165,16 @@ class AnalysisNormalizationService:
                 ("not just akin to a particular dataset", "general", "Signals that the result is not dataset-specific."),
                 ("obtain excellent results", "result", "Introduces strong benchmark performance."),
                 ("while still having lower complexity than", "contrast", "Compares depth and complexity against a baseline."),
+                ("lower complexity than", "contrast", "Compares a deeper ResNet against a computationally heavier VGG baseline."),
+                ("more accurate than", "result", "States that deeper ResNets outperform shallower residual networks."),
+                ("by considerable margins", "result", "Emphasizes that the reported accuracy improvement is large."),
+                ("We do not observe", "result", "Reports that the degradation problem does not appear in this setting."),
+                ("achieved very competitive accuracy", "result", "Introduces a strong baseline result before the final comparison."),
+                ("single-model top-5 validation error", "result", "Names the ImageNet metric used for the single-model result."),
+                ("form an ensemble", "method", "Explains how multiple models are combined for the competition entry."),
                 ("won the 1st place", "result", "Reports competition-level empirical validation."),
+                ("Our focus is on", "method", "Signals the experimental aim before describing CIFAR-10 setup."),
+                ("but not on pushing", "contrast", "Clarifies that the CIFAR-10 experiment studies behavior rather than chasing the benchmark record."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
                 ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
@@ -1501,6 +1549,31 @@ class AnalysisNormalizationService:
                     "practical considerations",
                     "Engineering concerns such as computation and parameter cost.",
                     "This explains why bottleneck designs are chosen in deeper ResNets.",
+                ),
+                (
+                    "very deep bottleneck ResNets",
+                    "The 50/101/152-layer residual networks built from bottleneck blocks.",
+                    "This is the scaling result after the bottleneck architecture is introduced.",
+                ),
+                (
+                    "lower complexity than VGG",
+                    "The claim that the 152-layer ResNet is deeper but still cheaper than VGG-16/19.",
+                    "This separates useful depth from raw computational cost.",
+                ),
+                (
+                    "no degradation with increased depth",
+                    "The observation that these very deep residual networks keep improving instead of getting harder to optimize.",
+                    "This is the empirical payoff of the residual design.",
+                ),
+                (
+                    "state-of-the-art comparison",
+                    "The benchmark comparison that moves from internal architecture analysis to external performance.",
+                    "This shows why the architecture matters beyond an ablation table.",
+                ),
+                (
+                    "CIFAR-10 analysis transition",
+                    "The shift from ImageNet results to controlled CIFAR-10 depth-behavior experiments.",
+                    "This tells the reader the next section changes experimental purpose.",
                 ),
                 (
                     "zero-padding shortcuts",
@@ -1900,6 +1973,27 @@ class AnalysisNormalizationService:
                     "The phrase helps separate empirical capability from engineering constraints.",
                 ),
                 (
+                    "although the depth is significantly increased",
+                    "Although A is significantly increased, B still has lower complexity than C.",
+                    "The authors contrast model depth with computational cost.",
+                    "'Although' 절은 예상과 다른 결과를 강조합니다.",
+                    "The sentence is difficult because it compares depth, FLOPs, and baseline architectures at once.",
+                ),
+                (
+                    "We do not observe the degradation problem",
+                    "We do not observe A and thus enjoy B from C.",
+                    "The authors state that deeper residual networks avoid the degradation failure.",
+                    "'and thus'는 앞의 관찰에서 뒤의 이득으로 이어지는 논리 연결입니다.",
+                    "This is a compact result sentence with cause, benefit, and condition packed together.",
+                ),
+                (
+                    "Our focus is on",
+                    "Our focus is on A, but not on B.",
+                    "The authors define the purpose of the CIFAR-10 experiments.",
+                    "'but not on'은 연구 목표와 제외 대상을 함께 정리합니다.",
+                    "This sentence helps distinguish analysis experiments from benchmark chasing.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -2135,6 +2229,23 @@ class AnalysisNormalizationService:
                         "Use 'mainly due to practical considerations' to mark an engineering reason for an architecture choice.",
                     ],
                 }
+            if self._is_resnet_deep_bottleneck_results_section(document_text):
+                return {
+                    "one_line": "This section shows very deep bottleneck ResNets outperform shallower ResNets and reach state-of-the-art ImageNet results.",
+                    "simple": (
+                        "The authors build 50-, 101-, and 152-layer ResNets with bottleneck blocks. Even though the 152-layer model is very deep, "
+                        "it is still cheaper than VGG in FLOPs, improves accuracy over 34-layer ResNets, avoids degradation, and wins ILSVRC 2015 with an ensemble."
+                    ),
+                    "academic": (
+                        "The section reports the scaling payoff of bottleneck residual architectures: depth can increase substantially while complexity remains controlled, "
+                        "accuracy improves by large margins, and the resulting models achieve state-of-the-art ImageNet performance before the paper transitions to CIFAR-10 analysis."
+                    ),
+                    "study_notes": [
+                        "Read this as evidence that bottleneck ResNets scale, not as another definition of degradation.",
+                        "Separate single-model performance from ensemble competition results.",
+                        "The CIFAR-10 paragraph is a transition into controlled behavior analysis.",
+                    ],
+                }
             if "based on the above plain network" in compact_lower and "we insert shortcut connections" in compact_lower:
                 return {
                     "one_line": "This section shows how the plain ImageNet baseline is converted into a residual network.",
@@ -2218,6 +2329,23 @@ class AnalysisNormalizationService:
                         "Read this as related-work positioning, not as the main method definition.",
                         "Separate residual representations from shortcut-connection architecture.",
                         "The key contrast is gated highway shortcuts versus parameter-free identity shortcuts.",
+                    ],
+                }
+            if "50/101/152-layer resnets" in compact_lower and "won the 1st place" in compact_lower:
+                return {
+                    "one_line": "This section shows very deep bottleneck ResNets outperform shallower ResNets and reach state-of-the-art ImageNet results.",
+                    "simple": (
+                        "The authors build 50-, 101-, and 152-layer ResNets with bottleneck blocks. Even though the 152-layer model is very deep, "
+                        "it is still cheaper than VGG in FLOPs, improves accuracy over 34-layer ResNets, avoids degradation, and wins ILSVRC 2015 with an ensemble."
+                    ),
+                    "academic": (
+                        "The section reports the scaling payoff of bottleneck residual architectures: depth can increase substantially while complexity remains controlled, "
+                        "accuracy improves by large margins, and the resulting models achieve state-of-the-art ImageNet performance before the paper transitions to CIFAR-10 analysis."
+                    ),
+                    "study_notes": [
+                        "Read this as evidence that bottleneck ResNets scale, not as another definition of degradation.",
+                        "Separate single-model performance from ensemble competition results.",
+                        "The CIFAR-10 paragraph is a transition into controlled behavior analysis.",
                     ],
                 }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
@@ -2489,6 +2617,8 @@ class AnalysisNormalizationService:
             return True
         if "the three layers are" in compact_lower and "bottleneck architectures" in compact_lower:
             return True
+        if self._is_resnet_deep_bottleneck_results_section(document_text):
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -2604,7 +2734,7 @@ class AnalysisNormalizationService:
         value = re.sub(r"^(?:the|a|an|or|and|but|these|those|this|that|to|of)\s+", "", value, flags=re.IGNORECASE)
         value = re.sub(r"^(?:dominant|best-performing|best performing|recent|previous|current)\s+", "", value, flags=re.IGNORECASE)
         lowered = value.lower()
-        if lowered in {"term", "string", "concept", "introduction recurrent", "tion model", "sentation models"}:
+        if lowered in {"term", "string", "concept", "model", "introduction recurrent", "tion model", "sentation models"}:
             return ""
         if lowered == "residual learning":
             return ""
@@ -2630,7 +2760,7 @@ class AnalysisNormalizationService:
             return ""
         if lowered in {"time complexity and model", "more efficient models"}:
             return ""
-        if lowered.startswith(("we describe ", "we also note ", "we can also use ")):
+        if lowered.startswith(("we describe ", "we also note ", "we can also use ", "we combine ")):
             return ""
         if lowered in {"reveals that network", "has higher training", "higher training", "deeper network"}:
             return ""
@@ -2716,11 +2846,75 @@ class AnalysisNormalizationService:
             or ("34-layer plain net has higher training error" in lowered and "next we evaluate" in lowered)
             or ("next we investigate projection shortcuts" in lowered and "we compare three options" in lowered)
             or ("the three layers are" in lowered and "bottleneck architectures" in lowered)
+            or self._is_resnet_deep_bottleneck_results_section(document_text)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "based on the above plain network" in lowered and "we insert shortcut connections" in lowered
+
+    def _is_resnet_deep_bottleneck_results_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "50/101/152-layer resnets" in lowered and "won the 1st place" in lowered
+
+    def _prefer_resnet_deep_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"feature maps", "resnet", "model", "we combine six models"}
+        preferred = {
+            "50/101/152-layer ResNets": (
+                "The very deep bottleneck residual networks that demonstrate the scaling result.",
+                "This is the main architecture result of the section.",
+            ),
+            "lower complexity than VGG": (
+                "The claim that 152-layer ResNet is deeper but still cheaper than VGG-16/19.",
+                "This separates useful depth from raw computational cost.",
+            ),
+            "single-model top-5 validation error": (
+                "The ImageNet metric reported before combining models into an ensemble.",
+                "This helps separate single-model evidence from ensemble competition results.",
+            ),
+            "ensemble": (
+                "A combined system of several ResNets used for the ILSVRC 2015 entry.",
+                "This explains how the final competition result was produced.",
+            ),
+            "state-of-the-art methods": (
+                "The external benchmark comparison against the best available methods.",
+                "This moves the section from architecture scaling to competitive performance.",
+            ),
+            "CIFAR-10": (
+                "The next benchmark used for controlled analysis of extremely deep networks.",
+                "This marks the transition into the following experiment section.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            elif self._appears_in_text(value, document_text):
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, value, document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_resnet_deep_results_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {"feature maps", "resnet", "model", "we combine six models"}
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
 
     def _score(self, value: Any, default: int) -> int:
         try:
