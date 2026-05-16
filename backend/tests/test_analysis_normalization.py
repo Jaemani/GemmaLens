@@ -1118,3 +1118,45 @@ def test_resnet_deep_bottleneck_results_section_recovers_imagenet_scaling_argume
         "This section shows very deep bottleneck ResNets outperform shallower ResNets and reach state-of-the-art ImageNet results."
     )
     assert result.sentences[0].core_structure == "Although A is significantly increased, B still has lower complexity than C."
+
+
+def test_resnet_cifar_architecture_section_filters_table_noise():
+    document = (
+        "The numbers of filters are {16, 32, 64} respectively. "
+        "The subsampling is performed by convolutions with a stride of 2. "
+        "The network ends with a global average pooling, a 10-way fully-connected layer, and softmax. "
+        "There are totally 6n+2 stacked weighted layers. "
+        "When shortcut connections are used, they are connected to the pairs of 3x3 layers, totally 3n shortcuts. "
+        "On this dataset we use identity shortcuts in all cases, i.e., option A. "
+        "method error Maxout NIN DSN FitNet Highway ResNet Classification error."
+    )
+    payload = {
+        "terms": [
+            {"term": "learning rate", "meaning": "not in this section"},
+            {"term": "Dropout", "meaning": "table noise"},
+            {"term": "For ResNet", "meaning": "fragment"},
+            {"term": "network", "meaning": "too generic"},
+        ],
+        "concepts": [
+            {"concept": "Dropout", "explanation": "table noise"},
+            {"concept": "For ResNet", "explanation": "fragment"},
+            {"concept": "network", "explanation": "too generic"},
+        ],
+        "phrases": [{"phrase": "subsampling is performed by convolutions with a stride of 2", "function": "method", "explanation": "useful"}],
+        "summaries": {"one_line": "The numbers of filters are {16, 32, 64} respectively."},
+        "sentences": [{"sentence": "The numbers of filters are {16, 32, 64} respectively.", "core_structure": "Main claim + explanation."}],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-cifar-arch", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert not {"learning rate", "Dropout", "For ResNet", "network"} & terms
+    assert not {"Dropout", "For ResNet", "network"} & concepts
+    assert {"stride of 2", "global average pooling", "10-way fully-connected layer", "6n+2 stacked weighted layers", "3n shortcuts"}.issubset(terms)
+    assert {"CIFAR-10 architecture", "6n+2 stacked weighted layers", "stride of 2", "global average pooling", "identity shortcuts in all cases"}.issubset(concepts)
+    assert {"subsampling is performed by", "network ends with", "There are totally", "When shortcut connections are used", "identity shortcuts in all cases"}.issubset(phrases)
+    assert "subsampling is performed by convolutions with a stride of 2" not in phrases
+    assert result.summaries.one_line == "This section defines the CIFAR-10 architecture used for controlled ResNet depth experiments."
+    assert result.sentences[0].core_structure == "The subsampling is performed by A with B."

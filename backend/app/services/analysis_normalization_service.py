@@ -27,6 +27,8 @@ class AnalysisNormalizationService:
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
             terms = self._filter_resnet_deep_results_noise(terms, "term")
+        if self._is_resnet_cifar_architecture_section(document_text):
+            terms = self._filter_resnet_cifar_architecture_noise(terms, "term")
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -50,6 +52,9 @@ class AnalysisNormalizationService:
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
             normalized["concepts"] = self._prefer_resnet_deep_results_concepts(normalized["concepts"], document_text)
+        if self._is_resnet_cifar_architecture_section(document_text):
+            normalized["concepts"] = self._prefer_resnet_cifar_architecture_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_resnet_cifar_architecture_noise(normalized["phrases"], "phrase")
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -951,6 +956,41 @@ class AnalysisNormalizationService:
                     "medium",
                     "It appears in the paper's experimental validation.",
                 ),
+                (
+                    "stride of 2",
+                    "A convolution setting that downsamples the spatial resolution by moving two pixels at a time.",
+                    "field_term",
+                    "medium",
+                    "This explains how the CIFAR-10 architecture performs subsampling.",
+                ),
+                (
+                    "global average pooling",
+                    "A pooling layer that averages each feature map before classification.",
+                    "field_term",
+                    "medium",
+                    "This is the final aggregation step before the classifier.",
+                ),
+                (
+                    "10-way fully-connected layer",
+                    "A classifier layer with ten output classes for CIFAR-10.",
+                    "field_term",
+                    "medium",
+                    "This connects the architecture to the ten CIFAR-10 classes.",
+                ),
+                (
+                    "6n+2 stacked weighted layers",
+                    "The depth formula for the CIFAR-10 residual/plain networks in this experiment.",
+                    "field_term",
+                    "hard",
+                    "This is how the paper maps n to 20/32/44/56-layer networks.",
+                ),
+                (
+                    "3n shortcuts",
+                    "The number of shortcut connections created by pairing 3x3 convolutional layers.",
+                    "field_term",
+                    "medium",
+                    "This identifies how many residual connections the CIFAR-10 architecture uses.",
+                ),
             ]
         else:
             known = [
@@ -1175,6 +1215,11 @@ class AnalysisNormalizationService:
                 ("won the 1st place", "result", "Reports competition-level empirical validation."),
                 ("Our focus is on", "method", "Signals the experimental aim before describing CIFAR-10 setup."),
                 ("but not on pushing", "contrast", "Clarifies that the CIFAR-10 experiment studies behavior rather than chasing the benchmark record."),
+                ("subsampling is performed by", "method", "Explains how spatial size is reduced in the CIFAR-10 architecture."),
+                ("network ends with", "method", "Introduces the final classifier layers of the architecture."),
+                ("There are totally", "general", "Signals the formula for total network depth."),
+                ("When shortcut connections are used", "method", "Explains where residual shortcuts are attached."),
+                ("identity shortcuts in all cases", "method", "States that CIFAR-10 experiments use the parameter-free option A shortcut."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
                 ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
@@ -1574,6 +1619,31 @@ class AnalysisNormalizationService:
                     "CIFAR-10 analysis transition",
                     "The shift from ImageNet results to controlled CIFAR-10 depth-behavior experiments.",
                     "This tells the reader the next section changes experimental purpose.",
+                ),
+                (
+                    "CIFAR-10 architecture",
+                    "The small-image residual/plain network design used for controlled CIFAR-10 experiments.",
+                    "This section defines the experiment architecture before comparing depth behavior.",
+                ),
+                (
+                    "6n+2 depth formula",
+                    "The formula that determines the total number of stacked weighted layers.",
+                    "This helps the reader connect n values to 20/32/44/56-layer networks.",
+                ),
+                (
+                    "stride-2 subsampling",
+                    "Downsampling performed by convolutions with stride 2.",
+                    "This explains how the network changes spatial resolution across feature-map sizes.",
+                ),
+                (
+                    "identity shortcut option A",
+                    "The parameter-free shortcut choice used for all CIFAR-10 cases in this section.",
+                    "This prevents the reader from confusing the CIFAR setup with the ImageNet projection options.",
+                ),
+                (
+                    "global average pooling",
+                    "The pooling layer before the 10-class classifier.",
+                    "This is part of the architecture endpoint, not a general vocabulary item.",
                 ),
                 (
                     "zero-padding shortcuts",
@@ -1994,6 +2064,34 @@ class AnalysisNormalizationService:
                     "This sentence helps distinguish analysis experiments from benchmark chasing.",
                 ),
                 (
+                    "subsampling is performed by",
+                    "The subsampling is performed by A with B.",
+                    "The authors explain how the network reduces spatial resolution.",
+                    "'is performed by'는 어떤 처리가 어떤 방법으로 수행되는지 설명합니다.",
+                    "The sentence is technical because it names both the operation and the implementation detail.",
+                ),
+                (
+                    "network ends with",
+                    "The network ends with A, B, and C.",
+                    "The authors list the final stages of the CIFAR-10 classifier.",
+                    "'ends with'는 모델 구조의 마지막 구성요소를 소개합니다.",
+                    "This is an architecture-list sentence, so read it as a sequence of layers.",
+                ),
+                (
+                    "There are totally",
+                    "There are totally A stacked weighted layers.",
+                    "The authors give the formula for total network depth.",
+                    "'There are totally'는 총 개수나 전체 구조를 요약하는 표현입니다.",
+                    "The hard part is connecting the formula to actual depths used later.",
+                ),
+                (
+                    "When shortcut connections are used",
+                    "When A are used, they are connected to B.",
+                    "The authors specify where residual shortcuts are attached.",
+                    "'When' 절은 조건을 제시하고, 주절은 그 조건에서의 배치를 설명합니다.",
+                    "The pronoun 'they' refers back to shortcut connections, which can be easy to miss.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -2348,6 +2446,23 @@ class AnalysisNormalizationService:
                         "The CIFAR-10 paragraph is a transition into controlled behavior analysis.",
                     ],
                 }
+            if self._is_resnet_cifar_architecture_section(document_text):
+                return {
+                    "one_line": "This section defines the CIFAR-10 architecture used for controlled ResNet depth experiments.",
+                    "simple": (
+                        "The authors describe the CIFAR-10 network layout: 3x3 convolutions, stride-2 subsampling, filter sizes 16/32/64, "
+                        "global average pooling, a 10-class classifier, and identity shortcuts attached to pairs of 3x3 layers."
+                    ),
+                    "academic": (
+                        "The section specifies the controlled CIFAR-10 architecture and shortcut policy before reporting depth comparisons, "
+                        "including the 6n+2 layer formula, 3n shortcut placement, and option-A identity shortcuts."
+                    ),
+                    "study_notes": [
+                        "Read this as experiment setup, not as the final result table.",
+                        "Save architecture terms like stride-2 subsampling and global average pooling; ignore table residue.",
+                        "Option A means identity shortcuts are used in all CIFAR-10 cases here.",
+                    ],
+                }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
                 return {
                     "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
@@ -2619,6 +2734,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_resnet_deep_bottleneck_results_section(document_text):
             return True
+        if self._is_resnet_cifar_architecture_section(document_text):
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -2847,6 +2964,7 @@ class AnalysisNormalizationService:
             or ("next we investigate projection shortcuts" in lowered and "we compare three options" in lowered)
             or ("the three layers are" in lowered and "bottleneck architectures" in lowered)
             or self._is_resnet_deep_bottleneck_results_section(document_text)
+            or self._is_resnet_cifar_architecture_section(document_text)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
@@ -2856,6 +2974,10 @@ class AnalysisNormalizationService:
     def _is_resnet_deep_bottleneck_results_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "50/101/152-layer resnets" in lowered and "won the 1st place" in lowered
+
+    def _is_resnet_cifar_architecture_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "6n+2 stacked weighted layers" in lowered and "identity shortcuts in all cases" in lowered
 
     def _prefer_resnet_deep_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         blocked = {"feature maps", "resnet", "model", "we combine six models"}
@@ -2914,6 +3036,66 @@ class AnalysisNormalizationService:
 
     def _filter_resnet_deep_results_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {"feature maps", "resnet", "model", "we combine six models"}
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_cifar_architecture_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"dropout", "for resnet", "network", "learning rate"}
+        preferred = {
+            "CIFAR-10 architecture": (
+                "The controlled small-image network design used before comparing depth behavior.",
+                "This section is mainly setup for the CIFAR-10 depth experiments.",
+            ),
+            "6n+2 stacked weighted layers": (
+                "The formula for the total depth of the CIFAR-10 networks.",
+                "This connects the architecture description to 20/32/44/56-layer variants.",
+            ),
+            "stride of 2": (
+                "The convolution stride used for subsampling.",
+                "This explains how feature-map resolution changes across stages.",
+            ),
+            "global average pooling": (
+                "The final pooling step before the CIFAR-10 classifier.",
+                "This is part of the architecture endpoint.",
+            ),
+            "identity shortcuts in all cases": (
+                "The option-A shortcut policy used for CIFAR-10 experiments.",
+                "This keeps the CIFAR setup distinct from the ImageNet projection comparisons.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            elif value == "CIFAR-10 architecture" or self._appears_in_text(value, document_text):
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, value if value != "CIFAR-10 architecture" else "CIFAR-10", document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_resnet_cifar_architecture_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {"dropout", "for resnet", "network", "learning rate"}
+        if key == "phrase":
+            blocked = {
+                *blocked,
+                "subsampling is performed by convolutions with a stride of 2",
+            }
         return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
 
     def _score(self, value: Any, default: int) -> int:
