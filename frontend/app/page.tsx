@@ -52,7 +52,7 @@ export default async function DashboardPage() {
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-semibold">Recent documents</h2>
               <Link href="/documents" className="inline-flex items-center gap-1 text-sm font-semibold text-accent">
-                Open <ArrowRight size={15} />
+                All documents <ArrowRight size={15} />
               </Link>
             </div>
             <div className="mt-3 divide-y divide-line">
@@ -76,8 +76,8 @@ export default async function DashboardPage() {
           <div className="rounded-lg border border-line bg-panel p-5 shadow-material">
             <h2 className="font-semibold">Current learning loop</h2>
             <div className="mt-4 space-y-3">
-              <LoopStep label="1" title="Section study" text="Read the source and analyze one paper section at a time" />
-              <LoopStep label="2" title="Paper map" text="Merge section lessons into argument flow and priority items" />
+              <LoopStep label="1" title="Source study" text="Read a PDF section, transcript segment, or passage with targeted language support" />
+              <LoopStep label="2" title="Learning map" text="Merge lessons into argument flow, concept anchors, and priority items" />
               <LoopStep label="3" title="Review queue" text="Save concepts, terms, expressions, and sentence patterns" />
             </div>
           </div>
