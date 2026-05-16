@@ -7503,7 +7503,22 @@ class AnalysisNormalizationService:
             "term",
             profile["terms"],
             limit=12,
-            blocked={"gradient", "learning rate", "batch normalization", "top-5 error", "ensemble", "imagenet", "internal covariate shift", "gradient descent step"},
+            blocked={
+                "gradient",
+                "learning rate",
+                "batch normalization",
+                "top-5 error",
+                "ensemble",
+                "imagenet",
+                "internal covariate shift",
+                "gradient descent step",
+                "mini-batch",
+                "normalize",
+                "convergence",
+                "stochastic optimization",
+                "minibatches",
+                "covariances",
+            },
         )
 
     def _prefer_batchnorm_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
@@ -7537,6 +7552,14 @@ class AnalysisNormalizationService:
                 "gradient descent optimization",
                 "normalization",
                 "activations",
+                "jacobians",
+                "covariance matrix",
+                "normalize",
+                "convergence",
+                "stochastic optimization",
+                "minibatches",
+                "covariances",
+                "singular covariance matrices",
             },
         )
 
@@ -7544,7 +7567,7 @@ class AnalysisNormalizationService:
         profile = self._batchnorm_profile(document_text)
         if not profile:
             return rows
-        return self._prefer_phrase_rows(rows, document_text, profile["phrases"], blocked={"we propose"})
+        return self._prefer_phrase_rows(rows, document_text, profile["phrases"], blocked={"we propose", "this motivates us to", "applied to"})
 
     def _prefer_attention_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         profile = self._attention_profile(document_text)
@@ -8916,6 +8939,141 @@ class AnalysisNormalizationService:
                 "The authors want normalization to be something the optimizer can account for.",
                 "'To address this issue'는 앞에서 제기한 문제를 해결하는 조건을 제시할 때 쓰입니다.",
                 "The section is short but abstract because it states a design constraint before showing the concrete mini-batch method.",
+            )
+        if "norm(x, x" in lowered and "this motivates us to seek an alternative" in lowered:
+            return profile(
+                "This section rejects full whitening and motivates a differentiable mini-batch alternative.",
+                (
+                    "The paper explains that normalization depends on both the current example and other training examples, so backpropagation would need difficult derivatives. "
+                    "Full whitening is expensive, so the authors seek a differentiable method that avoids analyzing the whole training set after every update."
+                ),
+                (
+                    "The passage closes the argument against full whitening: computing covariance matrices, inverse square roots, and all needed derivatives is too expensive, "
+                    "and single-example statistics discard useful scale information."
+                ),
+                [
+                    "This is the final motivation before mini-batch statistics.",
+                    "The important language move is 'This motivates us to seek an alternative'.",
+                    "Do not study Norm(x, X) as a term unless you need the math.",
+                ],
+                [
+                    ("Norm(x, X)", "Normalization transformation depending on one example and all examples.", "Norm(x, X"),
+                    ("Jacobians", "Derivatives needed for backpropagation through normalization.", "Jacobians"),
+                    ("covariance matrix", "Matrix required for full whitening.", "covariance matrix"),
+                    ("inverse square root", "Matrix operation needed for whitening.", "inverse square root"),
+                    ("whitened activations", "Activations after covariance-based whitening.", "whitened activations"),
+                    ("differentiable", "Property required for optimization through normalization.", "differentiable"),
+                    ("entire training set", "Dataset the authors want to avoid reanalyzing after every update.", "entire training set"),
+                    ("absolute scale of activations", "Information lost by some previous single-example methods.", "absolute scale of activations"),
+                ],
+                [
+                    ("full-whitening cost", "Whitening needs covariance, inverse square root, and derivatives.", "whitening the layer inputs is expensive"),
+                    ("differentiable-alternative motivation", "The authors need a cheaper differentiable normalization method.", "This motivates us to seek an alternative"),
+                    ("scale-preservation concern", "The method should preserve activation scale information.", "preserve the information"),
+                ],
+                [
+                    ("which depends not only on", "method", "Explains dependency scope."),
+                    ("For backpropagation", "method", "Introduces derivative requirements."),
+                    ("Within this framework", "general", "Evaluates the method under stated assumptions."),
+                    ("This motivates us to seek", "method", "Connects cost to the next design."),
+                    ("However", "contrast", "Introduces a problem with prior approaches."),
+                    ("We want to preserve", "claim", "States a design goal."),
+                ],
+                "This motivates us to seek an alternative",
+                "This motivates us to seek an alternative that does X and does not require Y.",
+                "Because full whitening is expensive, the authors seek a cheaper differentiable normalization method.",
+                "'This motivates us to seek'는 앞의 한계가 다음 설계 선택으로 이어진다는 신호입니다.",
+                "The section is dense because it contains transformation notation, derivative requirements, and design constraints.",
+            )
+        if "normalize each scalar feature independently" in lowered and "scale and shift the normalized value" in lowered:
+            return profile(
+                "This section introduces per-feature normalization and learned scale/shift parameters.",
+                (
+                    "The first simplification is to normalize each scalar feature independently to mean zero and variance one. "
+                    "Because pure normalization could reduce what a layer can represent, the method adds learned gamma and beta parameters to scale and shift the normalized value."
+                ),
+                (
+                    "The passage introduces the core representation-preserving idea of BatchNorm: normalize each dimension separately, "
+                    "then restore network capacity with learned affine parameters that can recover the identity transformation if needed."
+                ),
+                [
+                    "This is one of the key algorithm sections.",
+                    "Gamma and beta are not optional details; they preserve representation power.",
+                    "The second simplification starts at the end: use mini-batches to estimate mean and variance.",
+                ],
+                [
+                    ("scalar feature", "One dimension of a layer input normalized independently.", "scalar feature"),
+                    ("mean of zero", "Target mean after normalization.", "mean of zero"),
+                    ("variance of 1", "Target variance after normalization.", "variance of 1"),
+                    ("identity transform", "Transform the network can still represent after normalization.", "identity transform"),
+                    ("parameters γ, β", "Learned scale and shift parameters.", "parameters γ"),
+                    ("scale and shift", "Affine operation applied after normalization.", "scale and shift"),
+                    ("representation power", "Network's ability to express useful activations.", "representation power"),
+                    ("mini-batches", "Batches used to estimate activation mean and variance.", "mini-batches"),
+                ],
+                [
+                    ("per-feature normalization", "Features are normalized independently instead of full whitening.", "normalize each scalar feature independently"),
+                    ("affine recovery mechanism", "Gamma and beta let the network recover identity if needed.", "represent the identity transform"),
+                    ("mini-batch-statistics simplification", "Each mini-batch estimates mean and variance for each activation.", "mini-batch produces estimates"),
+                ],
+                [
+                    ("The first is that", "method", "Introduces the first simplification."),
+                    ("instead of", "contrast", "Contrasts scalar normalization with whitening."),
+                    ("To address this", "method", "Introduces the fix."),
+                    ("To accomplish this", "method", "Introduces implementation details."),
+                    ("These parameters are learned", "method", "Explains trainable parameters."),
+                    ("Therefore", "claim", "Introduces the second simplification."),
+                ],
+                "To address this, we make sure that the transformation inserted in the network can represent the identity transform.",
+                "To address X, we make sure that Y can Z.",
+                "Gamma and beta let normalization preserve the layer's ability to represent the identity transform.",
+                "'To address this'는 바로 앞의 문제를 해결하는 장치를 소개하는 표현입니다.",
+                "The section is algorithmically important because normalization and representation preservation are introduced together.",
+            )
+        if "batch normalizing transform" in lowered and "algorithm 1" in lowered:
+            return profile(
+                "This section defines the Batch Normalizing Transform over a mini-batch.",
+                (
+                    "The paper explains why mini-batches make per-dimension normalization practical, then defines BN_gamma,beta: compute mini-batch mean and variance, "
+                    "normalize each activation, and apply learned scale and shift."
+                ),
+                (
+                    "The passage is the algorithm definition: it avoids joint covariance issues, focuses on one activation dimension, defines the Batch Normalizing Transform, "
+                    "and states Algorithm 1 with mean, variance, normalization, scale, and shift steps."
+                ),
+                [
+                    "This is the core algorithm card for BatchNorm.",
+                    "Read Algorithm 1 as four operations: mean, variance, normalize, scale/shift.",
+                    "Epsilon is for numerical stability, not a learned parameter.",
+                ],
+                [
+                    ("per-dimension variances", "Variance computed per activation dimension.", "per-dimension variances"),
+                    ("joint covariances", "Full covariance terms avoided by the simplification.", "joint covariances"),
+                    ("singular covariance matrices", "Failure mode avoided when mini-batches are small.", "singular covariance matrices"),
+                    ("mini-batch mean", "Mean computed over the mini-batch.", "mini-batch mean"),
+                    ("mini-batch variance", "Variance computed over the mini-batch.", "mini-batch variance"),
+                    ("Batch Normalizing Transform", "BN_gamma,beta transform applied to activations.", "Batch Normalizing Transform"),
+                    ("numerical stability", "Reason epsilon is added to variance.", "numerical stability"),
+                    ("scale and shift", "Final learned affine transform with gamma and beta.", "scale and shift"),
+                ],
+                [
+                    ("BN algorithm steps", "Algorithm 1 computes mean, variance, normalization, then scale/shift.", "Algorithm 1"),
+                    ("small-batch covariance problem", "Joint covariance can be singular when batch size is smaller than activation count.", "singular covariance matrices"),
+                    ("mini-batch transform definition", "BN_gamma,beta maps mini-batch activations to normalized scaled outputs.", "BNγ,β"),
+                ],
+                [
+                    ("is enabled by", "claim", "Explains why mini-batches are possible."),
+                    ("rather than", "contrast", "Contrasts per-dimension variance with joint covariance."),
+                    ("Consider", "general", "Introduces the setup."),
+                    ("We refer to", "claim", "Names the transform."),
+                    ("In the algorithm", "general", "Explains an algorithm detail."),
+                    ("for numerical stability", "method", "Explains epsilon's purpose."),
+                ],
+                "We refer to the transform BNγ,β",
+                "We refer to X as Y.",
+                "The authors name the mini-batch normalization operation the Batch Normalizing Transform.",
+                "'We refer to X as Y'는 논문에서 새 개념이나 연산에 이름을 붙이는 표현입니다.",
+                "The section combines statistical motivation and algorithm notation, so the reader needs a step-by-step view.",
             )
         return None
 

@@ -159,6 +159,7 @@ Local demo records currently include:
 - Corpus-level audit exposed a history UX problem: duplicate PDFs can coexist with different analysis coverage, such as one complete ResNet record and one 1/28 partial ResNet record. Document list responses now include analyzed/total section counts, and Dashboard/Documents surface progress badges so users can avoid opening partial duplicates during demos.
 - Real BatchNorm sections 2-4 exposed early-paper failures: SGD/minibatch setup, sub-network equations, and sigmoid saturation were copied as first sentences or reduced to duplicated terms/concepts. BatchNorm profiles now teach the argument chain from minibatch SGD to internal covariate shift and the problem-to-method transition into Batch Normalization.
 - Real BatchNorm sections 5-7 exposed method-setup failures: benefit lists, whitening motivation, and normalization/backpropagation requirements returned no phrases or duplicated raw terms as concepts. BatchNorm profiles now separate benefit stack, naive-normalization failure, and normalization-in-graph requirement.
+- Real BatchNorm sections 8-10 exposed core-algorithm failures: full-whitening motivation, scalar feature normalization, gamma/beta scale-shift, and Algorithm 1 were copied as fragments or padded with generic terms. BatchNorm profiles now teach the transition from full whitening to differentiable mini-batch statistics and the Batch Normalizing Transform steps.
 
 ## Still Weak
 
