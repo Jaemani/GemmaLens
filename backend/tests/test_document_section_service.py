@@ -175,3 +175,28 @@ def test_document_section_service_skips_resnet_cifar_figure_artifacts():
     assert "iter. (1e4)" not in joined
     assert "Dashed lines denote training error" not in joined
     assert "The 1202-layer network" in joined
+
+
+def test_document_section_service_skips_bibliography_artifacts_but_keeps_appendix():
+    references = (
+        "References [1] Y. Bengio, P. Simard, and P. Frasconi. Learning long-term dependencies with gradient descent is difficult. "
+        "IEEE Transactions on Neural Networks, 1994. [2] C. M. Bishop. Neural networks for pattern recognition. Oxford university press, 1995. "
+        "[3] S. Ioffe and C. Szegedy. Batch normalization. In ICML, 2015. [4] S. Ren et al. Faster R-CNN. In NIPS, 2015."
+    )
+    appendix = (
+        "A. Object Detection Baselines In this section we introduce our detection method based on the baseline Faster R-CNN system. "
+        "The models are initialized by the ImageNet classification models, and then fine-tuned on the object detection data."
+    )
+    text = (
+        "[[GEMMALENS_PDF_PAGE:9]]\n"
+        f"{references} "
+        "[[GEMMALENS_PDF_PAGE:10]]\n"
+        f"{appendix}"
+    )
+
+    sections = DocumentSectionService().split_with_labels(text)
+    joined = " ".join(section.text for section in sections)
+
+    assert "References [1]" not in joined
+    assert "IEEE Transactions" not in joined
+    assert "Object Detection Baselines" in joined

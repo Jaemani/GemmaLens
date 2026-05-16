@@ -1292,3 +1292,37 @@ def test_resnet_detection_transfer_section_recovers_representation_generalizatio
     assert {"replacing VGG-16 with ResNet-101", "can only be attributed to", "Most remarkably", "relative improvement", "solely due to", "Based on deep residual nets"}.issubset(phrases)
     assert result.summaries.one_line == "This section shows ResNet-101 improves object detection by providing better learned representations."
     assert result.sentences[0].core_structure == "A can only be attributed to B."
+
+
+def test_resnet_detection_baseline_section_recovers_appendix_implementation():
+    document = (
+        "A. Object Detection Baselines In this section we introduce our detection method based on the baseline Faster R-CNN system. "
+        "The models are initialized by the ImageNet classification models, and then fine-tuned on the object detection data. "
+        "We have experimented with ResNet-50/101 at the time of the ILSVRC & COCO 2015 detection competitions. "
+        "Unlike VGG-16 used in Faster R-CNN, our ResNet has no hidden fc layers. "
+        "We adopt the idea of Networks on Conv feature maps (NoC) to address this issue. "
+        "We compute the full-image shared conv feature maps using layers whose strides on the image are no greater than 16 pixels."
+    )
+    payload = {
+        "terms": [{"term": "ImageNet classification", "meaning": "too broad"}],
+        "concepts": [{"concept": "ImageNet classification", "explanation": "too broad"}],
+        "phrases": [],
+        "summaries": {"one_line": "A."},
+        "sentences": [{"sentence": "A.", "core_structure": "Main claim + explanation."}],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-detection-baseline", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "ImageNet classification" not in terms
+    assert "ImageNet classification" not in concepts
+    assert "feature maps" not in concepts
+    assert {"Faster R-CNN", "full-image shared conv feature maps"}.issubset(terms)
+    assert "ImageNet" not in terms
+    assert "feature maps" not in terms
+    assert {"Faster R-CNN baseline adaptation", "ImageNet-to-detection fine-tuning", "ResNet without hidden fc layers", "shared convolutional feature maps"}.issubset(concepts)
+    assert {"detection method based on", "initialized by", "fine-tuned on", "Unlike VGG-16", "adopt the idea of", "to address this issue"}.issubset(phrases)
+    assert result.summaries.one_line == "This appendix section explains how ResNet classification backbones are adapted for Faster R-CNN detection."
+    assert result.sentences[0].core_structure == "A are initialized by B and then fine-tuned on C."

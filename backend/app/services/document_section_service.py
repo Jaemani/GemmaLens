@@ -122,6 +122,8 @@ class DocumentSectionService:
             return False
         if self._is_table_like_artifact(lowered):
             return False
+        if self._is_bibliography_artifact(lowered):
+            return False
         non_content_markers = [
             "work performed while",
             "conference on neural information processing systems",
@@ -153,6 +155,27 @@ class DocumentSectionService:
         stride_count = lowered.count("/2")
         pool_count = lowered.count("pool")
         return conv_count >= 15 and stride_count >= 4 and pool_count >= 3
+
+    def _is_bibliography_artifact(self, lowered: str) -> bool:
+        if lowered.startswith("references ["):
+            return True
+        citation_count = len(re.findall(r"\[\d+]", lowered))
+        venue_markers = sum(
+            lowered.count(marker)
+            for marker in (
+                " in nips",
+                " in icml",
+                " in cvpr",
+                " in iccv",
+                " tpami",
+                " arxiv:",
+                " ieee transactions",
+                " neural computation",
+                " cambridge university press",
+                " oxford university press",
+            )
+        )
+        return citation_count >= 3 and venue_markers >= 2
 
     def _is_short_artifact(self, lowered: str) -> bool:
         artifact_markers = [

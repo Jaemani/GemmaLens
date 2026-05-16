@@ -372,21 +372,21 @@ def test_paper_map_argument_flow_keeps_latest_section_when_longer_than_limit():
                 }
             ),
         )
-        for index in range(1, 19)
+        for index in range(1, 21)
     ]
 
     paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows(sections)).build(
-        "doc-flow-latest", [f"section {index}" for index in range(19)]
+        "doc-flow-latest", [f"section {index}" for index in range(21)]
     )
 
-    assert any(item.startswith("S19:") for item in paper_map.synthesis.argument_flow)
+    assert any(item.startswith("S21:") for item in paper_map.synthesis.argument_flow)
     assert any("more analyzed section summaries" in item for item in paper_map.synthesis.argument_flow)
 
 
-def test_paper_map_argument_flow_shows_eighteen_section_reading_path():
+def test_paper_map_argument_flow_shows_twenty_section_reading_path():
     base = AnalysisResult.model_validate(
         {
-            "document_id": "doc-flow-18",
+            "document_id": "doc-flow-20",
             "domain": {"primary_domain": "Machine Learning", "secondary_domains": [], "document_type": "paper", "confidence": 0.5},
             "difficulty": {"overall_level": "C2", "lexical_difficulty": 6, "syntax_difficulty": 6, "domain_difficulty": 8, "reason": "test"},
             "terms": [],
@@ -408,15 +408,15 @@ def test_paper_map_argument_flow_shows_eighteen_section_reading_path():
                 }
             ),
         )
-        for index in range(1, 18)
+        for index in range(1, 20)
     ]
 
     paper_map = PaperMapService(FakeAnalysisRepository(base), FakeSectionAnalysisRepositoryWithRows(sections)).build(
-        "doc-flow-18", [f"section {index}" for index in range(18)]
+        "doc-flow-20", [f"section {index}" for index in range(20)]
     )
 
-    assert len(paper_map.synthesis.argument_flow) == 18
-    assert paper_map.synthesis.argument_flow[-1].startswith("S18:")
+    assert len(paper_map.synthesis.argument_flow) == 20
+    assert paper_map.synthesis.argument_flow[-1].startswith("S20:")
     assert not any("more analyzed section summaries" in item for item in paper_map.synthesis.argument_flow)
 
 
