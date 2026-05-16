@@ -1253,3 +1253,42 @@ def test_resnet_over_1000_layers_section_recovers_optimization_vs_overfitting():
     assert "Exploring Over 1000 layers" not in phrases
     assert result.summaries.one_line == "This section stress-tests a 1202-layer ResNet and separates optimization success from overfitting."
     assert result.sentences[0].core_structure == "A shows no B, and C is able to achieve D."
+
+
+def test_resnet_detection_transfer_section_recovers_representation_generalization():
+    document = (
+        "Here we are interested in the improvements of replacing VGG-16 with ResNet-101. "
+        "The detection implementation of using both models is the same, so the gains can only be attributed to better networks. "
+        "Most remarkably, on the challenging COCO dataset we obtain a 6.0% increase in COCO's standard metric (mAP@[.5, .95]), which is a 28% relative improvement. "
+        "This gain is solely due to the learned representations. "
+        "Based on deep residual nets, we won the 1st places in several tracks in ILSVRC & COCO 2015 competitions: ImageNet detection, ImageNet localization, COCO detection, and COCO segmentation."
+    )
+    payload = {
+        "terms": [
+            {"term": "VGG-16", "meaning": "baseline only"},
+            {"term": "attributed to better networks", "meaning": "fragment"},
+        ],
+        "concepts": [
+            {"concept": "VGG-16", "explanation": "baseline only"},
+            {"concept": "attributed to better networks", "explanation": "fragment"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "Here we are interested in the improvements of replacing VGG-16 with ResNet-101."},
+        "sentences": [{"sentence": "Here we are interested in the improvements of replacing VGG-16 with ResNet-101.", "core_structure": "Main claim + explanation."}],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-detection-transfer", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert "VGG-16" not in terms
+    assert "ImageNet" not in terms
+    assert "attributed to better networks" not in terms
+    assert "VGG-16" not in concepts
+    assert "attributed to better networks" not in concepts
+    assert {"ResNet-101", "detection implementation", "COCO dataset", "mAP@[.5, .95]", "learned representations", "ILSVRC & COCO 2015 competitions"}.issubset(terms)
+    assert {"object-detection transfer", "representation quality attribution", "COCO relative improvement", "competition-level generalization"}.issubset(concepts)
+    assert {"replacing VGG-16 with ResNet-101", "can only be attributed to", "Most remarkably", "relative improvement", "solely due to", "Based on deep residual nets"}.issubset(phrases)
+    assert result.summaries.one_line == "This section shows ResNet-101 improves object detection by providing better learned representations."
+    assert result.sentences[0].core_structure == "A can only be attributed to B."

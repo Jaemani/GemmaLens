@@ -33,6 +33,8 @@ class AnalysisNormalizationService:
             terms = self._filter_resnet_cifar_depth_behavior_noise(terms, "term")
         if self._is_resnet_over_1000_layers_section(document_text):
             terms = self._filter_resnet_over_1000_layers_noise(terms, "term")
+        if self._is_resnet_detection_transfer_section(document_text):
+            terms = self._filter_resnet_detection_transfer_noise(terms, "term")
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -65,6 +67,9 @@ class AnalysisNormalizationService:
         if self._is_resnet_over_1000_layers_section(document_text):
             normalized["concepts"] = self._prefer_resnet_over_1000_layers_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_resnet_over_1000_layers_noise(normalized["phrases"], "phrase")
+        if self._is_resnet_detection_transfer_section(document_text):
+            normalized["concepts"] = self._prefer_resnet_detection_transfer_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_resnet_detection_transfer_noise(normalized["phrases"], "phrase")
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -1057,6 +1062,48 @@ class AnalysisNormalizationService:
                     "hard",
                     "The authors use this design choice instead of maxout/dropout in the paper.",
                 ),
+                (
+                    "ResNet-101",
+                    "A 101-layer residual network used here as a stronger feature extractor than VGG-16.",
+                    "field_term",
+                    "hard",
+                    "This is the model swap being tested in object detection.",
+                ),
+                (
+                    "detection implementation",
+                    "The object-detection system held constant while the backbone changes.",
+                    "field_term",
+                    "medium",
+                    "This makes the comparison isolate the network representation as the source of gains.",
+                ),
+                (
+                    "COCO dataset",
+                    "A challenging object-detection benchmark used to evaluate transfer performance.",
+                    "field_term",
+                    "hard",
+                    "This is where ResNet-101 shows a large transfer gain.",
+                ),
+                (
+                    "mAP@[.5, .95]",
+                    "COCO's standard detection metric averaged over IoU thresholds from .5 to .95.",
+                    "field_term",
+                    "hard",
+                    "This is the metric where ResNet improves by 6.0 points.",
+                ),
+                (
+                    "learned representations",
+                    "The internal features learned by the network and reused for downstream tasks.",
+                    "field_term",
+                    "hard",
+                    "The paper says the detection gain comes from better representations.",
+                ),
+                (
+                    "ILSVRC & COCO 2015 competitions",
+                    "The recognition/detection competitions where deep residual nets won several tracks.",
+                    "useful",
+                    "medium",
+                    "This provides external validation beyond the classification experiments.",
+                ),
             ]
         else:
             known = [
@@ -1302,6 +1349,12 @@ class AnalysisNormalizationService:
                 ("because of overfitting", "claim", "Explains the likely cause of worse test performance despite low training error."),
                 ("unnecessarily large", "limitation", "Explains why the 1202-layer network may overfit the small dataset."),
                 ("without distracting from", "method", "Explains why the paper avoids stronger regularization in this experiment."),
+                ("replacing VGG-16 with ResNet-101", "method", "Introduces the controlled model swap used for object detection."),
+                ("can only be attributed to", "claim", "Explains why the gains are credited to better networks rather than implementation changes."),
+                ("Most remarkably", "result", "Highlights the strongest reported transfer result."),
+                ("relative improvement", "result", "Expresses the gain as a percentage relative to the baseline."),
+                ("solely due to", "claim", "Attributes the improvement to learned representations."),
+                ("Based on deep residual nets", "claim", "Connects competition wins to the residual-network backbone."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
                 ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
@@ -1766,6 +1819,26 @@ class AnalysisNormalizationService:
                     "regularization tradeoff",
                     "The paper avoids maxout/dropout to keep the focus on optimization, while acknowledging stronger regularization may improve results.",
                     "This helps the learner distinguish research focus from best possible benchmark performance.",
+                ),
+                (
+                    "object-detection transfer",
+                    "The test of replacing a VGG-16 detector backbone with ResNet-101 while keeping the detection implementation the same.",
+                    "This shows whether residual representations help outside image classification.",
+                ),
+                (
+                    "representation quality attribution",
+                    "The argument that detection gains come from better networks because the implementation is held constant.",
+                    "This is the section's causal reasoning step.",
+                ),
+                (
+                    "COCO relative improvement",
+                    "The 6.0-point gain on mAP@[.5, .95], described as a 28% relative improvement.",
+                    "This is the strongest numeric evidence in the section.",
+                ),
+                (
+                    "competition-level generalization",
+                    "The claim that deep residual nets won multiple ILSVRC and COCO 2015 tracks.",
+                    "This supports the broader value of learned residual representations.",
                 ),
                 (
                     "zero-padding shortcuts",
@@ -2256,6 +2329,27 @@ class AnalysisNormalizationService:
                     "The pronoun 'this' refers to the worse testing result, so the reader must connect it backward.",
                 ),
                 (
+                    "can only be attributed to",
+                    "A can only be attributed to B.",
+                    "The authors explain why the improvement should be credited to better network representations.",
+                    "'can only be attributed to'는 원인을 하나로 제한해서 주장하는 표현입니다.",
+                    "This is a causal-attribution sentence; read what was controlled before accepting the cause.",
+                ),
+                (
+                    "Most remarkably",
+                    "Most remarkably, on A we obtain B, which is C.",
+                    "The authors highlight the strongest object-detection transfer result.",
+                    "'Most remarkably'는 여러 결과 중 특히 중요한 결과를 강조합니다.",
+                    "The sentence combines dataset, metric, absolute gain, and relative gain.",
+                ),
+                (
+                    "solely due to",
+                    "This gain is solely due to A.",
+                    "The authors attribute the detection improvement to learned representations.",
+                    "'solely due to'는 오직 그 원인 때문이라고 강하게 말합니다.",
+                    "This short sentence carries the main transfer-learning claim.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -2661,6 +2755,23 @@ class AnalysisNormalizationService:
                         "Read maxout/dropout as regularization context, not as the paper's main method.",
                     ],
                 }
+            if self._is_resnet_detection_transfer_section(document_text):
+                return {
+                    "one_line": "This section shows ResNet-101 improves object detection by providing better learned representations.",
+                    "simple": (
+                        "The authors replace VGG-16 with ResNet-101 in the same detection system. Because the implementation stays the same, "
+                        "the COCO improvement can be credited to better network representations, and residual nets win several ILSVRC/COCO tracks."
+                    ),
+                    "academic": (
+                        "The section evaluates transfer from classification to detection by holding the Faster R-CNN implementation constant and changing the backbone from VGG-16 to ResNet-101, "
+                        "attributing the COCO mAP gain and competition results to stronger learned representations."
+                    ),
+                    "study_notes": [
+                        "Read this as transfer/generalization evidence, not another CIFAR architecture section.",
+                        "The causal logic is controlled comparison: same detector, better backbone.",
+                        "Save learned representations and COCO metric as study anchors.",
+                    ],
+                }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
                 return {
                     "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
@@ -2938,6 +3049,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_resnet_over_1000_layers_section(document_text):
             return True
+        if self._is_resnet_detection_transfer_section(document_text):
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -3169,6 +3282,7 @@ class AnalysisNormalizationService:
             or self._is_resnet_cifar_architecture_section(document_text)
             or self._is_resnet_cifar_depth_behavior_section(document_text)
             or self._is_resnet_over_1000_layers_section(document_text)
+            or self._is_resnet_detection_transfer_section(document_text)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
@@ -3190,6 +3304,10 @@ class AnalysisNormalizationService:
     def _is_resnet_over_1000_layers_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "1202-layer network" in lowered and "because of overfitting" in lowered
+
+    def _is_resnet_detection_transfer_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "replacing vgg-16" in lowered and "resnet-101" in lowered and "learned representations" in lowered
 
     def _prefer_resnet_deep_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         blocked = {"feature maps", "resnet", "model", "we combine six models"}
@@ -3421,6 +3539,58 @@ class AnalysisNormalizationService:
 
     def _filter_resnet_over_1000_layers_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {"dropout", "resnet", "dashed lines denote training", "applied to", "exploring over 1000 layers"}
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_detection_transfer_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"vgg-16", "attributed to better networks"}
+        preferred = {
+            "object-detection transfer": (
+                "The controlled replacement of VGG-16 with ResNet-101 in the same detection system.",
+                "This tests whether residual representations help outside classification.",
+            ),
+            "representation quality attribution": (
+                "The claim that gains come from better networks because the detection implementation is unchanged.",
+                "This is the causal logic of the section.",
+            ),
+            "COCO relative improvement": (
+                "A 6.0-point gain on COCO mAP@[.5, .95], described as 28% relative improvement.",
+                "This is the strongest numeric transfer result.",
+            ),
+            "competition-level generalization": (
+                "Residual nets win multiple ILSVRC and COCO 2015 detection/localization/segmentation tracks.",
+                "This supports the broader usefulness of learned representations.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = "learned representations" if "representation" in lowered else "ResNet-101"
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_resnet_detection_transfer_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {"vgg-16", "imagenet", "attributed to better networks"}
         return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
 
     def _score(self, value: Any, default: int) -> int:
