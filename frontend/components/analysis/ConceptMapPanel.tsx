@@ -52,7 +52,7 @@ export function ConceptMapPanel({ analysis, sourceKind = "document" }: { analysi
         <h2 className="mt-1 text-lg font-semibold">{copy.title}</h2>
         <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">{copy.description}</p>
       </div>
-      <div className="grid gap-4 p-5 md:grid-cols-2">
+      <div className="grid gap-4 p-5">
         {concepts.map((concept) => {
           const isSaved = saved.has(concept.concept);
           return (

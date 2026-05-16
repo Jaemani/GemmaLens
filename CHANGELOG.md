@@ -22,6 +22,7 @@
 - Added Attention/Transformer paper normalization guardrails so discourse signals such as `the best performing models` are not treated as saveable vocabulary, while Transformer, self-attention, sequence transduction, and parallelization are preserved as learning objects.
 - Added a paper-map reading guide that synthesizes analyzed sections into `thesis so far`, coverage note, reading focus, and next steps instead of only showing concept/term/expression lists.
 - Added cached section-lesson retrieval. Selecting an already analyzed section now loads its saved lesson instead of requiring the user to run analysis again.
+- Simplified analysis-column card grids to one readable column in the PDF workspace, avoiding cramped concept/term/expression cards on normal desktop widths.
 - Replaced the native embedded PDF iframe with a PDF.js canvas preview, so the demo reliably shows the original PDF and supports PDF page Previous/Next controls.
 - Promoted extracted-section navigation so section Previous/Next and "Analyze this section" are visible without opening a hidden debug text block.
 - Added BERT-family learning guardrails after testing the BERT paper: BERT results now prioritize BERT, pre-training, fine-tuning, masked language model, and next sentence prediction instead of unrelated terms that merely appear elsewhere in the paper.

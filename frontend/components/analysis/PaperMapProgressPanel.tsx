@@ -70,12 +70,12 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
           Refresh
         </button>
       </div>
-      <div className="grid gap-4 p-5 lg:grid-cols-3">
+      <div className="grid gap-4 p-5">
         <div className="rounded-md border border-line bg-surface p-4 lg:col-span-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{guide.title}</p>
           <p className="mt-2 text-sm leading-6 text-ink">{guide.thesis_so_far}</p>
           <p className="mt-2 text-xs leading-5 text-neutral-600">{guide.coverage_note}</p>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="mt-4 grid gap-4">
             <GuideList title="Reading focus" rows={guide.reading_focus} />
             <GuideList title="Next steps" rows={guide.next_steps} />
           </div>
@@ -87,7 +87,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
       <div className="border-t border-line p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Analyzed sections</p>
         {paperMap.section_summaries.length ? (
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="mt-3 grid gap-3">
             {paperMap.section_summaries.map((summary) => (
               <article key={summary.text} className="rounded-md border border-line bg-surface p-3">
                 <p className="text-sm font-semibold text-ink">{summary.text}</p>

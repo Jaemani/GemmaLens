@@ -398,7 +398,7 @@ export function SectionLessonCard({
           </div>
         </div>
       ) : null}
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
+      <div className="mt-5 grid gap-4">
         <MiniList title="Terms to notice" rows={terms.map((term) => [term.term, term.meaning])} />
         <MiniList title="Academic expressions" rows={phrases.map((phrase) => [phrase.phrase, phrase.explanation])} />
       </div>
