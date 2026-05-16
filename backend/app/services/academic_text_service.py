@@ -1,5 +1,7 @@
 import re
 
+from app.services.text_cleanup_service import normalize_pdf_ligatures
+
 
 class AcademicTextService:
     page_marker_pattern = re.compile(r"\[\[GEMMALENS_PDF_PAGE:\d+]]")
@@ -12,6 +14,7 @@ class AcademicTextService:
         return self._drop_obvious_front_matter(normalized_lines)
 
     def _clean_lines(self, text: str) -> str:
+        text = normalize_pdf_ligatures(text)
         lines: list[str] = []
         for raw_line in text.replace("\r\n", "\n").splitlines():
             line = " ".join(raw_line.split())
@@ -54,6 +57,7 @@ class AcademicTextService:
         return False
 
     def _normalize_for_model(self, text: str) -> str:
+        text = normalize_pdf_ligatures(text)
         text = re.sub(r"\n(?=\d+\s+[A-Z][A-Za-z ]{2,}\n)", "\n\n", text)
         text = re.sub(r"([A-Za-z]{3,})-\s+([a-z]{2,})", r"\1\2", text)
         text = re.sub(r"([A-Za-z]{3,})-\s*\n\s*([a-z]{2,})", r"\1\2", text)

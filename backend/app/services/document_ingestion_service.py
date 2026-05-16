@@ -5,6 +5,7 @@ from fastapi import UploadFile
 
 from app.core.config import get_settings
 from app.schemas.document_schema import DocumentCreate
+from app.services.text_cleanup_service import normalize_pdf_ligatures
 
 
 class DocumentIngestionError(ValueError):
@@ -16,6 +17,7 @@ class DocumentIngestionService:
         self.settings = get_settings()
 
     def normalize_text(self, text: str) -> str:
+        text = normalize_pdf_ligatures(text)
         return "\n".join(line.strip() for line in text.replace("\r\n", "\n").splitlines() if line.strip())
 
     async def from_upload(self, file: UploadFile) -> DocumentCreate:

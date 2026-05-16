@@ -247,6 +247,21 @@ Unlike recent language repre- sentation models, BERT is designed to pre- train d
     assert not re.search(r"\bsentation models\b", readable)
 
 
+def test_academic_text_service_repairs_pdf_ligatures():
+    raw_text = """
+Abstract
+Deeper neural networks are more difﬁcult to train.
+We provide comprehensive empirical evidence showing the beneﬁt of residual functions.
+"""
+
+    readable = AcademicTextService().readable_section(raw_text)
+
+    assert "difficult" in readable
+    assert "benefit" in readable
+    assert "difﬁcult" not in readable
+    assert "beneﬁt" not in readable
+
+
 def test_batch_norm_real_paper_snippet_keeps_concepts_and_fragments_separate():
     document = (
         "Training Deep Neural Networks is complicated by the fact that the distribution of each layer's inputs changes during training, "
@@ -479,3 +494,21 @@ def test_resnet_real_paper_snippet_repairs_fragments_and_summary():
     assert "to ease the training of" in {phrase.phrase for phrase in result.phrases}
     assert result.summaries.one_line == "The paper introduces residual learning to train much deeper image-recognition networks."
     assert result.sentences[0].core_structure == "We present X to ease Y."
+
+
+def test_resnet_ligature_phrase_is_normalized_for_learning_output():
+    document = (
+        "Deeper neural networks are more difﬁcult to train. "
+        "We present a residual learning framework to ease the training of networks that are substantially deeper than those used previously."
+    )
+    payload = {
+        "phrases": [{"phrase": "more difﬁcult to train", "explanation": "bad ligature should be normalized"}],
+        "terms": [{"term": "residual learning framework", "meaning": "method for deeper networks"}],
+        "concepts": [{"concept": "residual learning framework", "explanation": "main method"}],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-ligature", document)
+
+    assert "more difficult to train" in {phrase.phrase for phrase in result.phrases}
+    assert "more difﬁcult to train" not in {phrase.phrase for phrase in result.phrases}
+    assert all("ﬁ" not in term.source_sentence for term in result.terms)

@@ -1,6 +1,8 @@
 import re
 from dataclasses import dataclass
 
+from app.services.text_cleanup_service import normalize_pdf_ligatures
+
 
 @dataclass(frozen=True)
 class DocumentSection:
@@ -51,6 +53,7 @@ class DocumentSectionService:
         return sections[index], len(sections)
 
     def _clean(self, text: str) -> str:
+        text = normalize_pdf_ligatures(text)
         text = text.replace("\r\n", "\n")
         text = re.sub(r"([A-Za-z]{3,})-\s+([a-z]{2,})", r"\1\2", text)
         text = re.sub(r"([A-Za-z]{3,})-\s*\n\s*([a-z]{2,})", r"\1\2", text)

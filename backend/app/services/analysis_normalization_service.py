@@ -4,6 +4,7 @@ from typing import Any
 
 from app.schemas.analysis_schema import AnalysisResult
 from app.services.analysis_quality_service import AnalysisQualityService
+from app.services.text_cleanup_service import normalize_pdf_ligatures
 
 
 class AnalysisNormalizationService:
@@ -14,6 +15,7 @@ class AnalysisNormalizationService:
         return self.normalize_payload(result.model_dump(), result.document_id, document_text)
 
     def normalize_payload(self, payload: dict[str, Any], document_id: str, document_text: str) -> AnalysisResult:
+        document_text = normalize_pdf_ligatures(document_text)
         terms = self._terms(payload.get("terms"), document_text)
         phrases = self._phrases(payload.get("phrases") or payload.get("academic_phrases") or payload.get("expressions"), document_text)
         terms = self._merge_learning_rows(self._heuristic_terms(document_text), terms, "term", limit=14)
@@ -94,7 +96,9 @@ class AnalysisNormalizationService:
             source_sentence = self._source_sentence(row.get("source_sentence"), term, document_text)
             priority = str(row.get("learning_priority") or row.get("priority") or "").lower()
             confidence = self._confidence(row.get("confidence"), 0.6)
-            meaning = str(row.get("meaning") or row.get("context_meaning") or row.get("general_meaning") or "Meaning not provided.").strip()
+            meaning = normalize_pdf_ligatures(
+                str(row.get("meaning") or row.get("context_meaning") or row.get("general_meaning") or "Meaning not provided.")
+            ).strip()
             terms.append(
                 {
                     "term": term,
@@ -104,9 +108,9 @@ class AnalysisNormalizationService:
                     "source_sentence": source_sentence,
                     "should_save": bool(row.get("should_save", confidence >= 0.45 and priority != "low_priority")),
                     "learning_priority": priority or self._priority_from_relevance(row.get("domain_relevance")),
-                    "reason": str(row.get("reason") or row.get("why") or "Selected as a useful learning item."),
-                    "context_meaning": str(row.get("context_meaning") or meaning),
-                    "general_meaning": str(row.get("general_meaning") or meaning),
+                    "reason": normalize_pdf_ligatures(str(row.get("reason") or row.get("why") or "Selected as a useful learning item.")),
+                    "context_meaning": normalize_pdf_ligatures(str(row.get("context_meaning") or meaning)),
+                    "general_meaning": normalize_pdf_ligatures(str(row.get("general_meaning") or meaning)),
                     "confidence": confidence,
                     "user_state": row.get("user_state") or "suggested",
                 }
@@ -120,7 +124,7 @@ class AnalysisNormalizationService:
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            phrase = str(row.get("phrase") or row.get("text") or "").strip()
+            phrase = normalize_pdf_ligatures(str(row.get("phrase") or row.get("text") or "")).strip()
             if not phrase:
                 continue
             if phrase.lower() in {"string", "phrase", "actual phrase"}:
@@ -133,7 +137,7 @@ class AnalysisNormalizationService:
             if key in seen:
                 continue
             seen.add(key)
-            explanation = str(row.get("explanation") or row.get("meaning") or "Explanation not provided.").strip()
+            explanation = normalize_pdf_ligatures(str(row.get("explanation") or row.get("meaning") or "Explanation not provided.")).strip()
             phrases.append(
                 {
                     "phrase": phrase,
@@ -141,8 +145,8 @@ class AnalysisNormalizationService:
                     "explanation": explanation,
                     "source_sentence": self._source_sentence(row.get("source_sentence"), phrase, document_text),
                     "learning_priority": row.get("learning_priority") or "useful",
-                    "reason": str(row.get("reason") or "Selected as a reusable expression."),
-                    "context_meaning": str(row.get("context_meaning") or explanation),
+                    "reason": normalize_pdf_ligatures(str(row.get("reason") or "Selected as a reusable expression.")),
+                    "context_meaning": normalize_pdf_ligatures(str(row.get("context_meaning") or explanation)),
                     "confidence": self._confidence(row.get("confidence"), 0.6),
                     "user_state": row.get("user_state") or "suggested",
                 }
@@ -192,7 +196,7 @@ class AnalysisNormalizationService:
             if key in seen:
                 continue
             seen.add(key)
-            explanation = str(row.get("explanation") or row.get("meaning") or "Concept explanation not provided.").strip()
+            explanation = normalize_pdf_ligatures(str(row.get("explanation") or row.get("meaning") or "Concept explanation not provided.")).strip()
             source_sentence = self._source_sentence(row.get("source_sentence"), concept, document_text)
             concepts.append(
                 {
@@ -200,7 +204,9 @@ class AnalysisNormalizationService:
                     "explanation": explanation,
                     "source_sentence": source_sentence,
                     "related_terms": self._string_list(row.get("related_terms")),
-                    "why_it_matters": str(row.get("why_it_matters") or row.get("reason") or "This concept helps connect vocabulary to the paper's main argument."),
+                    "why_it_matters": normalize_pdf_ligatures(
+                        str(row.get("why_it_matters") or row.get("reason") or "This concept helps connect vocabulary to the paper's main argument.")
+                    ),
                     "references": self._string_list(row.get("references")),
                     "learning_priority": row.get("learning_priority") or "field_term",
                     "confidence": self._confidence(row.get("confidence"), 0.6),
@@ -637,7 +643,7 @@ class AnalysisNormalizationService:
             ]
         elif self._is_resnet_text(document_text):
             phrase_specs = [
-                ("more difﬁcult to train", "limitation", "Introduces the practical problem caused by increasing network depth."),
+                ("more difficult to train", "limitation", "Introduces the practical problem caused by increasing network depth."),
                 ("to ease the training of", "method", "States the purpose of the proposed residual learning framework."),
                 ("substantially deeper than", "claim", "Signals the scale of the architecture compared with previous models."),
                 ("explicitly reformulate", "method", "Signals that the paper changes the learning target, not only the model size."),
@@ -1296,16 +1302,18 @@ class AnalysisNormalizationService:
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            sentence = str(row.get("sentence") or row.get("source_sentence") or "").strip()
+            sentence = normalize_pdf_ligatures(str(row.get("sentence") or row.get("source_sentence") or "")).strip()
             if not sentence:
                 continue
             sentences.append(
                 {
                     "sentence": sentence,
-                    "core_structure": str(row.get("core_structure") or "Structure not provided."),
-                    "simplified_version": str(row.get("simplified_version") or sentence),
-                    "korean_explanation": str(row.get("korean_explanation") or row.get("support_explanation") or "Explanation not provided."),
-                    "difficulty_reason": str(row.get("difficulty_reason") or "Dense sentence structure."),
+                    "core_structure": normalize_pdf_ligatures(str(row.get("core_structure") or "Structure not provided.")),
+                    "simplified_version": normalize_pdf_ligatures(str(row.get("simplified_version") or sentence)),
+                    "korean_explanation": normalize_pdf_ligatures(
+                        str(row.get("korean_explanation") or row.get("support_explanation") or "Explanation not provided.")
+                    ),
+                    "difficulty_reason": normalize_pdf_ligatures(str(row.get("difficulty_reason") or "Dense sentence structure.")),
                 }
             )
         if sentences:
@@ -1325,14 +1333,14 @@ class AnalysisNormalizationService:
         value = value if isinstance(value, dict) else {}
         first_sentence = self._sentences_from_text(document_text)[0] if document_text.strip() else "Document summary not available."
         return {
-            "one_line": str(value.get("one_line") or first_sentence),
-            "simple": str(value.get("simple") or value.get("simple_summary") or first_sentence),
-            "academic": str(value.get("academic") or value.get("academic_summary") or first_sentence),
+            "one_line": normalize_pdf_ligatures(str(value.get("one_line") or first_sentence)),
+            "simple": normalize_pdf_ligatures(str(value.get("simple") or value.get("simple_summary") or first_sentence)),
+            "academic": normalize_pdf_ligatures(str(value.get("academic") or value.get("academic_summary") or first_sentence)),
             "study_notes": self._string_list(value.get("study_notes")),
         }
 
     def _source_sentence(self, value: Any, target: str, document_text: str) -> str:
-        candidate = str(value or "").strip()
+        candidate = normalize_pdf_ligatures(str(value or "")).strip()
         if candidate and self._appears_in_text(candidate, document_text):
             return self._trim_source(candidate, target)
         sentences = self._sentences_from_text(document_text)
@@ -1344,6 +1352,7 @@ class AnalysisNormalizationService:
         return self._trim_source(sentences[0], target) if sentences else candidate
 
     def _sentences_from_text(self, text: str) -> list[str]:
+        text = normalize_pdf_ligatures(text)
         parts = [part.strip() for part in re.split(r"(?<=[.!?])\s+", text.strip()) if part.strip()]
         if len(parts) == 1 and len(parts[0]) > 700:
             chunks = re.split(r"\s+\b(?:so|and|but|because|then|now|first|second)\b\s+", parts[0])
@@ -1351,7 +1360,8 @@ class AnalysisNormalizationService:
         return parts
 
     def _trim_source(self, source: str, target: str, max_chars: int = 420) -> str:
-        source = " ".join(source.split())
+        source = " ".join(normalize_pdf_ligatures(source).split())
+        target = normalize_pdf_ligatures(target)
         if len(source) <= max_chars:
             return source
         index = source.lower().find(target.lower()) if target else -1
@@ -1367,7 +1377,7 @@ class AnalysisNormalizationService:
         return excerpt
 
     def _appears_in_text(self, value: str, text: str) -> bool:
-        return " ".join(value.lower().split()) in " ".join(text.lower().split())
+        return " ".join(normalize_pdf_ligatures(value).lower().split()) in " ".join(normalize_pdf_ligatures(text).lower().split())
 
     def _priority_from_relevance(self, value: Any) -> str:
         value = str(value or "").lower()
@@ -1378,6 +1388,7 @@ class AnalysisNormalizationService:
         return "useful"
 
     def _clean_learning_term(self, value: str) -> str:
+        value = normalize_pdf_ligatures(value)
         value = " ".join(value.strip().split())
         if not value:
             return ""
