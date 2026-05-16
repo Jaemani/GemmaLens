@@ -211,7 +211,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
             <div className="min-w-0 xl:sticky xl:top-4">
               <PdfSourcePane document={document} requestedPage={requestedPdfPage} onPageChange={setRequestedPdfPage} onReady={() => setSourceReady(true)} />
             </div>
-            <div className="min-w-0 xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto xl:pr-1">{workspaceContent}</div>
+            <div className="min-w-0">{workspaceContent}</div>
           </div>
         ) : (
           workspaceContent
@@ -355,7 +355,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           <div className="min-w-0 xl:sticky xl:top-4">
             <PdfSourcePane document={document} requestedPage={requestedPdfPage} onPageChange={setRequestedPdfPage} onReady={() => setSourceReady(true)} />
           </div>
-          <div className="min-w-0 xl:max-h-[calc(100vh-120px)] xl:overflow-y-auto xl:pr-1">{guideContent}</div>
+          <div className="min-w-0">{guideContent}</div>
         </div>
       ) : (
         guideContent

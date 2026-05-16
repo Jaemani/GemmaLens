@@ -56,6 +56,40 @@ async function request<T>(path: string, init?: ApiRequestInit): Promise<T> {
   }
 }
 
+async function withClientActivity<T>(label: string, detail: string, action: () => Promise<T>) {
+  writeClientActivity(label, detail);
+  try {
+    return await action();
+  } finally {
+    clearClientActivity();
+  }
+}
+
+function writeClientActivity(label: string, detail: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      "gemmalens:active-task",
+      JSON.stringify({
+        label,
+        detail,
+        updatedAt: Date.now()
+      })
+    );
+  } catch {
+    // Best-effort global status.
+  }
+}
+
+function clearClientActivity() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem("gemmalens:active-task");
+  } catch {
+    // Best-effort global status.
+  }
+}
+
 async function responseErrorMessage(response: Response) {
   const text = await response.text();
   try {
@@ -97,6 +131,7 @@ function isPrivateBackendUrl(value: string) {
 }
 
 export const api = {
+  health: () => request<{ status: string }>("/health", { timeoutMs: 4000 }),
   getModelStatus: () => request<ModelStatus>("/models/status"),
   listModelPresets: () => request<ModelPreset[]>("/models/presets"),
   warmupModel: () => request<{ status: string; provider: string; elapsed_seconds: number }>("/models/warmup", { method: "POST", timeoutMs: 300000 }),
@@ -147,7 +182,9 @@ export const api = {
     }
   },
   analyzeDocument: (documentId: string) =>
-    request<AnalysisResult>(`/documents/${documentId}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
+    withClientActivity("Analyzing document", "Building full-document learning output", () =>
+      request<AnalysisResult>(`/documents/${documentId}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS })
+    ),
   analyzeDocumentSection: (documentId: string, sectionIndex: number) =>
     request<AnalysisResult>(`/documents/${documentId}/sections/${sectionIndex}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
   getDocumentSectionAnalysis: (documentId: string, sectionIndex: number) =>
@@ -182,9 +219,15 @@ export const api = {
   updateProfile: (payload: Partial<Omit<UserProfile, "id" | "created_at">>) =>
     request<UserProfile>("/profile", { method: "PATCH", body: JSON.stringify(payload) }),
   translateText: (payload: { source_language: string; target_language: string; text: string }) =>
-    request<TranslationResponse>("/translate", { method: "POST", body: JSON.stringify(payload), timeoutMs: TRANSLATION_TIMEOUT_MS }),
+    withClientActivity("Translating text", `${payload.source_language} -> ${payload.target_language}`, () =>
+      request<TranslationResponse>("/translate", { method: "POST", body: JSON.stringify(payload), timeoutMs: TRANSLATION_TIMEOUT_MS })
+    ),
   parseTranscript: (payload: { content: string; source_name: string }) =>
-    request<TranscriptResponse>("/video/transcripts/parse", { method: "POST", body: JSON.stringify(payload) }),
+    withClientActivity("Preparing video transcript", payload.source_name, () =>
+      request<TranscriptResponse>("/video/transcripts/parse", { method: "POST", body: JSON.stringify(payload) })
+    ),
   fetchYouTubeTranscript: (payload: { url: string; languages?: string[] }) =>
-    request<TranscriptResponse>("/video/transcripts/youtube", { method: "POST", body: JSON.stringify(payload) })
+    withClientActivity("Fetching video transcript", "YouTube transcript import", () =>
+      request<TranscriptResponse>("/video/transcripts/youtube", { method: "POST", body: JSON.stringify(payload) })
+    )
 };

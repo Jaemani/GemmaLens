@@ -20,6 +20,7 @@ export function PdfSourcePane({
   const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
   const lastNotifiedPageRef = useRef<number | null>(null);
   const onPageChangeRef = useRef<typeof onPageChange>(onPageChange);
+  const onReadyRef = useRef<typeof onReady>(onReady);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -32,6 +33,10 @@ export function PdfSourcePane({
   useEffect(() => {
     onPageChangeRef.current = onPageChange;
   }, [onPageChange]);
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
 
   useEffect(() => {
     if (!requestedPage || requestedPage <= 0 || !Number.isFinite(requestedPage)) return;
@@ -83,7 +88,7 @@ export function PdfSourcePane({
         await renderTask.promise;
         if (!cancelled) {
           setStatus("");
-          onReady?.();
+          onReadyRef.current?.();
         }
       } catch (err) {
         if (err instanceof Error && err.name === "RenderingCancelledException") return;
@@ -99,7 +104,7 @@ export function PdfSourcePane({
       cancelled = true;
       renderTaskRef.current?.cancel();
     };
-  }, [fileUrl, onReady, pageNumber, zoom]);
+  }, [fileUrl, pageNumber, zoom]);
 
   return (
     <section className="overflow-hidden rounded-lg border border-line bg-panel shadow-material">
