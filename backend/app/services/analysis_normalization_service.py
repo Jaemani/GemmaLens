@@ -38,6 +38,9 @@ class AnalysisNormalizationService:
         if self._is_bert_nsp_procedure_section(document_text):
             terms = self._prefer_bert_nsp_procedure_terms(terms, document_text)
             phrases = self._filter_bert_nsp_procedure_phrases(phrases)
+        if self._is_bert_finetuning_unification_section(document_text):
+            terms = self._prefer_bert_finetuning_unification_terms(terms, document_text)
+            phrases = self._filter_bert_finetuning_unification_phrases(phrases)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -108,6 +111,9 @@ class AnalysisNormalizationService:
         if self._is_bert_nsp_procedure_section(document_text):
             normalized["concepts"] = self._prefer_bert_nsp_procedure_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_bert_nsp_procedure_phrases(normalized["phrases"])
+        if self._is_bert_finetuning_unification_section(document_text):
+            normalized["concepts"] = self._prefer_bert_finetuning_unification_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_bert_finetuning_unification_phrases(normalized["phrases"])
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -1824,6 +1830,18 @@ class AnalysisNormalizationService:
                 ("is not a meaningful sentence representation without", "limitation", "Warns against overinterpreting the vector before fine-tuning."),
                 ("closely related to", "general", "Connects the task to prior representation-learning objectives."),
                 ("transfers all parameters", "method", "Contrasts full-parameter transfer with sentence-embedding transfer."),
+                ("It is critical to use", "claim", "Marks a requirement for the training corpus."),
+                ("rather than a shuffled", "contrast", "Contrasts the preferred data format with a weaker alternative."),
+                ("in order to extract", "method", "Explains the purpose of a design choice."),
+                ("Fine-tuning is straightforward since", "claim", "Introduces why adaptation is simple."),
+                ("by swapping out", "method", "Explains the minimal task-specific change."),
+                ("a common pattern is to", "general", "Introduces the baseline workflow being contrasted."),
+                ("BERT instead uses", "contrast", "Introduces BERT's alternative to the common pattern."),
+                ("to unify these two stages", "method", "States the unification goal of BERT's self-attention."),
+                ("we simply plug in", "method", "Explains the fine-tuning recipe."),
+                ("finetune all the parameters end-to-end", "method", "States that the whole model is updated during fine-tuning."),
+                ("are analogous to", "general", "Maps BERT sentence slots to task-specific input pairs."),
+                ("Compared to pre-training", "contrast", "Contrasts fine-tuning cost with pre-training cost."),
             ]
         elif self._is_attention_text(document_text):
             phrase_specs = [
@@ -2808,6 +2826,17 @@ class AnalysisNormalizationService:
                         "difficulty_reason": "The sentence defines two labels and two sampling cases in one long procedure.",
                     }
                 ]
+            if self._is_bert_finetuning_unification_section(document_text):
+                sentence = self._source_sentence(None, "BERT instead uses", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "A common pattern is X. BERT instead uses Y to do Z.",
+                        "simplified_version": "Earlier systems encoded text pairs separately; BERT uses self-attention over the combined pair.",
+                        "korean_explanation": "'instead'는 기존 방식과 BERT 방식의 차이를 보여주는 전환 신호입니다.",
+                        "difficulty_reason": "The contrast is spread across prior-work and BERT-alternative clauses.",
+                    }
+                ]
             specs = [
                 (
                     "There are two existing strategies",
@@ -3004,6 +3033,27 @@ class AnalysisNormalizationService:
                     "The authors argue that a simple NSP task still helps QA and NLI.",
                     "'Despite'는 예상과 반대되는 결과를 말할 때 쓰는 양보 표현입니다.",
                     "The phrase links a simple method to a useful downstream effect.",
+                ),
+                (
+                    "Fine-tuning is straightforward since",
+                    "Fine-tuning is straightforward since X allows Y.",
+                    "The authors explain why BERT adapts easily to many downstream task formats.",
+                    "'since'는 앞 주장에 대한 이유를 연결합니다.",
+                    "The sentence contains a claim and its architectural reason in one clause.",
+                ),
+                (
+                    "BERT instead uses",
+                    "A common pattern is X. BERT instead uses Y to do Z.",
+                    "The authors contrast prior text-pair encoding with BERT's self-attention unification.",
+                    "'instead'는 기존 방식 대신 BERT가 선택한 방식을 소개합니다.",
+                    "The contrast spans two sentences, so the reader must connect common pattern and BERT alternative.",
+                ),
+                (
+                    "we simply plug in",
+                    "For each task, we plug in task-specific inputs and outputs and fine-tune all parameters.",
+                    "The authors summarize BERT fine-tuning as a reusable recipe.",
+                    "'plug in'은 기존 구조에 필요한 입출력만 끼워 넣는다는 실용적 표현입니다.",
+                    "The sentence is important because it describes how one model handles many tasks.",
                 ),
             ]
         elif self._is_attention_text(document_text):
@@ -4399,6 +4449,23 @@ class AnalysisNormalizationService:
                         "The vector C caveat matters: it is not a general sentence embedding without fine-tuning.",
                     ],
                 }
+            if self._is_bert_finetuning_unification_section(document_text):
+                return {
+                    "one_line": "This section explains why BERT fine-tuning can adapt one pre-trained model to many downstream task formats.",
+                    "simple": (
+                        "The paper first says pre-training needs document-level text so it can extract long contiguous sequences. "
+                        "Then it explains fine-tuning: BERT changes task-specific inputs and outputs, uses self-attention to connect text pairs, and updates all parameters end-to-end."
+                    ),
+                    "academic": (
+                        "The section links pre-training data requirements to BERT's fine-tuning strategy: document-level corpora support NSP-style sequence construction, "
+                        "while self-attention over concatenated inputs unifies single-text, text-pair, token-level, and classification tasks."
+                    ),
+                    "study_notes": [
+                        "Separate data requirement from fine-tuning method: document-level corpus first, task adaptation second.",
+                        "The key contrast is independent pair encoding versus BERT's concatenated self-attention.",
+                        "Map input/output examples instead of memorizing isolated task names.",
+                    ],
+                }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
                 return {
                     "one_line": "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning.",
@@ -4594,8 +4661,21 @@ class AnalysisNormalizationService:
         promoted: list[dict[str, Any]] = []
         for term, meaning, priority, difficulty, reason in preferred:
             lowered = term.lower()
+            target = {
+                "end-to-end fine-tuning": "finetune all the parameters end-to-end",
+                "task-specific inputs and outputs": "inputs and outputs",
+                "token-level tasks": "token representations",
+                "classification tasks": "output layer for classification",
+            }.get(term, term)
             if lowered in keyed:
-                promoted.append(keyed[lowered])
+                promoted.append(
+                    {
+                        **keyed[lowered],
+                        "meaning": keyed[lowered].get("meaning") or meaning,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "reason": keyed[lowered].get("reason") or reason,
+                    }
+                )
             else:
                 promoted.append(
                     {
@@ -4603,7 +4683,7 @@ class AnalysisNormalizationService:
                         "meaning": meaning,
                         "domain_relevance": "high" if priority == "field_term" else "medium",
                         "difficulty": difficulty,
-                        "source_sentence": self._source_sentence(None, term, document_text),
+                        "source_sentence": self._source_sentence(None, target, document_text),
                         "should_save": True,
                         "learning_priority": priority,
                         "reason": reason,
@@ -4873,13 +4953,19 @@ class AnalysisNormalizationService:
             if lowered in keyed:
                 promoted.append(keyed[lowered])
             else:
+                target = {
+                    "end-to-end fine-tuning": "finetune all the parameters end-to-end",
+                    "task-specific inputs and outputs": "inputs and outputs",
+                    "token-level tasks": "token representations",
+                    "classification tasks": "output layer for classification",
+                }.get(term, term)
                 promoted.append(
                     {
                         "term": term,
                         "meaning": meaning,
                         "domain_relevance": "high" if priority == "field_term" else "medium",
                         "difficulty": difficulty,
-                        "source_sentence": self._source_sentence(None, term, document_text),
+                        "source_sentence": self._source_sentence(None, target, document_text),
                         "should_save": True,
                         "learning_priority": priority,
                         "reason": reason,
@@ -5298,6 +5384,120 @@ class AnalysisNormalizationService:
         blocked = {"we demonstrate", "in order to train"}
         return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
 
+    def _prefer_bert_finetuning_unification_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"corpus", "self-attention mechanism", "entailment", "bert", "fine-tuning", "pre-training"}
+        preferred = [
+            ("document-level corpus", "A corpus preserving long contiguous document sequences.", "field_term", "medium", "This is required for extracting long sequences for pre-training."),
+            ("shuffled sentence-level corpus", "A corpus where sentences are shuffled and document continuity is lost.", "useful", "medium", "This is the data format the paper rejects."),
+            ("long contiguous sequences", "Extended text spans that preserve document-level context.", "field_term", "medium", "This explains why document-level data matters."),
+            ("self-attention mechanism", "The Transformer mechanism BERT uses to connect tokens across single or paired inputs.", "field_term", "hard", "This enables task unification during fine-tuning."),
+            ("bidirectional cross attention", "Attention between two texts in both directions.", "field_term", "hard", "This is the prior pair-encoding pattern BERT replaces with concatenated self-attention."),
+            ("task-specific inputs and outputs", "Inputs and output layers adjusted for each downstream task.", "field_term", "medium", "This is the main task-specific part of fine-tuning."),
+            ("end-to-end fine-tuning", "Updating all BERT parameters for a downstream task.", "field_term", "medium", "The section says all parameters are fine-tuned, not just the output layer."),
+            ("token-level tasks", "Tasks that need predictions for individual tokens.", "useful", "medium", "The output mapping differs for token-level tasks."),
+            ("classification tasks", "Tasks that use the [CLS] representation for a whole-input prediction.", "useful", "medium", "This is the other output mapping in the section."),
+            ("Cloud TPU", "Google hardware used to report fine-tuning runtime.", "useful", "medium", "This supports the claim that fine-tuning is relatively inexpensive."),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            lowered = term.lower()
+            target = {
+                "end-to-end fine-tuning": "finetune all the parameters end-to-end",
+                "task-specific inputs and outputs": "inputs and outputs",
+                "token-level tasks": "token representations",
+                "classification tasks": "output layer for classification",
+            }.get(term, term)
+            row = keyed.get(lowered, {})
+            promoted.append(
+                {
+                    **row,
+                    "term": term,
+                    "meaning": row.get("meaning") or meaning,
+                    "domain_relevance": row.get("domain_relevance") or ("high" if priority == "field_term" else "medium"),
+                    "difficulty": row.get("difficulty") or difficulty,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "should_save": bool(row.get("should_save", True)),
+                    "learning_priority": row.get("learning_priority") or priority,
+                    "reason": row.get("reason") or reason,
+                    "context_meaning": row.get("context_meaning") or meaning,
+                    "general_meaning": row.get("general_meaning") or meaning,
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}
+        ]
+        return [*promoted, *rest][:12]
+
+    def _prefer_bert_finetuning_unification_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"corpus", "self-attention mechanism", "entailment", "fine-tuning", "pre-training", "bert"}
+        preferred = {
+            "document-level pre-training data": (
+                "BERT needs document-level text rather than shuffled sentences to extract long contiguous sequences.",
+                "This connects the data source to NSP and long-context construction.",
+                "document-level corpus",
+            ),
+            "fine-tuning by input/output swapping": (
+                "BERT adapts to tasks by swapping task-specific inputs and outputs while keeping the same model core.",
+                "This is the practical reason one pre-trained model can serve many tasks.",
+                "swapping out the appropriate inputs and outputs",
+            ),
+            "self-attention task unification": (
+                "BERT uses self-attention over concatenated text to unify stages that prior systems handled separately.",
+                "This is the architecture reason text-pair tasks can be handled directly.",
+                "to unify these two stages",
+            ),
+            "task input analogy map": (
+                "Sentence A/B slots correspond to paraphrase pairs, hypothesis-premise pairs, question-passage pairs, or degenerate text pairs.",
+                "This helps users read task examples without treating them as random vocabulary.",
+                "are analogous to",
+            ),
+            "output routing by task type": (
+                "Token representations feed token-level output layers, while [CLS] feeds classification output layers.",
+                "This separates token-level tasks from classification tasks.",
+                "At the output",
+            ),
+            "low-cost downstream adaptation": (
+                "Fine-tuning is relatively inexpensive compared with pre-training.",
+                "This explains the deployment/workflow appeal of pre-trained BERT.",
+                "Compared to pre-training",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            lowered = concept.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                promoted.append(
+                    {
+                        "concept": concept,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [concept],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.88,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_bert_finetuning_unification_phrases(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        blocked = {"are fed into"}
+        return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -5331,6 +5531,7 @@ class AnalysisNormalizationService:
             (self._is_bert_text(document_text) and "contributions of our paper" in lowered)
             or self._is_bert_masked_lm_procedure_section(document_text)
             or self._is_bert_nsp_procedure_section(document_text)
+            or self._is_bert_finetuning_unification_section(document_text)
         )
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
@@ -5351,6 +5552,8 @@ class AnalysisNormalizationService:
         if self._is_bert_masked_lm_procedure_section(document_text):
             return True
         if self._is_bert_nsp_procedure_section(document_text):
+            return True
+        if self._is_bert_finetuning_unification_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -5618,6 +5821,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_nsp_procedure_section(document_text):
             return True
+        if self._is_bert_finetuning_unification_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -5654,6 +5859,10 @@ class AnalysisNormalizationService:
     def _is_bert_nsp_procedure_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "binarized next sentence prediction task" in lowered and "labeled as isnext" in lowered and "labeled as notnext" in lowered
+
+    def _is_bert_finetuning_unification_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "fine-tuning is straightforward" in lowered and "swapping out the appropriate inputs and outputs" in lowered and "finetune all the parameters" in lowered
 
     def _is_attention_text(self, document_text: str) -> bool:
         lowered = document_text.lower()

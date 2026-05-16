@@ -2270,3 +2270,82 @@ def test_bert_nsp_section_recovers_sentence_pair_sampling():
     assert "In order to train" not in phrases
     assert result.summaries.one_line == "This section defines BERT's Next Sentence Prediction task and why it supports sentence-pair understanding."
     assert result.sentences[0].core_structure == "When choosing A and B, 50% is X and 50% is Y."
+
+
+def test_bert_finetuning_section_recovers_task_unification():
+    document = (
+        "It is critical to use a document-level corpus rather than a shuffled sentence-level corpus in order to extract long contiguous sequences. "
+        "3.2 Fine-tuning BERT Fine-tuning is straightforward since the self-attention mechanism in the Transformer allows BERT to model many downstream tasks "
+        "whether they involve single text or text pairs by swapping out the appropriate inputs and outputs. "
+        "For applications involving text pairs, a common pattern is to independently encode text pairs before applying bidirectional cross attention. "
+        "BERT instead uses the self-attention mechanism to unify these two stages, as encoding a concatenated text pair with self-attention effectively includes bidirectional cross attention between two sentences. "
+        "For each task, we simply plug in the task-specific inputs and outputs into BERT and finetune all the parameters end-to-end. "
+        "At the input, sentence A and sentence B from pre-training are analogous to sentence pairs in paraphrasing, "
+        "hypothesis-premise pairs in entailment, question-passage pairs in question answering, and a degenerate text pair in text classification. "
+        "At the output, the token representations are fed into an output layer for token-level tasks, and the [CLS] representation is fed into an output layer for classification. "
+        "Compared to pre-training, fine-tuning is relatively inexpensive and can run on a single Cloud TPU."
+    )
+    payload = {
+        "terms": [
+            {"term": "corpus", "meaning": "too broad"},
+            {"term": "self-attention mechanism", "meaning": "important but duplicated"},
+            {"term": "entailment", "meaning": "task fragment"},
+        ],
+        "concepts": [
+            {"concept": "corpus", "explanation": "too broad"},
+            {"concept": "self-attention mechanism", "explanation": "term duplicated as concept"},
+            {"concept": "entailment", "explanation": "task fragment"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "It is critical to use a document-level corpus rather than a shuffled sentence-level corpus."},
+        "sentences": [{"sentence": "It is critical to use a document-level corpus rather than a shuffled sentence-level corpus.", "core_structure": "Main claim + explanation."}],
+        "quality_warnings": ["phrase_count_out_of_range:0"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-finetune", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "document-level corpus",
+        "shuffled sentence-level corpus",
+        "long contiguous sequences",
+        "self-attention mechanism",
+        "bidirectional cross attention",
+        "task-specific inputs and outputs",
+        "end-to-end fine-tuning",
+        "token-level tasks",
+        "classification tasks",
+        "Cloud TPU",
+    }.issubset(terms)
+    assert "corpus" not in terms
+    assert "entailment" not in terms
+    assert {
+        "document-level pre-training data",
+        "fine-tuning by input/output swapping",
+        "self-attention task unification",
+        "task input analogy map",
+        "output routing by task type",
+        "low-cost downstream adaptation",
+    }.issubset(concepts)
+    assert "corpus" not in concepts
+    assert "entailment" not in concepts
+    assert "BERT" not in concepts
+    assert {
+        "It is critical to use",
+        "rather than a shuffled",
+        "in order to extract",
+        "Fine-tuning is straightforward since",
+        "by swapping out",
+        "a common pattern is to",
+        "BERT instead uses",
+        "to unify these two stages",
+        "we simply plug in",
+        "finetune all the parameters end-to-end",
+        "are analogous to",
+    }.issubset(phrases)
+    assert result.summaries.one_line == "This section explains why BERT fine-tuning can adapt one pre-trained model to many downstream task formats."
+    assert result.sentences[0].core_structure == "A common pattern is X. BERT instead uses Y to do Z."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings
+    assert not any(warning.startswith("term_not_in_source_sentence:") for warning in result.quality_warnings)

@@ -134,6 +134,7 @@ Local demo records currently include:
 - Real BERT section 8 exposed an input-representation failure: the lesson copied the first [CLS] sentence and returned only generic `hidden state` and `embedding`. The normalizer now teaches [CLS] aggregation, sentence-pair packing, [SEP], segment/token/position embeddings, the summed input representation, and the transition from input formatting into Masked LM.
 - Real BERT section 9 exposed a Masked LM procedure failure: the lesson copied the opening masking sentence, kept only one phrase, and missed the 15% selection plus 80/10/10 replacement rule. The normalizer now teaches the objective, denoising-autoencoder contrast, [MASK] mismatch, replacement strategy, original-token target, and transition to NSP.
 - Real BERT section 10 exposed an NSP procedure failure: the lesson fell back to generic BERT summaries and missed IsNext/NotNext sampling. The normalizer now teaches 50/50 sentence-pair generation, IsNext and NotNext labels, QA/NLI benefit, the vector C caveat, and BERT's full-parameter transfer contrast.
+- Real BERT section 11 exposed a fine-tuning-section failure: the lesson copied the corpus sentence and produced broad fragments such as `corpus`, `self-attention mechanism`, and `entailment`. The normalizer now frames the section as document-level pre-training data plus fine-tuning unification, including input/output swapping, self-attention over concatenated text pairs, task input analogies, output routing, and low-cost downstream adaptation.
 
 ## Still Weak
 

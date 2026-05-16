@@ -67,6 +67,11 @@ class AnalysisQualityService:
             "left-to-right language models": "left-to-right",
             "right-to-left language models": "right-to-left",
             "80/10/10 replacement rule": "80% of the time",
+            "classification tasks": "classification",
+            "end-to-end fine-tuning": "finetune all the parameters end-to-end",
+            "self-attention mechanism": "selfattention mechanism",
+            "task-specific inputs and outputs": "inputs and outputs",
+            "token-level tasks": "tokenlevel tasks",
         }
         alias = support_aliases.get(value_lower)
         if alias and alias in source_lower:
