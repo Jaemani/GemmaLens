@@ -8,7 +8,13 @@ import { cleanDocumentPreview, displayableDocuments } from "@/lib/documentDispla
 import type { AnalysisResult, DictionaryItem, DocumentListItem, PaperMap } from "@/lib/types";
 
 type Source = { document: DocumentListItem; analysis: AnalysisResult | null; paperMap: PaperMap | null };
-type QuizItem = { prompt: string; answer: string; source: string; type: "concept" | "term" | "phrase" | "sentence" };
+type QuizItem = {
+  prompt: string;
+  answer: string;
+  source: string;
+  type: "concept" | "term" | "phrase" | "sentence";
+  dictionaryItemId?: string;
+};
 
 const CACHE_PREFIX = "gemmalens.quiz.";
 const DICTIONARY_SOURCE_ID = "__dictionary__";
@@ -18,6 +24,7 @@ export default function QuizPage() {
   const [dictionaryItems, setDictionaryItems] = useState<DictionaryItem[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [items, setItems] = useState<QuizItem[]>([]);
+  const [viewedDictionaryItems, setViewedDictionaryItems] = useState<Set<string>>(new Set());
   const [status, setStatus] = useState("Loading analyzed sources...");
 
   useEffect(() => {
@@ -80,6 +87,20 @@ export default function QuizPage() {
     const title = selectedDictionary ? "Saved dictionary" : selected!.document.title;
     window.localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(items));
     setStatus(`Cached ${items.length} quiz items for ${title}.`);
+  }
+
+  async function markQuizItemViewed(item: QuizItem, open: boolean) {
+    if (!open || !item.dictionaryItemId || viewedDictionaryItems.has(item.dictionaryItemId)) return;
+    setViewedDictionaryItems((previous) => new Set(previous).add(item.dictionaryItemId!));
+    try {
+      await api.markDictionaryViewed(item.dictionaryItemId);
+    } catch {
+      setViewedDictionaryItems((previous) => {
+        const next = new Set(previous);
+        next.delete(item.dictionaryItemId!);
+        return next;
+      });
+    }
   }
 
   const selectedTitle = selectedDictionary ? "Saved dictionary" : (selected?.document.title ?? "No source selected");
@@ -148,7 +169,13 @@ export default function QuizPage() {
           </div>
           <div className="mt-5 space-y-3">
             {items.length ? items.map((item, index) => (
-              <details key={`${item.type}-${item.prompt}-${index}`} className="rounded-lg border border-line bg-surface p-4 text-sm">
+              <details
+                key={`${item.type}-${item.prompt}-${index}`}
+                onToggle={(event) => {
+                  void markQuizItemViewed(item, event.currentTarget.open);
+                }}
+                className="rounded-lg border border-line bg-surface p-4 text-sm"
+              >
                 <summary className="cursor-pointer font-semibold">Q{index + 1}. {item.prompt}</summary>
                 <p className="mt-3 leading-6 text-neutral-800">{item.answer}</p>
                 <p className="mt-2 text-xs text-neutral-500">{item.source}</p>
@@ -173,7 +200,8 @@ function buildDictionaryQuiz(items: DictionaryItem[]): QuizItem[] {
         type: "concept",
         prompt: `Why does "${item.text}" matter?`,
         answer: item.meaning || "Review the source evidence where you saved this concept.",
-        source: item.source_sentence || "Saved dictionary item"
+        source: item.source_sentence || "Saved dictionary item",
+        dictionaryItemId: item.id
       };
     }
     if (item.item_type === "phrase") {
@@ -181,7 +209,8 @@ function buildDictionaryQuiz(items: DictionaryItem[]): QuizItem[] {
         type: "phrase",
         prompt: `What academic move does "${item.text}" make?`,
         answer: item.meaning || "Explain how this expression works in the source sentence.",
-        source: item.source_sentence || "Saved dictionary item"
+        source: item.source_sentence || "Saved dictionary item",
+        dictionaryItemId: item.id
       };
     }
     if (item.item_type === "sentence") {
@@ -189,14 +218,16 @@ function buildDictionaryQuiz(items: DictionaryItem[]): QuizItem[] {
         type: "sentence",
         prompt: "Simplify this saved sentence pattern.",
         answer: item.meaning || item.text,
-        source: item.source_sentence || item.text
+        source: item.source_sentence || item.text,
+        dictionaryItemId: item.id
       };
     }
     return {
       type: "term",
       prompt: `What does "${item.text}" mean in context?`,
       answer: item.meaning || "Review the source sentence and define this term in your own words.",
-      source: item.source_sentence || "Saved dictionary item"
+      source: item.source_sentence || "Saved dictionary item",
+      dictionaryItemId: item.id
     };
   });
 }
