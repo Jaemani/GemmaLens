@@ -72,6 +72,9 @@ class AnalysisQualityService:
             "self-attention mechanism": "selfattention mechanism",
             "task-specific inputs and outputs": "inputs and outputs",
             "token-level tasks": "tokenlevel tasks",
+            "squad v11": "squad",
+            "squad v1.1": "squad",
+            "softmax over paragraph tokens": "softmax over all of the words",
         }
         alias = support_aliases.get(value_lower)
         if alias and alias in source_lower:

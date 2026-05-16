@@ -47,6 +47,9 @@ class AnalysisNormalizationService:
         if self._is_bert_glue_result_interpretation_section(document_text):
             terms = self._prefer_bert_glue_result_interpretation_terms(terms, document_text)
             phrases = self._filter_bert_glue_result_interpretation_phrases(phrases)
+        if self._is_bert_squad_span_prediction_section(document_text):
+            terms = self._prefer_bert_squad_span_prediction_terms(terms, document_text)
+            phrases = self._prefer_bert_squad_span_prediction_phrases(phrases, document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             terms = self._filter_resnet_shortcut_option_noise(terms, "term")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -125,6 +128,9 @@ class AnalysisNormalizationService:
         if self._is_bert_glue_result_interpretation_section(document_text):
             normalized["concepts"] = self._prefer_bert_glue_result_interpretation_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_bert_glue_result_interpretation_phrases(normalized["phrases"])
+        if self._is_bert_squad_span_prediction_section(document_text):
+            normalized["concepts"] = self._prefer_bert_squad_span_prediction_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._prefer_bert_squad_span_prediction_phrases(normalized["phrases"], document_text)
         if self._is_resnet_shortcut_option_section(document_text):
             normalized["concepts"] = self._filter_resnet_shortcut_option_noise(normalized["concepts"], "concept")
         if self._is_resnet_deep_bottleneck_results_section(document_text):
@@ -1877,6 +1883,22 @@ class AnalysisNormalizationService:
                 ("as of the date of writing", "general", "Qualifies a time-sensitive leaderboard claim."),
                 ("significantly outperforms", "result", "States a stronger comparative result."),
                 ("is explored more thoroughly in", "general", "Points forward to a later analysis section."),
+                ("Given a question and a passage", "general", "Introduces the question-answering input setting."),
+                ("the task is to predict", "claim", "Defines the task objective."),
+                ("answer text span", "general", "Names the output unit in extractive question answering."),
+                ("we represent the input question and passage as", "method", "Explains how QA inputs are packed for BERT."),
+                ("We only introduce", "method", "Emphasizes the small task-specific parameter addition."),
+                ("is computed as", "method", "Introduces a formula or scoring computation."),
+                ("followed by a softmax", "method", "Explains the normalization step after scoring."),
+                ("The analogous formula is used for", "method", "Maps the start-position computation to the end-position computation."),
+                ("is defined as", "method", "Defines a scoring function."),
+                ("maximum scoring span", "method", "Explains how the final answer span is selected."),
+                ("The training objective is", "method", "Introduces the optimization target."),
+                ("Table 2 shows", "result", "Introduces a result table."),
+                ("do not have up-to-date public system descriptions", "limitation", "Qualifies leaderboard comparability."),
+                ("are allowed to use any public data", "limitation", "Explains a benchmark-permission caveat."),
+                ("We therefore use", "method", "Introduces a consequence-driven method choice."),
+                ("by first fine-tuning on", "method", "Explains a staged fine-tuning or data-augmentation recipe."),
             ]
         elif self._is_attention_text(document_text):
             phrase_specs = [
@@ -2892,6 +2914,17 @@ class AnalysisNormalizationService:
                         "simplified_version": "Both BERT model sizes beat previous GLUE systems, with BERTLARGE showing the larger average improvement.",
                         "korean_explanation": "'Both A and B'는 두 모델을 함께 비교하고, 'by a substantial margin'은 결과 차이가 크다는 평가 표현입니다.",
                         "difficulty_reason": "The sentence combines model comparison, benchmark claim, margin language, and two percentage improvements.",
+                    }
+                ]
+            if self._is_bert_squad_span_prediction_section(document_text):
+                sentence = self._source_sentence(None, "The score of a candidate span", document_text)
+                return [
+                    {
+                        "sentence": sentence,
+                        "core_structure": "The score of X is defined as Y, and the maximum-scoring X is used as Z.",
+                        "simplified_version": "BERT scores each possible answer span with start and end vectors, then chooses the span with the highest score.",
+                        "korean_explanation": "'is defined as'는 수식 정의를 알리는 표현이고, 'is used as a prediction'은 그 점수가 실제 답 선택으로 이어짐을 뜻합니다.",
+                        "difficulty_reason": "The sentence is difficult because it mixes span notation, vector dot products, and prediction selection in one definition.",
                     }
                 ]
             specs = [
@@ -4571,6 +4604,23 @@ class AnalysisNormalizationService:
                         "The random-restart detail is a caveat about small datasets and BERTLARGE stability.",
                     ],
                 }
+            if self._is_bert_squad_span_prediction_section(document_text):
+                return {
+                    "one_line": "This section explains how BERT fine-tunes on SQuAD by predicting answer-span start and end positions.",
+                    "simple": (
+                        "For SQuAD, BERT packs the question and passage into one sequence, adds only start and end vectors, scores possible answer spans, "
+                        "trains on correct start/end positions, and compares results against leaderboard and published systems."
+                    ),
+                    "academic": (
+                        "The section defines BERT's extractive question-answering formulation: question-passage packing with A/B embeddings, start/end vector scoring, "
+                        "softmax probabilities over paragraph tokens, maximum-scoring span selection, log-likelihood training, and TriviaQA-then-SQuAD augmentation."
+                    ),
+                    "study_notes": [
+                        "Read this as a task-adaptation recipe, not as a general SQuAD summary.",
+                        "Track the start/end symmetry: start vector S predicts the start token, end vector E predicts the end token.",
+                        "The leaderboard paragraph is about fair comparison and data augmentation caveats.",
+                    ],
+                }
             if "contextual word embeddings" in lower and "openai gpt" in lower and "fine-tuning approaches" in lower:
                 return {
                     "one_line": "This transition section compares ELMo-style feature integration with GPT-style unsupervised fine-tuning.",
@@ -5843,6 +5893,174 @@ class AnalysisNormalizationService:
         blocked = {"during fine-tuning", "we present bert fine-tuning results on", "is a collection of"}
         return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
 
+    def _prefer_bert_squad_span_prediction_terms(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"learning rate", "fine-tune", "bert", "glue", "bertbase", "bertlarge"}
+        preferred = [
+            ("SQuAD v1.1", "A question-answering benchmark with crowdsourced question/answer pairs.", "field_term", "medium", "This is the benchmark for the section."),
+            ("answer text span", "The contiguous passage span that the model must predict as the answer.", "field_term", "medium", "This is the output unit of extractive QA."),
+            ("single packed sequence", "The combined question and passage input representation for BERT.", "field_term", "medium", "This explains how BERT receives QA inputs."),
+            ("A embedding", "The segment embedding used for the question in the packed sequence.", "field_term", "medium", "This distinguishes the question segment."),
+            ("B embedding", "The segment embedding used for the passage in the packed sequence.", "field_term", "medium", "This distinguishes the passage segment."),
+            ("start vector S", "The fine-tuned vector used to score possible answer start tokens.", "field_term", "hard", "This is one of the only new QA parameters."),
+            ("end vector E", "The fine-tuned vector used to score possible answer end tokens.", "field_term", "hard", "This mirrors the start vector for the span endpoint."),
+            ("softmax over paragraph tokens", "The normalization that turns token scores into start or end probabilities.", "field_term", "hard", "This explains the probability formula."),
+            ("candidate span", "A possible answer range from start position i to end position j.", "field_term", "medium", "This is what the model scores before prediction."),
+            ("maximum scoring span", "The valid candidate span with the highest start-plus-end score.", "field_term", "medium", "This is how the final answer is selected."),
+            ("log-likelihoods", "The training objective terms for the correct start and end positions.", "field_term", "hard", "This is the optimization target."),
+            ("TriviaQA", "An additional QA dataset used before fine-tuning on SQuAD.", "field_term", "medium", "This explains the data augmentation step."),
+        ]
+        keyed = {str(row.get("term") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for term, meaning, priority, difficulty, reason in preferred:
+            target = {
+                "SQuAD v1.1": "fine-tuning on SQuAD",
+                "single packed sequence": "single packed sequence",
+                "A embedding": "A embedding",
+                "B embedding": "B embedding",
+                "softmax over paragraph tokens": "softmax over all of the words",
+                "log-likelihoods": "log-likelihoods",
+            }.get(term, term)
+            row = keyed.get(term.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "term": term,
+                    "meaning": row.get("meaning") or meaning,
+                    "domain_relevance": row.get("domain_relevance") or ("high" if priority == "field_term" else "medium"),
+                    "difficulty": row.get("difficulty") or difficulty,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "should_save": bool(row.get("should_save", True)),
+                    "learning_priority": row.get("learning_priority") or priority,
+                    "reason": row.get("reason") or reason,
+                    "context_meaning": row.get("context_meaning") or meaning,
+                    "general_meaning": row.get("general_meaning") or meaning,
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}
+        ]
+        return [*promoted, *rest][:14]
+
+    def _prefer_bert_squad_span_prediction_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"learning rate", "packed sequence", "start vector s", "log-likelihoods", "bert", "squad"}
+        preferred = {
+            "extractive QA span prediction": (
+                "SQuAD asks the model to predict the answer text span inside the passage.",
+                "This frames the task as span extraction, not free-form answer generation.",
+                "answer text span",
+            ),
+            "question-passage packed input": (
+                "BERT represents the question and passage as one packed sequence with A/B segment embeddings.",
+                "This reuses BERT's sentence-pair input machinery for QA.",
+                "single packed sequence",
+            ),
+            "minimal QA-specific parameters": (
+                "Fine-tuning introduces only a start vector S and end vector E.",
+                "This continues the paper's theme that downstream tasks need small output changes.",
+                "start vector S",
+            ),
+            "start/end probability scoring": (
+                "Token start and end probabilities are computed with vector dot products followed by softmax.",
+                "This explains how the formula turns token representations into answer-boundary probabilities.",
+                "followed by a softmax",
+            ),
+            "maximum-span prediction rule": (
+                "Candidate spans are scored with start and end vectors, and the highest valid span is selected.",
+                "This explains how probabilities become the final answer span.",
+                "maximum scoring span",
+            ),
+            "start/end log-likelihood objective": (
+                "Training maximizes the correct start and end positions through log-likelihood terms.",
+                "This is the supervised objective for the QA adaptation.",
+                "log-likelihoods",
+            ),
+            "leaderboard comparability caveat": (
+                "Top SQuAD leaderboard systems may lack public descriptions and may use public data.",
+                "This warns the reader not to compare leaderboard rows too naively.",
+                "up-to-date public system descriptions",
+            ),
+            "TriviaQA data augmentation": (
+                "The system first fine-tunes on TriviaQA before fine-tuning on SQuAD.",
+                "This is the section's practical augmentation step.",
+                "TriviaQA",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for concept, (explanation, why_it_matters, target) in preferred.items():
+            row = keyed.get(concept.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "concept": concept,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(None, target, document_text),
+                    "related_terms": row.get("related_terms") or [concept],
+                    "why_it_matters": row.get("why_it_matters") or why_it_matters,
+                    "references": row.get("references") or self._references_near("", document_text),
+                    "learning_priority": row.get("learning_priority") or "field_term",
+                    "confidence": self._confidence(row.get("confidence"), 0.88),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {concept.lower() for concept in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_bert_squad_span_prediction_phrases(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        blocked = {"during fine-tuning", "fine-tune for", "answer text span"}
+        return [row for row in rows if str(row.get("phrase") or "").strip().lower() not in blocked]
+
+    def _prefer_bert_squad_span_prediction_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"during fine-tuning", "fine-tune for", "answer text span", "is a collection of"}
+        preferred = [
+            ("Given a question and a passage", "general", "Introduces the question-answering input setting."),
+            ("the task is to predict", "claim", "Defines the task objective."),
+            ("we represent the input question and passage as", "method", "Explains how QA inputs are packed for BERT."),
+            ("We only introduce", "method", "Emphasizes the small task-specific parameter addition."),
+            ("is computed as", "method", "Introduces a formula or scoring computation."),
+            ("followed by a softmax", "method", "Explains the normalization step after scoring."),
+            ("The analogous formula is used for", "method", "Maps the start-position computation to the end-position computation."),
+            ("is defined as", "method", "Defines a scoring function."),
+            ("maximum scoring span", "method", "Explains how the final answer span is selected."),
+            ("The training objective is", "method", "Introduces the optimization target."),
+            ("Table 2 shows", "result", "Introduces a result table."),
+            ("We therefore use", "method", "Introduces a consequence-driven method choice."),
+        ]
+        keyed = {str(row.get("phrase") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for phrase, function, explanation in preferred:
+            if phrase.lower() not in document_text.lower():
+                continue
+            row = keyed.get(phrase.lower(), {})
+            promoted.append(
+                {
+                    **row,
+                    "phrase": phrase,
+                    "function": row.get("function") or function,
+                    "explanation": row.get("explanation") or explanation,
+                    "source_sentence": self._source_sentence(row.get("source_sentence"), phrase, document_text),
+                    "learning_priority": row.get("learning_priority") or ("must_review" if function in {"method", "result", "contrast"} else "useful"),
+                    "reason": row.get("reason") or "Reusable question-answering paper expression detected in the source.",
+                    "context_meaning": row.get("context_meaning") or explanation,
+                    "confidence": self._confidence(row.get("confidence"), 0.87),
+                    "user_state": row.get("user_state") or "suggested",
+                }
+            )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("phrase") or "").strip().lower() not in blocked | {phrase.lower() for phrase, *_ in preferred}
+        ]
+        return [*promoted, *rest][:12]
+
     def _filter_resnet_shortcut_option_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {
             "batch normalization",
@@ -5879,6 +6097,7 @@ class AnalysisNormalizationService:
             or self._is_bert_finetuning_unification_section(document_text)
             or self._is_bert_glue_setup_results_section(document_text)
             or self._is_bert_glue_result_interpretation_section(document_text)
+            or self._is_bert_squad_span_prediction_section(document_text)
         )
 
     def _summaries_are_weak(self, summaries: dict[str, Any], document_text: str) -> bool:
@@ -5905,6 +6124,8 @@ class AnalysisNormalizationService:
         if self._is_bert_glue_setup_results_section(document_text):
             return True
         if self._is_bert_glue_result_interpretation_section(document_text):
+            return True
+        if self._is_bert_squad_span_prediction_section(document_text):
             return True
         if "masked language model" in lowered and "next sentence prediction" in lowered and "contributions of our paper" in lowered:
             return True
@@ -6178,6 +6399,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_bert_glue_result_interpretation_section(document_text):
             return True
+        if self._is_bert_squad_span_prediction_section(document_text):
+            return True
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
@@ -6235,6 +6458,16 @@ class AnalysisNormalizationService:
             and "random restarts" in lowered
             and "outperform all systems" in lowered
             and "official glue leaderboard" in lowered
+        )
+
+    def _is_bert_squad_span_prediction_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return (
+            "answer text span" in lowered
+            and "single packed sequence" in lowered
+            and "start vector" in lowered
+            and "maximum scoring span" in lowered
+            and "triviaqa" in lowered
         )
 
     def _is_attention_text(self, document_text: str) -> bool:

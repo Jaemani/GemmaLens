@@ -2523,3 +2523,92 @@ def test_bert_glue_result_section_recovers_protocol_and_result_reading():
     assert result.summaries.one_line == "This section explains GLUE metric conventions, fine-tuning protocol, random restarts, and BERT's result advantage."
     assert result.sentences[0].core_structure == "Both A and B outperform C by D, obtaining E."
     assert "phrase_count_out_of_range:0" not in result.quality_warnings
+
+
+def test_bert_squad_section_recovers_span_prediction_recipe():
+    document = (
+        "Given a question and a passage from Wikipedia containing the answer, the task is to predict the answer text span in the passage. "
+        "As shown in Figure 1, in the question answering task, we represent the input question and passage as a single packed sequence, "
+        "with the question using the A embedding and the passage using the B embedding. "
+        "We only introduce a start vector S ∈ RH and an end vector E ∈ RH during fine-tuning. "
+        "The probability of word i being the start of the answer span is computed as a dot product between Ti and S followed by a softmax over all of the words in the paragraph. "
+        "The analogous formula is used for the end of the answer span. "
+        "The score of a candidate span from position i to position j is defined as S·Ti + E·Tj, and the maximum scoring span where j ≥ i is used as a prediction. "
+        "The training objective is the sum of the log-likelihoods of the correct start and end positions. "
+        "We fine-tune for 3 epochs with a learning rate of 5e-5 and a batch size of 32. "
+        "Table 2 shows top leaderboard entries as well as results from top published systems. "
+        "The top results from the SQuAD leaderboard do not have up-to-date public system descriptions available, and are allowed to use any public data when training their systems. "
+        "We therefore use modest data augmentation in our system by first fine-tuning on TriviaQA before fine-tuning on SQuAD. "
+        "The Stanford Question Answering Dataset (SQuAD v1.1) is a collection of question/answer pairs."
+    )
+    payload = {
+        "terms": [
+            {"term": "learning rate", "meaning": "too broad alone"},
+            {"term": "packed sequence", "meaning": "generic fragment"},
+            {"term": "start vector S", "meaning": "start scoring vector"},
+            {"term": "log-likelihoods", "meaning": "objective terms"},
+        ],
+        "concepts": [
+            {"concept": "learning rate", "explanation": "too broad alone"},
+            {"concept": "packed sequence", "explanation": "term duplicated as concept"},
+            {"concept": "start vector S", "explanation": "term duplicated as concept"},
+            {"concept": "log-likelihoods", "explanation": "term duplicated as concept"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "Given a question and a passage from 9The GLUE data set distribution does not include the Test labels."},
+        "sentences": [
+            {
+                "sentence": "Given a question and a passage from 9The GLUE data set distribution does not include the Test labels.",
+                "core_structure": "Main claim + explanation.",
+            }
+        ],
+        "quality_warnings": ["phrase_count_out_of_range:0"],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "bert-squad", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {
+        "SQuAD v1.1",
+        "answer text span",
+        "single packed sequence",
+        "A embedding",
+        "B embedding",
+        "start vector S",
+        "end vector E",
+        "softmax over paragraph tokens",
+        "candidate span",
+        "maximum scoring span",
+        "log-likelihoods",
+        "TriviaQA",
+    }.issubset(terms)
+    assert "learning rate" not in terms
+    assert {
+        "extractive QA span prediction",
+        "question-passage packed input",
+        "minimal QA-specific parameters",
+        "start/end probability scoring",
+        "maximum-span prediction rule",
+        "start/end log-likelihood objective",
+        "leaderboard comparability caveat",
+        "TriviaQA data augmentation",
+    }.issubset(concepts)
+    assert "learning rate" not in concepts
+    assert "packed sequence" not in concepts
+    assert {
+        "Given a question and a passage",
+        "the task is to predict",
+        "we represent the input question and passage as",
+        "We only introduce",
+        "is computed as",
+        "followed by a softmax",
+        "The analogous formula is used for",
+        "is defined as",
+        "maximum scoring span",
+        "The training objective is",
+    }.issubset(phrases)
+    assert result.summaries.one_line == "This section explains how BERT fine-tunes on SQuAD by predicting answer-span start and end positions."
+    assert result.sentences[0].core_structure == "The score of X is defined as Y, and the maximum-scoring X is used as Z."
+    assert "phrase_count_out_of_range:0" not in result.quality_warnings
