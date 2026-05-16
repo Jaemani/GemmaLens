@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, RefreshCw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { PaperMap } from "@/lib/types";
@@ -9,7 +9,7 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
   const [paperMap, setPaperMap] = useState<PaperMap | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
-  const [showStudyLists, setShowStudyLists] = useState(false);
+  const [showStudyLists, setShowStudyLists] = useState(true);
   const [showSignals, setShowSignals] = useState(false);
   const [showSectionSummaries, setShowSectionSummaries] = useState(false);
 
@@ -25,6 +25,20 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
   useEffect(() => {
     load();
   }, [documentId, refreshKey]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setExpanded(false);
+    }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [expanded]);
 
   if (!paperMap && loading) {
     return (
@@ -70,12 +84,11 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
         </div>
         <button
           type="button"
-          onClick={() => setExpanded((value) => !value)}
+          onClick={() => setExpanded(true)}
           className="inline-flex items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-surface"
-          aria-expanded={expanded}
         >
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          {expanded ? "Collapse" : "Open map"}
+          <ChevronRight size={14} />
+          Open map
         </button>
         </div>
         {!complete ? (
@@ -99,20 +112,81 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
         ) : null}
       </div>
       {expanded ? (
-        <div className="grid gap-4 border-t border-line p-5">
-          <div className="grid gap-4 min-[1800px]:grid-cols-[0.95fr_1.05fr]">
-            <div className="rounded-md border border-line bg-surface p-4">
+        <PaperMapWorkspace
+          complete={complete}
+          guide={guide}
+          synthesis={synthesis}
+          paperMap={paperMap}
+          showStudyLists={showStudyLists}
+          setShowStudyLists={setShowStudyLists}
+          showSignals={showSignals}
+          setShowSignals={setShowSignals}
+          showSectionSummaries={showSectionSummaries}
+          setShowSectionSummaries={setShowSectionSummaries}
+          onClose={() => setExpanded(false)}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+function PaperMapWorkspace({
+  complete,
+  guide,
+  synthesis,
+  paperMap,
+  showStudyLists,
+  setShowStudyLists,
+  showSignals,
+  setShowSignals,
+  showSectionSummaries,
+  setShowSectionSummaries,
+  onClose
+}: {
+  complete: boolean;
+  guide: NonNullable<PaperMap["guide"]>;
+  synthesis: NonNullable<PaperMap["synthesis"]>;
+  paperMap: PaperMap;
+  showStudyLists: boolean;
+  setShowStudyLists: (value: (current: boolean) => boolean) => void;
+  showSignals: boolean;
+  setShowSignals: (value: (current: boolean) => boolean) => void;
+  showSectionSummaries: boolean;
+  setShowSectionSummaries: (value: (current: boolean) => boolean) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-ink/30 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true">
+      <div className="mx-auto flex h-[min(88vh,980px)] w-[min(1180px,94vw)] flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-material">
+        <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{complete ? "Paper study map" : "Progressive paper map"}</p>
+            <h2 className="mt-1 text-xl font-semibold text-ink">{complete ? "Whole-paper guide ready" : "Map from ready sections"}</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">{guide.coverage_note}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line text-neutral-600 hover:bg-surface"
+            aria-label="Close paper map"
+          >
+            <X size={17} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto bg-surface p-5">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <div className="rounded-md border border-line bg-panel p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{guide.title}</p>
-              <p className="mt-2 text-sm leading-6 text-ink">{guide.thesis_so_far}</p>
-              <p className="mt-2 text-xs leading-5 text-neutral-600">{guide.coverage_note}</p>
-              <div className="mt-4 grid gap-4">
+              <p className="mt-2 text-base leading-7 text-ink">{guide.thesis_so_far}</p>
+              <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-1">
                 <GuideList title="Reading focus" rows={guide.reading_focus.slice(0, 3)} />
                 <GuideList title="Next steps" rows={guide.next_steps.slice(0, 3)} />
               </div>
             </div>
             <SynthesisPanel synthesis={synthesis} complete={complete} />
           </div>
-          <div className="rounded-md border border-line bg-panel p-4">
+
+          <div className="mt-5 rounded-md border border-line bg-panel p-4">
             <button
               type="button"
               onClick={() => setShowStudyLists((value) => !value)}
@@ -120,82 +194,73 @@ export function PaperMapProgressPanel({ documentId, refreshKey = 0 }: { document
             >
               <span>
                 <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">Vocabulary and review plan</span>
-                <span className="mt-1 block text-sm leading-6 text-neutral-600">
-                  Paper-level terms, reusable expressions, and review sequence. Keep separate from the visual map because it is study material, not navigation.
-                </span>
+                <span className="mt-1 block text-sm leading-6 text-neutral-600">Paper-level terms, reusable expressions, and review sequence.</span>
               </span>
               {showStudyLists ? <ChevronDown size={18} className="shrink-0 text-neutral-500" /> : <ChevronRight size={18} className="shrink-0 text-neutral-500" />}
             </button>
           </div>
           {showStudyLists ? (
-            <div className="grid gap-4 min-[1800px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]">
-              <div className="rounded-md border border-line bg-surface p-4">
+            <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]">
+              <div className="rounded-md border border-line bg-panel p-4">
                 <SynthesisList title="Priority terms" rows={synthesis.priority_terms} limit={8} spacious />
               </div>
-              <div className="rounded-md border border-line bg-surface p-4">
+              <div className="rounded-md border border-line bg-panel p-4">
                 <SynthesisList title="Reusable expressions" rows={synthesis.reusable_expressions} limit={6} spacious />
               </div>
-              <div className="rounded-md border border-line bg-surface p-4">
+              <div className="rounded-md border border-line bg-panel p-4">
                 <GuideList title="Review plan" rows={synthesis.review_plan} />
               </div>
             </div>
           ) : null}
-          <div className="rounded-md border border-line bg-panel p-4">
-            <button
-              type="button"
-              onClick={() => setShowSignals((value) => !value)}
-              className="flex w-full items-center justify-between gap-3 text-left"
-            >
-              <span>
-                <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">Source-grounded signals</span>
-                <span className="mt-1 block text-sm leading-6 text-neutral-600">
-                  Raw concepts, terms, and expressions behind the draft. Open when you want to inspect or save items.
-                </span>
-              </span>
-              {showSignals ? <ChevronDown size={18} className="shrink-0 text-neutral-500" /> : <ChevronRight size={18} className="shrink-0 text-neutral-500" />}
-            </button>
+
+          <div className="mt-5 grid gap-4 xl:grid-cols-2">
+            <DisclosureBlock
+              title="Source-grounded signals"
+              detail="Raw concepts, terms, and expressions behind the draft."
+              open={showSignals}
+              onToggle={() => setShowSignals((value) => !value)}
+            />
+            <DisclosureBlock
+              title="Analyzed sections"
+              detail={`${paperMap.section_summaries.length} section summaries are available for audit.`}
+              open={showSectionSummaries}
+              onToggle={() => setShowSectionSummaries((value) => !value)}
+            />
           </div>
           {showSignals ? (
-            <div className="grid gap-4 min-[1800px]:grid-cols-3">
+            <div className="mt-4 grid gap-4 xl:grid-cols-3">
               <MapList title="Concepts" rows={paperMap.top_concepts} />
               <MapList title="Terms" rows={paperMap.top_terms} />
               <MapList title="Expressions" rows={paperMap.top_phrases} />
             </div>
           ) : null}
-          <div className="border-t border-line pt-5">
-            <button
-              type="button"
-              onClick={() => setShowSectionSummaries((value) => !value)}
-              className="flex w-full items-center justify-between gap-3 text-left"
-            >
-              <span>
-                <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">Analyzed sections</span>
-                <span className="mt-1 block text-sm leading-6 text-neutral-600">
-                  {paperMap.section_summaries.length
-                    ? `${paperMap.section_summaries.length} section summaries are available. Open when you want to audit the section-by-section trail.`
-                    : "Analyze a section to start building the paper map."}
-                </span>
-              </span>
-              {showSectionSummaries ? (
-                <ChevronDown size={18} className="shrink-0 text-neutral-500" />
-              ) : (
-                <ChevronRight size={18} className="shrink-0 text-neutral-500" />
-              )}
-            </button>
-            {showSectionSummaries && paperMap.section_summaries.length ? (
-              <div className="mt-3 grid max-h-[520px] gap-3 overflow-y-auto pr-1">
-                {paperMap.section_summaries.map((summary) => (
-                  <article key={summary.text} className="rounded-md border border-line bg-surface p-3">
-                    <p className="text-sm font-semibold text-ink">{summary.text}</p>
-                    <p className="mt-1 text-xs leading-5 text-neutral-600">{summary.meaning}</p>
-                  </article>
-                ))}
-              </div>
-            ) : null}
-          </div>
+          {showSectionSummaries && paperMap.section_summaries.length ? (
+            <div className="mt-4 grid gap-3 xl:grid-cols-2">
+              {paperMap.section_summaries.map((summary) => (
+                <article key={summary.text} className="rounded-md border border-line bg-panel p-3">
+                  <p className="text-sm font-semibold text-ink">{summary.text}</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-600">{summary.meaning}</p>
+                </article>
+              ))}
+            </div>
+          ) : null}
         </div>
-      ) : null}
-    </section>
+      </div>
+    </div>
+  );
+}
+
+function DisclosureBlock({ title, detail, open, onToggle }: { title: string; detail: string; open: boolean; onToggle: () => void }) {
+  return (
+    <div className="rounded-md border border-line bg-panel p-4">
+      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3 text-left">
+        <span>
+          <span className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</span>
+          <span className="mt-1 block text-sm leading-6 text-neutral-600">{detail}</span>
+        </span>
+        {open ? <ChevronDown size={18} className="shrink-0 text-neutral-500" /> : <ChevronRight size={18} className="shrink-0 text-neutral-500" />}
+      </button>
+    </div>
   );
 }
 

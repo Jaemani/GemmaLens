@@ -361,6 +361,33 @@ export function DocumentPageReader({
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+          <div className="flex items-center rounded-md border border-line bg-surface">
+            <button
+              type="button"
+              onClick={() => goToSection(Math.max(0, pageIndex - 1))}
+              disabled={pageIndex === 0}
+              className="inline-flex h-9 w-9 items-center justify-center text-ink hover:bg-white disabled:opacity-35"
+              aria-label="Previous section"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span
+              className={`border-x border-line px-3 py-2 text-xs font-semibold ${
+                currentSection?.analyzed ? "bg-green-50 text-green-700" : "bg-panel text-neutral-600"
+              }`}
+            >
+              {currentSection?.analyzed ? "Ready" : "Not ready"}
+            </span>
+            <button
+              type="button"
+              onClick={() => goToSection(Math.min(sections.length - 1, pageIndex + 1))}
+              disabled={!sections.length || pageIndex >= sections.length - 1}
+              className="inline-flex h-9 w-9 items-center justify-center text-ink hover:bg-white disabled:opacity-35"
+              aria-label="Next section"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
           {document.source_type === "pdf" && !document.has_original_file ? (
             <>
               <button
@@ -399,8 +426,12 @@ export function DocumentPageReader({
       {sections.length ? (
         <div className="border-b border-line px-5 py-3">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section navigator</p>
-            <p className="text-xs font-semibold text-neutral-600">Green sections are ready</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Paper sections</p>
+            <div className="flex items-center gap-3 text-[11px] font-semibold text-neutral-600">
+              <span>{analyzedCount} ready</span>
+              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-accent" /> Current</span>
+              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" /> Ready</span>
+            </div>
           </div>
           <div className="flex gap-2 overflow-x-auto">
           {sectionGroups.map((group) => {
@@ -445,34 +476,9 @@ export function DocumentPageReader({
           </div>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
-        <button
-          type="button"
-          onClick={() => goToSection(Math.max(0, pageIndex - 1))}
-          disabled={pageIndex === 0}
-          className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-40"
-        >
-          <ChevronLeft size={15} />
-          Previous section
-        </button>
-        <div className="text-center">
-          <p className={`rounded-full px-3 py-1 text-xs font-semibold ${currentSection?.analyzed ? "bg-green-50 text-green-700" : "bg-neutral-100 text-neutral-500"}`}>
-            {currentSection?.analyzed ? "Ready" : "Not ready"}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => goToSection(Math.min(sections.length - 1, pageIndex + 1))}
-          disabled={!sections.length || pageIndex >= sections.length - 1}
-          className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink hover:bg-surface disabled:opacity-40"
-        >
-          Next section
-          <ChevronRight size={15} />
-        </button>
-      </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-5 py-3">
         <div className="max-w-2xl space-y-1">
-          {currentSection?.preview ? <p className="text-sm font-medium leading-6 text-ink">{currentSection.preview}</p> : null}
+          <p className="text-sm font-semibold leading-6 text-ink">Source text</p>
           <p className="text-xs leading-5 text-neutral-600">
             {currentSection?.analyzed
               ? "Open the lesson from this section, then save words and expressions worth reviewing."
