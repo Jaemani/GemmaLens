@@ -150,6 +150,8 @@ export const api = {
     request<AnalysisResult>(`/documents/${documentId}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
   analyzeDocumentSection: (documentId: string, sectionIndex: number) =>
     request<AnalysisResult>(`/documents/${documentId}/sections/${sectionIndex}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
+  getDocumentSectionAnalysis: (documentId: string, sectionIndex: number) =>
+    request<AnalysisResult>(`/documents/${documentId}/sections/${sectionIndex}/analysis`),
   stagedAnalyzeDocument: (documentId: string, payload: { max_sections: number }) =>
     request<StagedAnalysisResponse>(`/documents/${documentId}/staged-analysis`, {
       method: "POST",

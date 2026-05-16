@@ -29,6 +29,7 @@ export function DocumentPageReader({
   const [batchStatus, setBatchStatus] = useState("");
   const [isAttaching, setIsAttaching] = useState(false);
   const [sectionAnalysis, setSectionAnalysis] = useState<AnalysisResult | null>(null);
+  const [sectionAnalysisIndex, setSectionAnalysisIndex] = useState<number | null>(null);
   const [error, setError] = useState("");
   const attachInputRef = useRef<HTMLInputElement>(null);
   const currentSection = sections[pageIndex];
@@ -59,8 +60,31 @@ export function DocumentPageReader({
 
   useEffect(() => {
     setSectionAnalysis(null);
+    setSectionAnalysisIndex(null);
     setError("");
   }, [pageIndex]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!document || !currentSection?.analyzed || sectionAnalysisIndex === currentSection.index) return;
+    api
+      .getDocumentSectionAnalysis(document.id, currentSection.index)
+      .then((cached) => {
+        if (cancelled) return;
+        setSectionAnalysis(cached);
+        setSectionAnalysisIndex(currentSection.index);
+        onSectionLesson?.({ analysis: cached, sectionNumber: pageIndex + 1 });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSectionAnalysis(null);
+          setSectionAnalysisIndex(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentSection?.analyzed, currentSection?.index, document, onSectionLesson, pageIndex, sectionAnalysisIndex]);
 
   useEffect(() => {
     onSourcePageChange?.(pdfPageFromLabel(currentSection?.source_label ?? null));
@@ -90,6 +114,7 @@ export function DocumentPageReader({
     try {
       const created = await api.analyzeDocumentSection(document.id, section.index);
       setSectionAnalysis(created);
+      setSectionAnalysisIndex(section.index);
       onSectionLesson?.({ analysis: created, sectionNumber: index + 1 });
       setSections((current) =>
         current.map((currentSection) => (currentSection.index === section.index ? { ...currentSection, analyzed: true } : currentSection))

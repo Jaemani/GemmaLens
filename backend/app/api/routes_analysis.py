@@ -44,6 +44,27 @@ async def analyze_document_section(document_id: str, section_index: int, db: Ses
     return result
 
 
+@router.get("/{document_id}/sections/{section_index}/analysis", response_model=AnalysisResult)
+def get_document_section_analysis(document_id: str, section_index: int, db: Session = Depends(get_db)):
+    document = DocumentRepository(db).get(document_id)
+    if not document:
+        raise not_found("Document not found")
+    readable_text = AcademicTextService().readable_section(document.content)
+    section = DocumentSectionService().section(readable_text, section_index)
+    if not section:
+        raise not_found("Document section not found")
+    section_text, section_count = section
+    result = SectionAnalysisRepository(db).get_result(document_id, section_index)
+    if not result and section_index == 0:
+        result = AnalysisRepository(db).get_result(document_id)
+    if not result:
+        raise not_found("Section analysis not found")
+    normalized = AnalysisNormalizationService().normalize_result(result, section_text)
+    if f"section:{section_index + 1}/{section_count}" not in normalized.quality_warnings:
+        normalized.quality_warnings.append(f"section:{section_index + 1}/{section_count}")
+    return normalized
+
+
 @router.post("/{document_id}/staged-analysis", response_model=StagedAnalysisResponse)
 async def analyze_next_document_sections(
     document_id: str,
