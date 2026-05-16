@@ -266,22 +266,32 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
       ) : null}
       {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
       {sectionLesson ? <SectionLessonCard analysis={sectionLesson.analysis} sectionNumber={sectionLesson.sectionNumber} isAnalyzingNext={false} /> : null}
-      <section className="rounded-lg border border-line bg-panel shadow-material">
-        <button
-          type="button"
-          onClick={() => setShowDetailedOutput((value) => !value)}
-          className="flex w-full items-center justify-between gap-3 p-4 text-left"
-        >
-          <span>
-            <span className="block text-sm font-semibold text-ink">Detailed generated output</span>
-            <span className="mt-1 block text-xs leading-5 text-neutral-600">
-              Open for the full model output: concept cards, learning-object table, layered summaries, and sentence structures.
+      {isVideoSource ? (
+        <>
+          <ConceptMapPanel analysis={analysis} sourceKind="video" />
+          {learningObjects}
+          {summaries}
+          {sentenceStructures}
+        </>
+      ) : null}
+      {!isVideoSource ? (
+        <section className="rounded-lg border border-line bg-panel shadow-material">
+          <button
+            type="button"
+            onClick={() => setShowDetailedOutput((value) => !value)}
+            className="flex w-full items-center justify-between gap-3 p-4 text-left"
+          >
+            <span>
+              <span className="block text-sm font-semibold text-ink">Detailed generated output</span>
+              <span className="mt-1 block text-xs leading-5 text-neutral-600">
+                Open for the full model output: concept cards, learning-object table, layered summaries, and sentence structures.
+              </span>
             </span>
-          </span>
-          {showDetailedOutput ? <ChevronDown size={18} className="shrink-0 text-neutral-500" /> : <ChevronRight size={18} className="shrink-0 text-neutral-500" />}
-        </button>
-      </section>
-      {showDetailedOutput ? (
+            {showDetailedOutput ? <ChevronDown size={18} className="shrink-0 text-neutral-500" /> : <ChevronRight size={18} className="shrink-0 text-neutral-500" />}
+          </button>
+        </section>
+      ) : null}
+      {showDetailedOutput && !isVideoSource ? (
         <>
           {documentId !== DEMO_DOCUMENT_ID ? (
             <div className="flex justify-end">

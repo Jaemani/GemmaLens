@@ -29,7 +29,7 @@ Evaluate GemmaLens as a real user reading famous academic PDFs end to end. The a
 | Extraction trash hidden | Dashboard/Documents previews and lesson snippets strip PDF markers and raw clutter; paper-map synthesis filters references-boundary summaries, bibliography venue markers, and low-value expression fragments from priority study lists | Met for inspected pages |
 | Duplicate partial uploads reduced | `displayableDocuments` chooses the most complete display item per title/source type | Met for display; raw duplicate records still exist |
 | Translate is not blank/opaque | Translate page empty/loading/copy states verified by Playwright | Met |
-| Video has usable empty/progress state | Video page empty/fetch/parse states verified by screenshot and build | Met for empty state; full transcript interaction still lightly tested |
+| Video has usable empty/progress/result state | Video page empty/fetch/parse states verified; video analysis result now shows transcript learning content immediately instead of hiding it behind detailed output | Mostly met; full YouTube caption variability still lightly tested |
 | Dictionary is a review queue | Dictionary shows type counts and review-focus filters; Quiz can now use saved dictionary items as a review source and marks them viewed when opened | Partly met; no spaced repetition scheduler yet |
 | Guide matches current product | Guide rewritten around PDF source, section study, paper map, current limits | Met |
 | Internal experiment tooling hidden | Sidebar nav no longer links experiments, real analysis pages hide A/B panels, and the standalone `/experiments` route has been removed from the build | Met |
@@ -43,7 +43,7 @@ Evaluate GemmaLens as a real user reading famous academic PDFs end to end. The a
 - Duplicate document records are hidden in lists but not merged or cleaned in the database.
 - PDF extraction still loses equations, columns, and some mathematical layout; the UI is honest about this but does not solve OCR/layout recovery.
 - Dictionary review now shows lightweight review states (`New`, `Review soon`, `Familiar`) from encounter and view counts. Saved items can be reviewed directly from Quiz, and opening a saved-item quiz prompt increments the dictionary view count. It is still not a full spaced-repetition scheduler.
-- Video transcript analysis is aligned visually, but the full video-result flow needs the same depth of famous-paper auditing.
+- Video transcript analysis is aligned visually: video results show the concept map, learning objects, summaries, and sentence structures immediately with transcript-aware copy. YouTube caption availability still needs broader real-world testing.
 - Quiz now builds prompts from saved dictionary items and from complete paper-map priority concepts, terms, and expressions when available, then falls back to base analysis items. It is still lightweight and not a full spaced-repetition scheduler.
 
 ## Current Verdict
