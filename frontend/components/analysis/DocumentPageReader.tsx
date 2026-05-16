@@ -1,6 +1,6 @@
 "use client";
 
-import { BookmarkPlus, CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Paperclip, ScanText } from "lucide-react";
+import { BookmarkPlus, CheckCircle2, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Eye, EyeOff, Paperclip, ScanText } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { AnalysisResult, DocumentRead, DocumentSection } from "@/lib/types";
@@ -53,6 +53,8 @@ export function DocumentPageReader({
   const sectionGroups = groupSectionsByPdfPage(sections);
   const currentPdfPage = pdfPageFromLabel(currentSection?.source_label ?? null);
   const currentPageSectionNumber = currentSection ? sectionNumberWithinPdfPage(sections, pageIndex) : null;
+  const previousPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, -1);
+  const nextPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, 1);
 
   useEffect(() => {
     let cancelled = false;
@@ -364,28 +366,43 @@ export function DocumentPageReader({
           <div className="flex items-center rounded-md border border-line bg-surface">
             <button
               type="button"
+              onClick={() => {
+                if (previousPageIndex !== null) goToSection(previousPageIndex);
+              }}
+              disabled={previousPageIndex === null}
+              className="inline-flex h-9 w-9 items-center justify-center text-ink hover:bg-white disabled:opacity-35"
+              aria-label="Previous PDF page"
+            >
+              <ChevronsLeft size={16} />
+            </button>
+            <button
+              type="button"
               onClick={() => goToSection(Math.max(0, pageIndex - 1))}
               disabled={pageIndex === 0}
-              className="inline-flex h-9 w-9 items-center justify-center text-ink hover:bg-white disabled:opacity-35"
+              className="inline-flex h-9 w-9 items-center justify-center border-l border-line text-ink hover:bg-white disabled:opacity-35"
               aria-label="Previous section"
             >
               <ChevronLeft size={16} />
             </button>
-            <span
-              className={`border-x border-line px-3 py-2 text-xs font-semibold ${
-                currentSection?.analyzed ? "bg-green-50 text-green-700" : "bg-panel text-neutral-600"
-              }`}
-            >
-              {currentSection?.analyzed ? "Ready" : "Not ready"}
-            </span>
             <button
               type="button"
               onClick={() => goToSection(Math.min(sections.length - 1, pageIndex + 1))}
               disabled={!sections.length || pageIndex >= sections.length - 1}
-              className="inline-flex h-9 w-9 items-center justify-center text-ink hover:bg-white disabled:opacity-35"
+              className="inline-flex h-9 w-9 items-center justify-center border-l border-line text-ink hover:bg-white disabled:opacity-35"
               aria-label="Next section"
             >
               <ChevronRight size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (nextPageIndex !== null) goToSection(nextPageIndex);
+              }}
+              disabled={nextPageIndex === null}
+              className="inline-flex h-9 w-9 items-center justify-center border-l border-line text-ink hover:bg-white disabled:opacity-35"
+              aria-label="Next PDF page"
+            >
+              <ChevronsRight size={16} />
             </button>
           </div>
           {document.source_type === "pdf" && !document.has_original_file ? (
@@ -431,6 +448,7 @@ export function DocumentPageReader({
               <span>{analyzedCount} ready</span>
               <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-accent" /> Current</span>
               <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" /> Ready</span>
+              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-neutral-300" /> Not ready</span>
             </div>
           </div>
           <div className="flex gap-2 overflow-x-auto">
@@ -813,6 +831,28 @@ function sectionNumberWithinPdfPage(sections: DocumentSection[], index: number) 
     }
   }
   return localNumber || null;
+}
+
+function findAdjacentPdfPageIndex(sections: DocumentSection[], currentIndex: number, direction: -1 | 1) {
+  const currentPage = pdfPageFromLabel(sections[currentIndex]?.source_label ?? null);
+  if (!currentPage) return null;
+  if (direction < 0) {
+    for (let cursor = currentIndex - 1; cursor >= 0; cursor -= 1) {
+      const page = pdfPageFromLabel(sections[cursor]?.source_label ?? null);
+      if (page && page !== currentPage) {
+        while (cursor > 0 && pdfPageFromLabel(sections[cursor - 1]?.source_label ?? null) === page) {
+          cursor -= 1;
+        }
+        return cursor;
+      }
+    }
+    return null;
+  }
+  for (let cursor = currentIndex + 1; cursor < sections.length; cursor += 1) {
+    const page = pdfPageFromLabel(sections[cursor]?.source_label ?? null);
+    if (page && page !== currentPage) return cursor;
+  }
+  return null;
 }
 
 function buildSectionLessonSelection(analysis: AnalysisResult, sections: DocumentSection[], index: number): SectionLessonSelection {
