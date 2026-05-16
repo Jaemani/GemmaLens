@@ -7580,6 +7580,11 @@ class AnalysisNormalizationService:
                 "convolutional",
                 "overfitting",
                 "regularizer",
+                "randomization",
+                "photometric distortions",
+                "batchnormalized networks",
+                "sigmoid nonlinearity",
+                "accuracy",
             },
         )
 
@@ -9502,6 +9507,140 @@ class AnalysisNormalizationService:
                 "The method needs matching training settings to show its full speed benefit.",
                 "'does not take full advantage of'는 단순 적용과 제대로 활용한 적용을 구분하는 표현입니다.",
                 "The section is long because it compresses multiple hyperparameter and regularization changes into one list.",
+            )
+        if "randomization inherent in our method" in lowered and "reduce the photometric distortions" in lowered:
+            return profile(
+                "This short tail section finishes the BN-Inception tuning recipe with shuffling and image-distortion changes.",
+                (
+                    "The paper argues that BatchNorm's mini-batch randomness helps most when examples appear with different neighbors. "
+                    "Because batch-normalized networks train faster and see each example fewer times, the authors reduce photometric distortions."
+                ),
+                (
+                    "This is a continuation fragment from the previous experimental-modification list: it connects within-shard shuffling to BN's regularization effect, "
+                    "then changes data augmentation so the faster trainer focuses on more realistic images."
+                ),
+                [
+                    "This extracted section is a page-tail fragment; read it together with the previous BN-Inception tuning list.",
+                    "The learning point is experimental rationale, not a standalone paper claim.",
+                    "Save `photometric distortions` only if image-augmentation vocabulary matters to you.",
+                ],
+                [
+                    ("randomization", "Training variation introduced by mini-batch composition.", "randomization"),
+                    ("photometric distortions", "Image color/brightness-style data augmentation reduced in this experiment.", "photometric distortions"),
+                    ("training example", "Example whose mini-batch context can change across training.", "training example"),
+                    ("batchnormalized networks", "Networks using BN that train faster and see examples fewer times.", "batchnormalized networks"),
+                ],
+                [
+                    ("mini-batch-randomization rationale", "BN regularization is stronger when examples meet different mini-batch neighbors.", "affects an example differently"),
+                    ("augmentation-reduction rationale", "Faster BN training motivates reducing artificial image distortions.", "distorting them less"),
+                    ("orphan-section continuation", "This text completes the preceding list of BN-Inception modifications.", "Reduce the photometric distortions"),
+                ],
+                [
+                    ("inherent in our method", "claim", "Describes a property built into the method."),
+                    ("should be most beneficial when", "claim", "States the condition under which an effect helps most."),
+                    ("Because", "claim", "Introduces the reason for an experimental change."),
+                    ("by distorting them less", "method", "Explains the practical data-augmentation adjustment."),
+                ],
+                "Because batchnormalized networks train faster",
+                "Because X, we let Y do Z.",
+                "Since BN networks train faster, the authors reduce artificial image distortion.",
+                "'Because X, we let Y...'는 실험 설정을 바꾼 이유와 조치를 연결하는 구조입니다.",
+                "The section is difficult mainly because it is a dangling continuation from the previous page.",
+            )
+        if "bn-baseline" in lowered and "bn-x5" in lowered and "bn-x30" in lowered and "single-network classification" in lowered:
+            return profile(
+                "This section defines the single-network ImageNet variants and the Figure 2/3 result-table setup.",
+                (
+                    "The paper compares Inception, BN-Baseline, BN-x5, BN-x30, and BN-x5-Sigmoid. "
+                    "The variants test whether BatchNorm allows faster training, larger learning rates, and sigmoid networks that would otherwise fail."
+                ),
+                (
+                    "The passage is a result-table setup section: it names each ImageNet network variant, lists the learning-rate changes, "
+                    "and defines the speed/accuracy comparison against Inception's 72.2% validation accuracy."
+                ),
+                [
+                    "Ignore the leading chart-axis numbers; they are figure extraction residue.",
+                    "Focus on variant names and what each variant changes.",
+                    "This is where `BN-x5` and `BN-x30` become shorthand for learning-rate stress tests.",
+                ],
+                [
+                    ("BN-Baseline", "Inception plus BatchNorm before each nonlinearity.", "BN-Baseline"),
+                    ("BN-x5", "BN-Inception with the section 4.2.1 modifications and 5x initial learning rate.", "BN-x5"),
+                    ("BN-x30", "BN-x5-style model with 30x Inception initial learning rate.", "BN-x30"),
+                    ("BN-x5-Sigmoid", "BN-x5 variant using sigmoid instead of ReLU.", "BN-x5-Sigmoid"),
+                    ("LSVRC2012 training data", "ImageNet training data used for the single-network experiments.", "LSVRC2012 training data"),
+                    ("validation accuracy", "Metric plotted as training progresses.", "validation accuracy"),
+                    ("machine infinity", "Numerical blow-up when original Inception uses too large a learning rate.", "machine infinity"),
+                    ("chance accuracy", "Near-random prediction performance for original sigmoid Inception.", "chance"),
+                ],
+                [
+                    ("variant-definition table", "The section defines the models that later result numbers compare.", "We evaluated the following networks"),
+                    ("learning-rate stress test", "BN-x5 and BN-x30 test whether BN tolerates much larger learning rates.", "learning rate was increased"),
+                    ("sigmoid-rescue test", "BN-x5-Sigmoid tests whether BN can train sigmoid networks that otherwise fail.", "sigmoid nonlinearity"),
+                ],
+                [
+                    ("Steps to match", "general", "Names a speed-to-target metric."),
+                    ("as a function of", "general", "Describes the x-axis of a result plot."),
+                    ("all trained on", "method", "States the shared data condition."),
+                    ("Same as", "method", "Defines a variant relative to a baseline."),
+                    ("Like", "method", "Defines another variant by analogy."),
+                    ("but with", "contrast", "Names the changed setting."),
+                    ("We also attempted", "method", "Reports an unsuccessful comparison attempt."),
+                ],
+                "We evaluated the following networks",
+                "We evaluated the following X, all Y and Z.",
+                "The authors define a controlled set of network variants before comparing speed and accuracy.",
+                "'the following networks'은 실험 대상 목록이 시작된다는 신호입니다.",
+                "The section is hard because chart text, table text, and variant definitions are extracted into one block.",
+            )
+        if "bn-x5 needs 14 times fewer steps" in lowered and "ensemble classification" in lowered:
+            return profile(
+                "This section interprets the ImageNet speed/accuracy results and begins the ensemble result claim.",
+                (
+                    "BN-Baseline matches Inception accuracy in less than half the steps. BN-x5 reaches the same target in 14 times fewer steps, "
+                    "BN-x30 reaches higher final accuracy, and BN lets a sigmoid Inception train at all."
+                ),
+                (
+                    "The passage converts Figure 3 into claims: BatchNorm accelerates optimization, supports high learning rates, "
+                    "rescues sigmoid nonlinearities from chance-level failure, and then reports ImageNet ensemble top-5 error results."
+                ),
+                [
+                    "This is a result-interpretation section: map each model variant to the claim it supports.",
+                    "Separate single-network speed results from the ensemble classification claim at the end.",
+                    "The important language pattern is `By only using...`, which isolates the effect of one modification.",
+                ],
+                [
+                    ("steps to 72.2% accuracy", "Training-speed metric using Inception's target accuracy.", "72.2% accuracy"),
+                    ("BN-Baseline", "BatchNorm-only Inception variant.", "BN-Baseline"),
+                    ("BN-x5", "Modified BN-Inception with 5x initial learning rate.", "BN-x5"),
+                    ("BN-x30", "BN variant with 30x initial learning rate.", "BN-x30"),
+                    ("BN-x5-Sigmoid", "Sigmoid BN variant that reaches 69.8%.", "BN-x5-Sigmoid"),
+                    ("internal covariate shift", "Mechanism whose reduction allows sigmoid networks to train.", "internal covariate shift"),
+                    ("top-5 validation error", "ImageNet metric reported for the ensemble.", "top-5 validation error"),
+                    ("ILSVRC server", "Evaluation server used for the reported test error.", "ILSVRC server"),
+                ],
+                [
+                    ("BatchNorm-only speedup", "BN-Baseline alone cuts steps by more than half.", "less than half"),
+                    ("modified-BN speedup", "BN-x5 reaches target accuracy with 14x fewer steps.", "14 times fewer steps"),
+                    ("high-learning-rate accuracy gain", "BN-x30 trains slower at first but reaches higher final accuracy.", "higher final accuracy"),
+                    ("sigmoid training rescue", "BatchNorm enables sigmoid Inception to train far above chance.", "sigmoid is used"),
+                    ("ensemble result claim", "The section begins reporting top-5 validation/test error for a six-network ensemble.", "For our ensemble"),
+                ],
+                [
+                    ("By only using", "method", "Isolates the effect of one modification."),
+                    ("By applying", "method", "Introduces the combined modification effect."),
+                    ("significantly increase", "result", "States a large performance change."),
+                    ("Interestingly", "general", "Flags a non-obvious result."),
+                    ("further", "general", "Signals an additional degree of change."),
+                    ("despite", "contrast", "Contrasts success with known difficulty."),
+                    ("Indeed", "claim", "Introduces supporting numeric evidence."),
+                    ("Here we report", "result", "Introduces the authors' result claim."),
+                ],
+                "By only using Batch Normalization",
+                "By only using X, we achieve Y.",
+                "Using BatchNorm alone already matches the baseline in fewer training steps.",
+                "'By only using'은 어떤 효과가 특정 변경 하나만으로도 나타남을 강조합니다.",
+                "The section is dense because it interprets a table, compares multiple variants, and then shifts into ensemble results.",
             )
         return None
 
