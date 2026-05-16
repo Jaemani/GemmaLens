@@ -7,14 +7,14 @@ const items = [
   { href: "/video", label: "Video", icon: Video },
   { href: "/translate", label: "Translate", icon: Languages },
   { href: "/quiz", label: "Quiz", icon: FileQuestion },
-  { href: "/dictionary", label: "Dictionary", icon: BookOpen },
+  { href: "/dictionary", label: "Library", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/guide", label: "Guide", icon: HelpCircle }
 ];
 
 export function Sidebar() {
   return (
-    <aside className="hidden min-h-screen w-64 shrink-0 border-r border-line bg-panel px-4 py-5 md:block">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 overflow-y-auto border-r border-line bg-panel px-4 py-5 md:block">
       <div className="mb-7">
         <p className="text-base font-semibold text-ink">GemmaLens</p>
         <h1 className="mt-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">Edge language learning</h1>

@@ -1,10 +1,9 @@
 "use client";
 
 import { BookOpenCheck, Clock, FileText, Link as LinkIcon, Play } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import type { TranscriptResponse, TranscriptSegment } from "@/lib/types";
+import type { AnalysisResult, TranscriptResponse, TranscriptSegment } from "@/lib/types";
 import { AnalysisProgress } from "@/components/analysis/AnalysisProgress";
 
 declare global {
@@ -23,7 +22,6 @@ type YouTubePlayer = {
 };
 
 export function VideoLearningPanel() {
-  const router = useRouter();
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [videoId, setVideoId] = useState<string | null>(null);
   const [subtitleText, setSubtitleText] = useState("");
@@ -36,6 +34,8 @@ export function VideoLearningPanel() {
   const [analysisElapsed, setAnalysisElapsed] = useState(0);
   const [analysisStep, setAnalysisStep] = useState(0);
   const [analysisLabel, setAnalysisLabel] = useState<string | null>(null);
+  const [videoAnalysis, setVideoAnalysis] = useState<AnalysisResult | null>(null);
+  const [videoAnalysisTitle, setVideoAnalysisTitle] = useState("");
   const [showSubtitleFallback, setShowSubtitleFallback] = useState(false);
   const playerRef = useRef<YouTubePlayer | null>(null);
   const playerElementId = "youtube-learning-player";
@@ -166,12 +166,13 @@ export function VideoLearningPanel() {
     setError(null);
     try {
       const document = await api.createDocument({ title, content, source_type: sourceType });
+      setVideoAnalysisTitle(title);
       setAnalysisStep(1);
       setAnalysisLabel(sourceType === "video_segment" ? "Preparing nearby transcript lines" : "Preparing transcript chunks");
-      await api.analyzeDocument(document.id);
+      const analysis = await api.analyzeDocument(document.id);
       setAnalysisStep(4);
-      setAnalysisLabel("Opening video learning result");
-      router.push(`/analysis/${document.id}`);
+      setAnalysisLabel(null);
+      setVideoAnalysis(analysis);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not analyze transcript text.");
       setAnalysisLabel(null);
@@ -295,13 +296,14 @@ export function VideoLearningPanel() {
                     "Validating learning objects",
                     "Opening result"
                   ]}
-                  hint="Video analysis uses the same learning-object pipeline as documents, but labels and reader UI should stay transcript-aware."
+                  hint="Keep watching. The lesson will appear here beside the video instead of opening a separate document page."
                 />
               </div>
             ) : null}
             {error ? <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">{error}</p> : null}
           </div>
         )}
+        {videoAnalysis ? <VideoInlineLesson analysis={videoAnalysis} title={videoAnalysisTitle} /> : null}
       </section>
 
       <aside className="rounded-lg border border-line bg-panel shadow-material">
@@ -348,6 +350,88 @@ export function VideoLearningPanel() {
       </aside>
     </div>
   );
+}
+
+function VideoInlineLesson({ analysis, title }: { analysis: AnalysisResult; title: string }) {
+  const concepts = (analysis.concepts ?? []).slice(0, 4);
+  const terms = analysis.terms.slice(0, 6);
+  const phrases = analysis.phrases.slice(0, 5);
+  const sentence = analysis.sentences[0];
+
+  return (
+    <section className="rounded-lg border border-line bg-panel shadow-material">
+      <div className="border-b border-line p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Video lesson</p>
+        <h2 className="mt-1 text-lg font-semibold">{title || "Current video lesson"}</h2>
+        <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.summaries.one_line}</p>
+      </div>
+      <div className="grid gap-4 p-5">
+        <div className="rounded-md border border-line bg-surface p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Watch for</p>
+          <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.summaries.simple}</p>
+          {analysis.summaries.study_notes.length ? (
+            <ul className="mt-3 space-y-2">
+              {analysis.summaries.study_notes.slice(0, 3).map((note) => (
+                <li key={note} className="text-sm leading-6 text-neutral-700">
+                  <span className="mr-2 font-semibold text-accent">Focus</span>
+                  {note}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+        {concepts.length ? (
+          <CompactVideoList
+            title="Ideas in this scene"
+            rows={concepts.map((concept) => ({
+              text: concept.concept,
+              meaning: concept.explanation || concept.why_it_matters,
+              source: concept.source_sentence
+            }))}
+          />
+        ) : null}
+        <CompactVideoList
+          title="Words to listen for"
+          rows={terms.map((term) => ({ text: term.term, meaning: term.meaning, source: term.source_sentence }))}
+        />
+        <CompactVideoList
+          title="Useful spoken expressions"
+          rows={phrases.map((phrase) => ({ text: phrase.phrase, meaning: phrase.explanation, source: phrase.source_sentence }))}
+        />
+        {sentence ? (
+          <div className="rounded-md border border-line bg-surface p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Sentence pattern</p>
+            <p className="mt-2 text-sm font-semibold text-ink">{sentence.core_structure}</p>
+            <p className="mt-2 text-sm leading-6 text-neutral-700">{sentence.korean_explanation || sentence.simplified_version}</p>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function CompactVideoList({ title, rows }: { title: string; rows: Array<{ text: string; meaning: string; source?: string }> }) {
+  if (!rows.length) return null;
+  return (
+    <div className="rounded-md border border-line bg-surface p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
+      <div className="mt-3 grid gap-3">
+        {rows.map((row) => (
+          <div key={`${title}:${row.text}`} className="border-t border-line pt-3 first:border-t-0 first:pt-0">
+            <p className="text-sm font-semibold text-ink">{row.text}</p>
+            <p className="mt-1 text-sm leading-6 text-neutral-700">{row.meaning}</p>
+            {row.source ? <p className="mt-1 text-xs leading-5 text-neutral-500">{truncate(row.source, 180)}</p> : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function truncate(value: string, limit: number) {
+  const normalized = value.split(/\s+/).join(" ").trim();
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, limit).trim()}...`;
 }
 
 function EmptyPlayer() {

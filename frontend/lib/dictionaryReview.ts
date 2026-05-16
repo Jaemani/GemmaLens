@@ -10,8 +10,8 @@ export function reviewState(item: DictionaryItem): ReviewState {
 
 export function reviewLabel(state: ReviewState) {
   if (state === "new") return "New";
-  if (state === "review-soon") return "Review soon";
-  return "Familiar";
+  if (state === "review-soon") return "Review next";
+  return "Stable";
 }
 
 export function reviewTone(state: ReviewState) {

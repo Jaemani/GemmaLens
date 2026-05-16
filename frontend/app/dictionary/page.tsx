@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenCheck, Filter, Layers, Quote, RotateCcw, ScanText, Sparkles } from "lucide-react";
+import { BookOpenCheck, GitBranch, Layers, Quote, RotateCcw, ScanText, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { DictionaryTable } from "@/components/dictionary/DictionaryTable";
@@ -30,49 +30,53 @@ export default function DictionaryPage() {
   const filteredItems = filter === "all" ? items : items.filter((item) => item.item_type === filter);
   const counts = countByType(items);
   const review = reviewCounts(items);
+  const sourceCount = new Set(items.map((item) => item.document_id).filter(Boolean)).size;
 
   return (
     <AppShell>
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Dictionary</h1>
+        <h1 className="text-2xl font-semibold">Learning Library</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-          Saved concepts, terms, expressions, and sentence patterns from analyzed documents. Use this as a review queue, not as a raw word dump.
+          Saved concepts, terms, expressions, and sentence patterns from papers, docs, and videos. This is a study library and review queue, not a raw word list.
         </p>
       </div>
       {items.length === 0 ? (
         <EmptyState title="No saved items" detail="Save concepts, terms, expressions, or sentence patterns from an analysis result to build your review queue." />
       ) : (
         <div className="space-y-6">
-          <section className="grid gap-3 md:grid-cols-4">
-            <SummaryCard icon={<Layers size={18} />} label="Concepts" count={counts.concept} />
-            <SummaryCard icon={<ScanText size={18} />} label="Terms" count={counts.term} />
-            <SummaryCard icon={<Quote size={18} />} label="Expressions" count={counts.phrase} />
-            <SummaryCard icon={<BookOpenCheck size={18} />} label="Sentences" count={counts.sentence} />
+          <section className="grid gap-3 md:grid-cols-5">
+            {(["all", "concept", "term", "phrase", "sentence"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFilter(value)}
+                className={`rounded-lg border p-4 text-left shadow-material ${
+                  filter === value ? "border-accent bg-blue-50 text-accent" : "border-line bg-panel text-ink hover:bg-surface"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold">{filterLabel(value)}</span>
+                  <span className="text-2xl font-semibold">{value === "all" ? items.length : counts[value]}</span>
+                </div>
+              </button>
+            ))}
           </section>
           <section className="grid gap-3 md:grid-cols-3">
             <SummaryCard icon={<Sparkles size={18} />} label="New" count={review.new} tone="blue" />
-            <SummaryCard icon={<RotateCcw size={18} />} label="Review soon" count={review["review-soon"]} tone="amber" />
-            <SummaryCard icon={<BookOpenCheck size={18} />} label="Familiar" count={review.familiar} tone="emerald" />
+            <SummaryCard icon={<RotateCcw size={18} />} label="Review next" count={review["review-soon"]} tone="amber" />
+            <SummaryCard icon={<BookOpenCheck size={18} />} label="Stable" count={review.familiar} tone="emerald" />
           </section>
           <section className="rounded-lg border border-line bg-panel p-4 shadow-material">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <Filter size={16} className="text-accent" />
-                Review focus
+            <div className="flex items-start gap-3">
+              <div className="rounded-md bg-blue-50 p-2 text-accent">
+                <GitBranch size={18} />
               </div>
-              <div className="flex flex-wrap gap-2">
-                {(["all", "concept", "term", "phrase", "sentence"] as const).map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setFilter(value)}
-                    className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${
-                      filter === value ? "border-accent bg-blue-50 text-accent" : "border-line text-neutral-600 hover:bg-surface"
-                    }`}
-                  >
-                    {filterLabel(value)}
-                  </button>
-                ))}
+              <div>
+                <h2 className="text-sm font-semibold text-ink">Connections</h2>
+                <p className="mt-1 text-sm leading-6 text-neutral-600">
+                  {sourceCount || 1} source{sourceCount === 1 ? "" : "s"} · {counts.concept} concepts · {counts.term} terms · {counts.phrase} expressions.
+                  Use the type tabs above to inspect each layer. A graph/wiki view can build on these saved items by linking repeated terms across papers, videos, and docs.
+                </p>
               </div>
             </div>
           </section>
