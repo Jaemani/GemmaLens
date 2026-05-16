@@ -1326,3 +1326,44 @@ def test_resnet_detection_baseline_section_recovers_appendix_implementation():
     assert {"detection method based on", "initialized by", "fine-tuned on", "Unlike VGG-16", "adopt the idea of", "to address this issue"}.issubset(phrases)
     assert result.summaries.one_line == "This appendix section explains how ResNet classification backbones are adapted for Faster R-CNN detection."
     assert result.sentences[0].core_structure == "A are initialized by B and then fine-tuned on C."
+
+
+def test_resnet_detection_evaluation_section_recovers_pascal_coco_metrics():
+    document = (
+        "PASCAL VOC Following prior work, for the PASCAL VOC 2007 test set we use VOC 2007 and VOC 2012 trainval images for training. "
+        "The hyper-parameters for training Faster R-CNN are the same. ResNet-101 improves the mAP by >3% over VGG-16. "
+        "This gain is solely because of the improved features learned by ResNet. "
+        "MS COCO The MS COCO dataset involves 80 object categories. "
+        "We evaluate the PASCAL VOC metric (mAP @ IoU = 0.5) and the standard COCO metric (mAP @ IoU = .5:.05:.95). "
+        "ResNet-101 has a 6% increase of mAP@[.5, .95] over VGG-16, which is a 28% relative improvement, solely contributed by the features learned by the better network. "
+        "This suggests that a deeper network can improve both recognition and localization."
+    )
+    payload = {
+        "terms": [
+            {"term": "mini-batch", "meaning": "training detail"},
+            {"term": "learning rate", "meaning": "training detail"},
+            {"term": "PASCAL VOC Following", "meaning": "heading glue"},
+            {"term": "MS COCO The MS", "meaning": "heading glue"},
+        ],
+        "concepts": [
+            {"concept": "mini-batch", "explanation": "training detail"},
+            {"concept": "PASCAL VOC Following", "explanation": "heading glue"},
+            {"concept": "MS COCO The MS", "explanation": "heading glue"},
+        ],
+        "phrases": [],
+        "summaries": {"one_line": "PASCAL VOC Following prior work, for the PASCAL VOC 2007 test set we use VOC 2007 and VOC 2012 trainval images for training."},
+        "sentences": [{"sentence": "PASCAL VOC Following prior work.", "core_structure": "Main claim + explanation."}],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "resnet-detection-eval", document)
+    terms = {term.term for term in result.terms}
+    concepts = {concept.concept for concept in result.concepts}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert not {"mini-batch", "learning rate", "PASCAL VOC Following", "MS COCO The MS"} & terms
+    assert not {"mini-batch", "PASCAL VOC Following", "MS COCO The MS"} & concepts
+    assert {"PASCAL VOC", "mAP", "mAP @ IoU = 0.5", "mAP @ IoU = .5:.05:.95"}.issubset(terms)
+    assert {"PASCAL and COCO evaluation setup", "ResNet feature gain attribution", "COCO metric comparison", "recognition and localization improvement"}.issubset(concepts)
+    assert {"improves the mAP by", "solely because of", "standard COCO metric", "relative improvement", "improve both recognition and localization"}.issubset(phrases)
+    assert result.summaries.one_line == "This appendix section evaluates ResNet-101 detection gains on PASCAL VOC and MS COCO."
+    assert result.sentences[0].core_structure == "This gain is solely because of A."

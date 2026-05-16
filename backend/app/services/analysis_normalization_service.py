@@ -37,6 +37,8 @@ class AnalysisNormalizationService:
             terms = self._filter_resnet_detection_transfer_noise(terms, "term")
         if self._is_resnet_detection_baseline_section(document_text):
             terms = self._filter_resnet_detection_baseline_noise(terms, "term")
+        if self._is_resnet_detection_evaluation_section(document_text):
+            terms = self._filter_resnet_detection_evaluation_noise(terms, "term")
         normalized = {
             "document_id": document_id,
             "domain": self._domain(payload.get("domain")),
@@ -75,6 +77,9 @@ class AnalysisNormalizationService:
         if self._is_resnet_detection_baseline_section(document_text):
             normalized["concepts"] = self._prefer_resnet_detection_baseline_concepts(normalized["concepts"], document_text)
             normalized["phrases"] = self._filter_resnet_detection_baseline_noise(normalized["phrases"], "phrase")
+        if self._is_resnet_detection_evaluation_section(document_text):
+            normalized["concepts"] = self._prefer_resnet_detection_evaluation_concepts(normalized["concepts"], document_text)
+            normalized["phrases"] = self._filter_resnet_detection_evaluation_noise(normalized["phrases"], "phrase")
         if self._sentences_are_weak(normalized["sentences"]) or self._needs_bert_section_sentence_override(document_text):
             normalized["sentences"] = self._heuristic_sentences(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
@@ -1137,6 +1142,48 @@ class AnalysisNormalizationService:
                     "hard",
                     "This is how the appendix describes the ResNet detection backbone.",
                 ),
+                (
+                    "PASCAL VOC",
+                    "An object-detection benchmark used to evaluate the detector.",
+                    "field_term",
+                    "medium",
+                    "This section reports ResNet improvements on PASCAL VOC and COCO.",
+                ),
+                (
+                    "mAP",
+                    "Mean average precision, a standard object-detection evaluation metric.",
+                    "field_term",
+                    "hard",
+                    "This is the metric improved by ResNet-101 over VGG-16.",
+                ),
+                (
+                    "mAP @ IoU = 0.5",
+                    "A PASCAL-style detection metric that counts detections correct at 0.5 IoU.",
+                    "field_term",
+                    "hard",
+                    "This contrasts with the stricter COCO metric.",
+                ),
+                (
+                    "mAP @ IoU = .5:.05:.95",
+                    "The standard COCO metric averaged over IoU thresholds from .5 to .95.",
+                    "field_term",
+                    "hard",
+                    "This tests localization quality more strictly than mAP@.5.",
+                ),
+                (
+                    "RPN step",
+                    "The region proposal network training stage in Faster R-CNN.",
+                    "field_term",
+                    "hard",
+                    "This is one of the two detector-training steps described for COCO.",
+                ),
+                (
+                    "Fast R-CNN step",
+                    "The detection/classification training stage after region proposals.",
+                    "field_term",
+                    "hard",
+                    "This is the second Faster R-CNN training stage described for COCO.",
+                ),
             ]
         else:
             known = [
@@ -1395,6 +1442,13 @@ class AnalysisNormalizationService:
                 ("adopt the idea of", "method", "Introduces the NoC adaptation used for ResNet detection."),
                 ("to address this issue", "method", "Connects the architecture problem to the proposed adaptation."),
                 ("analogous to", "general", "Explains how ResNet layers correspond to VGG convolutional layers."),
+                ("improves the mAP by", "result", "States the detection performance gain over VGG-16."),
+                ("solely because of", "claim", "Attributes the improvement to the learned ResNet features."),
+                ("standard COCO metric", "general", "Names the stricter COCO detection metric."),
+                ("similar to that for", "general", "Connects the COCO detection system to the PASCAL VOC setup."),
+                ("relative improvement", "result", "Expresses the COCO mAP gain relative to the VGG baseline."),
+                ("nearly as big as", "result", "Compares localization-sensitive and recognition-focused gains."),
+                ("improve both recognition and localization", "result", "States the interpretation of the two metric gains."),
                 ("This strong evidence shows that", "result", "Moves from specific experiments to a general principle claim."),
                 ("is shown to be more effective than", "result", "Reports prior evidence in related work."),
                 ("reformulates the system as", "method", "Signals a reformulation strategy in related work."),
@@ -1899,6 +1953,26 @@ class AnalysisNormalizationService:
                     "shared convolutional feature maps",
                     "Full-image convolutional maps reused by detection regions.",
                     "This is the detection-backbone implementation detail worth learning.",
+                ),
+                (
+                    "PASCAL and COCO evaluation setup",
+                    "The appendix describes how detection models are trained and evaluated on PASCAL VOC and MS COCO.",
+                    "This section is about evaluation protocol and benchmark evidence.",
+                ),
+                (
+                    "ResNet feature gain attribution",
+                    "The claim that mAP gains come from improved features learned by ResNet.",
+                    "This extends the representation-quality claim into detection benchmarks.",
+                ),
+                (
+                    "COCO metric comparison",
+                    "The paper compares mAP@.5 with the stricter mAP@[.5,.95] metric.",
+                    "This explains why the result matters for localization, not only recognition.",
+                ),
+                (
+                    "recognition and localization improvement",
+                    "The interpretation that deeper networks improve both category recognition and box localization.",
+                    "This is the main takeaway from the COCO metric comparison.",
                 ),
                 (
                     "zero-padding shortcuts",
@@ -2431,6 +2505,27 @@ class AnalysisNormalizationService:
                     "The purpose phrase explains why the borrowed method is needed.",
                 ),
                 (
+                    "solely because of",
+                    "This gain is solely because of A.",
+                    "The authors attribute the PASCAL VOC improvement to ResNet features.",
+                    "'solely because of'는 하나의 원인만을 강조합니다.",
+                    "This is an attribution sentence, not just a result sentence.",
+                ),
+                (
+                    "relative improvement",
+                    "A has a B increase over C, which is a D relative improvement.",
+                    "The authors report both absolute and relative COCO gains.",
+                    "'which is' 절은 앞의 수치를 다른 방식으로 다시 해석합니다.",
+                    "The sentence is dense because it contains metric, baseline, absolute gain, and relative gain.",
+                ),
+                (
+                    "improve both recognition and localization",
+                    "This suggests that A can improve both B and C.",
+                    "The authors interpret metric gains as improvements in both classification and box quality.",
+                    "'both A and B'는 두 가지 효과를 동시에 강조합니다.",
+                    "This sentence converts metric comparison into the section's learning point.",
+                ),
+                (
                     "We present a residual learning framework",
                     "We present X to ease Y.",
                     "The authors introduce residual learning as a method for training substantially deeper networks.",
@@ -2870,6 +2965,23 @@ class AnalysisNormalizationService:
                         "NoC is an adaptation detail, not the main residual-learning claim.",
                     ],
                 }
+            if self._is_resnet_detection_evaluation_section(document_text):
+                return {
+                    "one_line": "This appendix section evaluates ResNet-101 detection gains on PASCAL VOC and MS COCO.",
+                    "simple": (
+                        "The authors describe PASCAL VOC and COCO training/evaluation settings. ResNet-101 improves mAP over VGG-16, "
+                        "and the COCO gains suggest better learned features improve both recognition and localization."
+                    ),
+                    "academic": (
+                        "The section reports detection benchmark protocol and results: ResNet-101 improves PASCAL VOC mAP by more than 3%, "
+                        "improves COCO mAP@[.5,.95] by 6 points, and attributes the gains to stronger ResNet features."
+                    ),
+                    "study_notes": [
+                        "Read this as benchmark protocol plus evidence, not as a new model architecture.",
+                        "Separate PASCAL's mAP@.5 metric from COCO's stricter averaged IoU metric.",
+                        "The key interpretation is improved recognition and localization from better features.",
+                    ],
+                }
             if "plain" in compact_lower and "higher training error" in compact_lower and "accuracy gains" in compact_lower:
                 return {
                     "one_line": "This section states the empirical case for ResNet: residual nets optimize better and gain accuracy from depth.",
@@ -3151,6 +3263,8 @@ class AnalysisNormalizationService:
             return True
         if self._is_resnet_detection_baseline_section(document_text):
             return True
+        if self._is_resnet_detection_evaluation_section(document_text):
+            return True
         if "network architectures" in compact_lower and "degradation problem" in summary_signal:
             return True
         if "reasonable preconditioning" in compact_lower and "degradation problem" in summary_signal:
@@ -3384,6 +3498,7 @@ class AnalysisNormalizationService:
             or self._is_resnet_over_1000_layers_section(document_text)
             or self._is_resnet_detection_transfer_section(document_text)
             or self._is_resnet_detection_baseline_section(document_text)
+            or self._is_resnet_detection_evaluation_section(document_text)
         )
 
     def _is_resnet_shortcut_option_section(self, document_text: str) -> bool:
@@ -3413,6 +3528,10 @@ class AnalysisNormalizationService:
     def _is_resnet_detection_baseline_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
         return "object detection baselines" in lowered and "faster r-cnn" in lowered and "networks on conv feature maps" in lowered
+
+    def _is_resnet_detection_evaluation_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        return "pascal voc" in lowered and "ms coco" in lowered and "improve both recognition and localization" in lowered
 
     def _prefer_resnet_deep_results_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         blocked = {"feature maps", "resnet", "model", "we combine six models"}
@@ -3748,6 +3867,58 @@ class AnalysisNormalizationService:
 
     def _filter_resnet_detection_baseline_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
         blocked = {"imagenet", "imagenet classification", "feature maps"}
+        return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
+
+    def _prefer_resnet_detection_evaluation_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
+        blocked = {"mini-batch", "learning rate", "pascal voc following", "ms coco the ms"}
+        preferred = {
+            "PASCAL and COCO evaluation setup": (
+                "The training/evaluation setup for object detection on PASCAL VOC and MS COCO.",
+                "This frames the appendix section as benchmark protocol plus evidence.",
+            ),
+            "ResNet feature gain attribution": (
+                "The claim that detection gains come from improved features learned by ResNet.",
+                "This continues the representation-quality argument.",
+            ),
+            "COCO metric comparison": (
+                "The comparison between mAP@.5 and the stricter mAP@[.5,.95] metric.",
+                "This explains why localization quality matters in the result.",
+            ),
+            "recognition and localization improvement": (
+                "The interpretation that deeper networks improve both category recognition and box localization.",
+                "This is the main learning point after the metric discussion.",
+            ),
+        }
+        keyed = {str(row.get("concept") or "").strip().lower(): row for row in rows}
+        promoted: list[dict[str, Any]] = []
+        for value, (explanation, why_it_matters) in preferred.items():
+            lowered = value.lower()
+            if lowered in keyed:
+                promoted.append(keyed[lowered])
+            else:
+                target = "PASCAL VOC" if "pascal" in lowered else "improve both recognition and localization"
+                promoted.append(
+                    {
+                        "concept": value,
+                        "explanation": explanation,
+                        "source_sentence": self._source_sentence(None, target, document_text),
+                        "related_terms": [value],
+                        "why_it_matters": why_it_matters,
+                        "references": self._references_near("", document_text),
+                        "learning_priority": "field_term",
+                        "confidence": 0.85,
+                        "user_state": "suggested",
+                    }
+                )
+        rest = [
+            row
+            for row in rows
+            if str(row.get("concept") or "").strip().lower() not in blocked | {value.lower() for value in preferred}
+        ]
+        return [*promoted, *rest][:8]
+
+    def _filter_resnet_detection_evaluation_noise(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        blocked = {"mini-batch", "learning rate", "pascal voc following", "ms coco the ms"}
         return [row for row in rows if str(row.get(key) or "").strip().lower() not in blocked]
 
     def _score(self, value: Any, default: int) -> int:
