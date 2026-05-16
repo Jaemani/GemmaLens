@@ -391,8 +391,8 @@ def test_attention_intro_summary_replaces_long_first_sentence_copy():
 
     result = AnalysisNormalizationService().normalize_payload(payload, "attention-intro", document)
 
-    assert result.summaries.one_line == "This section explains recurrent sequence-modeling baselines before the Transformer contrast."
-    assert "background" in result.summaries.study_notes[0].lower()
+    assert result.summaries.one_line == "This introduction explains why recurrent sequence models limit parallel training before motivating attention."
+    assert "problem setup" in result.summaries.study_notes[0].lower()
     assert "hidden states" in {term.term for term in result.terms}
     assert "long-range dependencies" not in {term.term for term in result.terms}
     assert "hidden-state chain" in {concept.concept for concept in result.concepts}
@@ -418,8 +418,8 @@ def test_attention_architecture_summary_replaces_figure_caption_copy():
 
     result = AnalysisNormalizationService().normalize_payload(payload, "attention-architecture", document)
 
-    assert result.summaries.one_line == "This section explains the Transformer's encoder-decoder stack and sub-layer structure."
-    assert "architecture parts" in result.summaries.study_notes[0]
+    assert result.summaries.one_line == "This section defines the Transformer's encoder/decoder stacks and their repeated sub-layer pattern."
+    assert "architecture anatomy" in result.summaries.study_notes[0]
 
 
 def test_attention_formula_summary_replaces_equation_fragment_copy():
@@ -441,8 +441,8 @@ def test_attention_formula_summary_replaces_equation_fragment_copy():
 
     result = AnalysisNormalizationService().normalize_payload(payload, "attention-formula", document)
 
-    assert result.summaries.one_line == "This section explains scaled dot-product attention using queries, keys, values, softmax, and scaling."
-    assert "Q, K, and V" in result.summaries.study_notes[0]
+    assert result.summaries.one_line == "This section defines scaled dot-product attention with queries, keys, values, softmax, and 1/sqrt(dk) scaling."
+    assert "Q, K, V" in result.summaries.study_notes[0]
 
 
 def test_multi_head_attention_summary_replaces_formula_lead_sentence():
@@ -465,8 +465,8 @@ def test_multi_head_attention_summary_replaces_formula_lead_sentence():
 
     result = AnalysisNormalizationService().normalize_payload(payload, "multi-head", document)
 
-    assert result.summaries.one_line == "This section explains multi-head attention as parallel learned projections of queries, keys, and values."
-    assert "architecture concept" in result.summaries.study_notes[2]
+    assert result.summaries.one_line == "This section explains multi-head attention as parallel learned projections of Q, K, and V."
+    assert "representational diversity" in result.summaries.study_notes[2]
 
 
 def test_resnet_real_paper_snippet_repairs_fragments_and_summary():

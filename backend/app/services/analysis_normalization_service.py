@@ -246,6 +246,8 @@ class AnalysisNormalizationService:
             or self._is_attention_learning_section(document_text)
         ):
             normalized["sentences"] = self._heuristic_sentences(document_text)
+        if self._is_attention_learning_section(document_text):
+            normalized["summaries"] = self._heuristic_summaries(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
             normalized["summaries"] = self._heuristic_summaries(document_text)
         result = AnalysisResult.model_validate(normalized)
@@ -4025,6 +4027,9 @@ class AnalysisNormalizationService:
     def _heuristic_summaries(self, document_text: str) -> dict[str, Any]:
         lower = document_text.lower()
         compact_lower = " ".join(lower.split())
+        if self._is_attention_learning_section(document_text):
+            profile = self._attention_profile(document_text) or {}
+            return profile["summaries"]
         if "batch normalization" in lower and "internal covariate shift" in lower:
             return {
                 "one_line": "The paper proposes Batch Normalization to make deep neural network training faster and more stable.",
@@ -4620,9 +4625,6 @@ class AnalysisNormalizationService:
                     "Useful patterns are venue phrases such as 'In Proceedings of' and source labels such as 'arXiv preprint'.",
                 ],
             }
-        if self._is_attention_learning_section(document_text):
-            profile = self._attention_profile(document_text) or {}
-            return profile["summaries"]
         if self._is_attention_text(document_text):
             return {
                 "one_line": "The paper introduces the Transformer, an attention-only architecture for sequence transduction.",
@@ -7471,26 +7473,59 @@ class AnalysisNormalizationService:
         profile = self._attention_profile(document_text)
         if not profile:
             return rows
+        blocked = {
+            "transformer",
+            "new simple network",
+            "decoder stacks encoder",
+            "neural networks",
+            "attention",
+            "subspaces",
+            "softmax",
+            "dmodel",
+            "sinusoid",
+            "values",
+            "keys",
+            "queries",
+        }
         return self._prefer_rows(
             rows,
             document_text,
             "term",
             profile["terms"],
             limit=14,
-            blocked={"transformer", "new simple network", "decoder stacks encoder", "neural networks"},
+            blocked=blocked,
         )
 
     def _prefer_attention_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         profile = self._attention_profile(document_text)
         if not profile:
             return rows
+        blocked = {
+            "transformer",
+            "new simple network",
+            "decoder stacks encoder",
+            "neural networks",
+            "attention",
+            "subspaces",
+            "softmax",
+            "dmodel",
+            "sinusoid",
+            "values",
+            "keys",
+            "queries",
+            "auto-regressive property",
+            "encoder-decoder attention",
+            "positional encodings",
+            "representation dimension",
+            "self-attention",
+        }
         return self._prefer_rows(
             rows,
             document_text,
             "concept",
             profile["concepts"],
             limit=8,
-            blocked={"transformer", "new simple network", "decoder stacks encoder", "neural networks"},
+            blocked=blocked,
         )
 
     def _prefer_attention_phrases(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
@@ -8736,6 +8771,229 @@ class AnalysisNormalizationService:
                 "Multi-head attention lets the model attend to different subspaces and positions at the same time.",
                 "'allows the model to'는 구조적 선택이 가능하게 하는 기능을 설명합니다.",
                 "The sentence uses abstract nouns, so the reader must map them back to Q/K/V projections and heads.",
+            )
+        if "applications of attention in our model" in lowered and "encoder-decoder attention" in lowered:
+            return profile(
+                "This section explains where the Transformer uses multi-head attention inside the model.",
+                (
+                    "After finishing the multi-head formula, the paper lists three attention uses: encoder-decoder attention, "
+                    "encoder self-attention, and decoder self-attention."
+                ),
+                (
+                    "The passage connects the abstract multi-head attention mechanism to concrete architectural locations, distinguishing "
+                    "query/key/value sources in encoder-decoder attention from self-attention inside the encoder and decoder."
+                ),
+                [
+                    "This is a placement guide: where does attention appear in the architecture?",
+                    "For each attention type, ask where Q, K, and V come from.",
+                    "Do not memorize the equation before understanding the three application sites.",
+                ],
+                [
+                    ("encoder-decoder attention", "Attention where decoder queries attend to encoder keys and values.", "encoder-decoder attention"),
+                    ("memory keys and values", "Encoder outputs used as keys and values for decoder attention.", "memory keys and values"),
+                    ("self-attention layers", "Layers where queries, keys, and values come from the same source.", "self-attention layers"),
+                    ("input sequence", "The source sequence the decoder can attend over through encoder outputs.", "input sequence"),
+                    ("previous decoder layer", "The source of queries in encoder-decoder attention.", "previous decoder layer"),
+                    ("previous layer in the encoder", "The source for encoder self-attention Q/K/V.", "previous layer in the encoder"),
+                    ("parallel attention layers", "The attention heads used in multi-head attention.", "parallel attention layers"),
+                ],
+                [
+                    ("three attention application sites", "The architecture uses attention in encoder-decoder, encoder self-attention, and decoder self-attention layers.", "three different ways"),
+                    ("Q/K/V source distinction", "Attention type is defined by where queries, keys, and values come from.", "queries come from"),
+                    ("decoder-to-input access", "Encoder-decoder attention lets each decoder position attend across the input sequence.", "attend over all positions in the input sequence"),
+                ],
+                [
+                    ("in three different ways", "method", "Introduces a classification of uses."),
+                    ("come from", "method", "Identifies source components."),
+                    ("This allows", "result", "States the function enabled by a design."),
+                    ("mimics the typical", "comparison", "Relates the design to prior models."),
+                    ("Similarly", "general", "Signals a parallel case."),
+                ],
+                "The Transformer uses multi-head attention in three different ways",
+                "X uses Y in N different ways: A, B, and C.",
+                "The model places attention in three sites, and each site differs by where Q, K, and V originate.",
+                "'in three different ways'는 뒤에 나올 분류를 예고하는 표현입니다.",
+                "The passage is hard because it mixes formula continuation with an architecture taxonomy.",
+            )
+        if "prevent leftward information flow" in lowered and "position-wise feed-forward networks" in lowered:
+            return profile(
+                "This section explains decoder masking, position-wise feed-forward layers, embeddings, and softmax output.",
+                (
+                    "The decoder masks illegal future connections to preserve autoregressive generation. Each layer also has a position-wise feed-forward network, "
+                    "and the model uses learned embeddings plus softmax to predict next-token probabilities."
+                ),
+                (
+                    "The passage bundles several implementation details: future-token masking in scaled dot-product attention, identical per-position feed-forward networks, "
+                    "1x1-convolution equivalence, learned token embeddings, shared weight matrices, and pre-softmax prediction."
+                ),
+                [
+                    "This is an implementation-detail section, not a new main idea.",
+                    "Separate decoder masking from feed-forward networks and output prediction.",
+                    "The key language pattern is purpose: 'to preserve the auto-regressive property'.",
+                ],
+                [
+                    ("leftward information flow", "Future-token information that must be blocked in the decoder.", "leftward information flow"),
+                    ("auto-regressive property", "The rule that prediction uses only previous output positions.", "auto-regressive property"),
+                    ("scaled dot-product attention", "The attention operation where masking is applied.", "scaled dot-product attention"),
+                    ("illegal connections", "Connections to future positions masked before softmax.", "illegal connections"),
+                    ("position-wise feed-forward network", "Feed-forward network applied separately and identically to each position.", "Position-wise Feed-Forward Networks"),
+                    ("ReLU activation", "Nonlinear activation between two linear transformations.", "ReLU"),
+                    ("learned embeddings", "Token-to-vector representations learned by the model.", "learned embeddings"),
+                    ("predicted next-token probabilities", "Decoder output probabilities after linear transformation and softmax.", "predicted next-token probabilities"),
+                ],
+                [
+                    ("causal decoder masking", "Future positions are masked to preserve autoregressive generation.", "preserve the auto-regressive property"),
+                    ("position-wise transformation", "The same feed-forward network is applied independently to each position.", "each position separately and identically"),
+                    ("weight sharing", "Embedding matrices and pre-softmax transformation share parameters.", "share the same weight matrix"),
+                ],
+                [
+                    ("to preserve", "method", "Explains purpose."),
+                    ("by masking out", "method", "Explains implementation mechanism."),
+                    ("In addition to", "general", "Adds another component."),
+                    ("applied to each position separately and identically", "method", "Defines position-wise behavior."),
+                    ("Another way of describing this is", "general", "Rephrases a technical idea."),
+                    ("Similarly to", "comparison", "Connects the method to prior models."),
+                ],
+                "We need to prevent leftward information flow",
+                "We need to prevent X to preserve Y.",
+                "The decoder blocks future-token information so generation remains autoregressive.",
+                "'to preserve'는 어떤 성질을 유지하기 위한 목적을 나타냅니다.",
+                "The section moves quickly across masking, feed-forward layers, and output embeddings.",
+            )
+        if "maximum path lengths" in lowered and "positional encoding" in lowered:
+            return profile(
+                "This section compares layer complexity and explains why the Transformer adds positional encodings.",
+                (
+                    "The table compares self-attention, recurrent, convolutional, and restricted self-attention layers. Because the Transformer has no recurrence or convolution, "
+                    "it adds positional encodings to embeddings so the model can use token order."
+                ),
+                (
+                    "The passage combines table interpretation with the positional-encoding method: self-attention has constant sequential operations, "
+                    "but order information must be injected through learned or sinusoidal vectors added to input embeddings."
+                ),
+                [
+                    "Read Table 1 as a design tradeoff table.",
+                    "The positional-encoding paragraph answers the question: how does a non-recurrent model know word order?",
+                    "The formula matters less than the role: inject relative or absolute position.",
+                ],
+                [
+                    ("maximum path length", "Longest path between positions in a layer type.", "Maximum Path Length"),
+                    ("sequential operations", "Operations that cannot be parallelized.", "Sequential"),
+                    ("representation dimension", "The hidden vector size d.", "representation dimension"),
+                    ("positional encodings", "Vectors added to embeddings to represent token order.", "positional encodings"),
+                    ("relative or absolute position", "Two ways of representing token order.", "relative or absolute position"),
+                    ("input embeddings", "Token vectors at the bottom of encoder and decoder stacks.", "input embeddings"),
+                    ("sine and cosine functions", "Fixed sinusoidal functions used for positional encoding.", "sine and cosine functions"),
+                    ("geometric progression", "Pattern of wavelengths in sinusoidal encodings.", "geometric progression"),
+                ],
+                [
+                    ("complexity tradeoff table", "The paper compares layer types by complexity, sequential operations, and path length.", "Table 1"),
+                    ("order injection problem", "Attention-only models need explicit positional information.", "contains no recurrence and no convolution"),
+                    ("sinusoidal position encoding", "The chosen fixed encoding may support relative-position learning and extrapolation.", "sinusoid"),
+                ],
+                [
+                    ("Since our model contains no", "method", "Introduces a consequence of an architectural absence."),
+                    ("in order for", "method", "States purpose."),
+                    ("To this end", "method", "Introduces the solution."),
+                    ("There are many choices of", "general", "Signals design alternatives."),
+                    ("because we hypothesized", "claim", "Explains design rationale."),
+                    ("found that the two versions", "result", "Reports comparison outcome."),
+                ],
+                "Since our model contains no recurrence and no convolution",
+                "Since X contains no A and no B, we must inject C.",
+                "Because the Transformer lacks recurrence and convolution, it needs positional encodings for token order.",
+                "'Since our model contains no...'는 설계상 빠진 요소가 어떤 보완책을 요구하는지 설명합니다.",
+                "The section is difficult because a table, architecture rationale, and sinusoidal formula are packed together.",
+            )
+        if "why self-attention" in lowered and "three desiderata" in lowered:
+            return profile(
+                "This section motivates self-attention using complexity, parallelism, and path length.",
+                (
+                    "The paper compares self-attention with recurrent and convolutional layers using three criteria: per-layer complexity, parallelizable computation, "
+                    "and path length for long-range dependencies."
+                ),
+                (
+                    "The passage provides the theoretical justification for self-attention: constant sequential operations, shorter paths between positions, "
+                    "and favorable computational complexity under common sentence-representation settings."
+                ),
+                [
+                    "This is the main design-justification section.",
+                    "The three criteria are the reading frame for Table 1.",
+                    "Long-range dependency is source-present here, so it is a valid save target in this section.",
+                ],
+                [
+                    ("self-attention layers", "Layers compared against recurrent and convolutional alternatives.", "self-attention layers"),
+                    ("variable-length sequence", "Sequence input whose length can vary.", "variable-length sequence"),
+                    ("computational complexity per layer", "Cost criterion for comparing layer types.", "computational complexity per layer"),
+                    ("minimum number of sequential operations", "Parallelization criterion in the comparison.", "minimum number of sequential operations"),
+                    ("long-range dependencies", "Dependencies between distant sequence positions.", "long-range dependencies"),
+                    ("maximum path length", "Longest signal path between input/output positions.", "maximum path length"),
+                    ("constant number of sequentially executed operations", "Self-attention's parallelism advantage.", "constant number"),
+                ],
+                [
+                    ("three desiderata", "The paper evaluates layer types by complexity, parallelism, and dependency path length.", "three desiderata"),
+                    ("long-range dependency argument", "Shorter paths make distant dependencies easier to learn.", "Learning long-range dependencies"),
+                    ("self-attention parallelism", "Self-attention connects all positions with constant sequential operations.", "constant number of sequentially executed operations"),
+                ],
+                [
+                    ("In this section we compare", "general", "Announces comparison scope."),
+                    ("Motivating our use of", "claim", "Introduces design rationale."),
+                    ("One is", "general", "Begins an enumerated criterion."),
+                    ("Another is", "general", "Adds a second criterion."),
+                    ("The third is", "general", "Adds a final criterion."),
+                    ("One key factor affecting", "claim", "Introduces causal explanation."),
+                    ("As noted in", "general", "Connects prose to a table."),
+                ],
+                "Motivating our use of self-attention we consider three desiderata",
+                "Motivating our use of X, we consider A, B, and C.",
+                "The authors justify self-attention by comparing complexity, parallelism, and path length.",
+                "'Motivating our use of'는 왜 이 방법을 선택했는지 설명하는 학술 표현입니다.",
+                "The sentence is conceptually dense because each criterion connects to a different column in Table 1.",
+            )
+        if "restricted to considering only a neighborhood" in lowered and "separable convolutions" in lowered:
+            return profile(
+                "This section completes the self-attention comparison and transitions into training details.",
+                (
+                    "The paper explains when self-attention is faster, how restricted attention could handle very long sequences, why convolutional layers need stacks to connect positions, "
+                    "and then moves toward the training regime."
+                ),
+                (
+                    "The passage qualifies the self-attention advantage: sequence length versus dimensionality matters, restricted self-attention is a future option for long sequences, "
+                    "convolutional alternatives increase path length or cost, and attention heads show syntactic/semantic behavior."
+                ),
+                [
+                    "This is a caveat-and-transition section.",
+                    "Track limits: very long sequences may need restricted attention.",
+                    "The final sentence sets up appendix attention visualizations and training.",
+                ],
+                [
+                    ("restricted self-attention", "Attention limited to a local neighborhood for long sequences.", "self-attention could be restricted"),
+                    ("neighborhood of size r", "Local window considered by restricted attention.", "neighborhood of size r"),
+                    ("maximum path length", "Dependency path length affected by restrictions and convolutions.", "maximum path length"),
+                    ("dilated convolutions", "Convolutions that reduce required stack depth.", "dilated convolutions"),
+                    ("separable convolutions", "Lower-cost convolution variant.", "Separable convolutions"),
+                    ("point-wise feed-forward layer", "Feed-forward layer paired with self-attention in the Transformer.", "point-wise feed-forward layer"),
+                    ("attention distributions", "Observed attention patterns in trained models.", "attention distributions"),
+                    ("syntactic and semantic structure", "Language structure reflected by some attention heads.", "syntactic and semantic structure"),
+                ],
+                [
+                    ("long-sequence caveat", "Self-attention may need locality restrictions for very long sequences.", "very long sequences"),
+                    ("convolution path-length tradeoff", "Convolutions need stacks or dilation to connect distant positions.", "does not connect all pairs"),
+                    ("attention-head interpretability", "Some heads appear to learn syntactic or semantic roles.", "different tasks"),
+                ],
+                [
+                    ("To improve computational performance", "method", "Introduces an optimization motivation."),
+                    ("could be restricted to", "method", "States a possible limitation strategy."),
+                    ("We plan to investigate", "limitation", "Marks future work."),
+                    ("Doing so requires", "result", "States a consequence."),
+                    ("Not only do", "claim", "Introduces an additional result."),
+                    ("many appear to exhibit", "claim", "Cautiously reports observed behavior."),
+                ],
+                "To improve computational performance for tasks involving very long sequences",
+                "To improve X for tasks involving Y, Z could be restricted to A.",
+                "For long sequences, attention can be restricted locally, but that increases path length.",
+                "'could be restricted to'는 확정된 방법이 아니라 가능한 변형을 조심스럽게 제시합니다.",
+                "The section alternates between complexity caveats, convolution comparisons, and qualitative attention behavior.",
             )
         return None
 
