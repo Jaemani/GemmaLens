@@ -180,6 +180,7 @@ Local demo records currently include:
 - Mobile analysis audit exposed an excessive-scroll problem: complete papers expanded every section in the whole-paper argument flow before the current section lesson. The paper map now shows the first six argument-flow steps by default and lets the user expand the remaining sections on demand.
 - Translate page audit exposed a blank-output problem: the result panel looked like an empty card until translation finished. The page now has a purposeful empty state, a clearer local-model loading state, a copied state for the copy action, and labels model notes as learner notes.
 - Video page audit exposed a weak empty state and unclear transcript-fetch feedback. The page now explains the timeline-learning flow before captions are loaded, makes the player placeholder describe caption-to-segment behavior, and shows explicit fetch/parse progress labels.
+- Cross-page Playwright audit exposed that PDF extraction markers could still leak into visible analysis excerpts. Section lesson source snippets now strip `GEMMALENS_PDF_PAGE` markers before rendering.
 
 ## Still Weak
 

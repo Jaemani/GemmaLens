@@ -620,7 +620,11 @@ function isUsefulExpression(value: string) {
 }
 
 function truncateText(value: string, limit: number) {
-  const normalized = value.split(/\s+/).join(" ");
+  const normalized = value
+    .replace(/\[\[GEMMALENS_PDF_PAGE:\d+]]/g, " ")
+    .split(/\s+/)
+    .join(" ")
+    .trim();
   if (normalized.length <= limit) return normalized;
   return `${normalized.slice(0, limit).trim()}...`;
 }
