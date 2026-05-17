@@ -266,7 +266,7 @@ test("upload flow prepares first page before opening reader", async ({ page }) =
 
   await expect(page.getByText("Preparing the first page lesson so the reader opens ready...")).toBeVisible();
   await expect.poll(() => pageCalls.length).toBe(1);
-  await expect(page).toHaveURL(/\/analysis\/uploaded-pdf$/);
+  await expect(page).toHaveURL(/\/analysis\/uploaded-pdf\?ready=1$/);
 });
 
 test("pdf viewer waits until the first page lesson is ready", async ({ page }) => {

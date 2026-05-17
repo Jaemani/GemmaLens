@@ -73,8 +73,10 @@ export function DocumentInputPanel() {
       setStep(2);
       setProgressTitle("Preparing first page");
       setStatus("Preparing the first page lesson so the reader opens ready...");
+      let firstPageReady = false;
       try {
         await api.analyzeDocumentPage(document.id, 1);
+        firstPageReady = true;
       } catch {
         // Some non-PDF uploads or unusual extractions may not expose page 1.
         // The analysis page can still prepare the first available section.
@@ -82,7 +84,7 @@ export function DocumentInputPanel() {
       setStep(4);
       setProgressTitle("Opening reader");
       setStatus(`First page is ready. Opening ${file.name}...`);
-      router.push(`/analysis/${document.id}`);
+      router.push(`/analysis/${document.id}${firstPageReady ? "?ready=1" : ""}`);
     });
   }
 

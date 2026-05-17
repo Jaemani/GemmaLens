@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { AnalysisResult, DocumentRead } from "@/lib/types";
@@ -33,6 +34,7 @@ import { PdfSourcePane } from "./PdfSourcePane";
 import { ErrorState } from "../common/ErrorState";
 
 export function AnalysisResultView({ documentId }: { documentId: string }) {
+  const searchParams = useSearchParams();
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [document, setDocument] = useState<DocumentRead | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -174,7 +176,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
     const isVideoSource = document.source_type === "transcript" || document.source_type === "video_segment";
     const isDocumentSource = documentId !== DEMO_DOCUMENT_ID && !isVideoSource;
     const hasPdfViewer = Boolean(document.source_type === "pdf" && document.has_original_file);
-    const firstLessonReady = (sectionPreparation?.ready ?? 0) > 0 || Boolean(sectionLesson);
+    const firstLessonReady = searchParams.get("ready") === "1" || (sectionPreparation?.ready ?? 0) > 0 || Boolean(sectionLesson);
     const workspaceContent = (
       <div className="min-w-0 space-y-6">
         {isDocumentSource ? (
