@@ -192,3 +192,19 @@ class StagedAnalysisResponse(BaseModel):
     skipped_sections: list[int] = Field(default_factory=list)
     status: Literal["completed", "nothing_to_do", "partial"]
     message: str
+
+
+class PageBatchAnalysisRequest(BaseModel):
+    max_pages: int = Field(default=1, ge=1, le=5)
+
+
+class PageBatchAnalysisResponse(BaseModel):
+    document_id: str
+    total_pages: int
+    total_sections: int
+    requested_pages: list[int] = Field(default_factory=list)
+    analyzed_pages: list[int] = Field(default_factory=list)
+    analyzed_sections: list[int] = Field(default_factory=list)
+    skipped_sections: list[int] = Field(default_factory=list)
+    status: Literal["completed", "nothing_to_do", "partial"]
+    message: str

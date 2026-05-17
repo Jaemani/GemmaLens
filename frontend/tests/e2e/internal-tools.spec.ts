@@ -39,8 +39,8 @@ test("real analysis pages do not expose experiment controls", async ({ page }) =
   await expect(page.getByText("spoken English")).toBeVisible();
 });
 
-test("document workspace prepares first section before showing paper map", async ({ page }) => {
-  const calls: number[] = [];
+test("document workspace prepares first page before showing paper map", async ({ page }) => {
+  const pageCalls: number[] = [];
   const sections = [
     {
       index: 0,
@@ -85,7 +85,7 @@ test("document workspace prepares first section before showing paper map", async
   await page.route(/\/documents\/first-section-doc\/sections$/, (route) => {
     const body = sections.map((section) => ({
       ...section,
-      analyzed: calls.includes(section.index)
+      analyzed: pageCalls.includes(1)
     }));
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   });
@@ -105,16 +105,33 @@ test("document workspace prepares first section before showing paper map", async
       })
     })
   );
-  await page.route(/\/documents\/first-section-doc\/sections\/\d+\/analysis$/, (route) =>
-    route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ detail: "not ready" }) })
-  );
-  await page.route(/\/documents\/first-section-doc\/sections\/\d+\/analyze$/, async (route) => {
-    const sectionIndex = Number(route.request().url().match(/sections\/(\d+)\/analyze/)?.[1] ?? 0);
-    calls.push(sectionIndex);
-    await route.fulfill({
+  await page.route(/\/documents\/first-section-doc\/sections\/\d+\/analysis$/, (route) => {
+    if (!pageCalls.includes(1)) {
+      return route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ detail: "not ready" }) });
+    }
+    return route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ ...mockAnalysis, document_id: "first-section-doc" })
+    });
+  });
+  await page.route(/\/documents\/first-section-doc\/pages\/\d+\/analyze$/, async (route) => {
+    const pageNumber = Number(route.request().url().match(/pages\/(\d+)\/analyze/)?.[1] ?? 0);
+    pageCalls.push(pageNumber);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        document_id: "first-section-doc",
+        total_pages: 1,
+        total_sections: 2,
+        requested_pages: [pageNumber],
+        analyzed_pages: [pageNumber],
+        analyzed_sections: [1, 2],
+        skipped_sections: [],
+        status: "completed",
+        message: "Prepared page 1 with 2 section lesson(s)."
+      })
     });
   });
 
@@ -122,8 +139,122 @@ test("document workspace prepares first section before showing paper map", async
 
   await expect(page.getByText("Preparing the first section lesson before opening the workspace.")).toBeVisible();
   await expect(page.getByText("Video lesson")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "A confrontational movie dialogue with idiomatic spoken expressions." })).toBeVisible();
+  await expect.poll(() => pageCalls[0]).toBe(1);
+});
+
+test("pdf viewer waits until the first page lesson is ready", async ({ page }) => {
+  let resolvePageAnalyze: (() => void) | null = null;
+  const pageAnalyzeStarted = new Promise<void>((resolve) => {
+    resolvePageAnalyze = resolve;
+  });
+  const sections = [
+    {
+      index: 0,
+      section_number: 1,
+      total_sections: 1,
+      text: "Abstract This first section explains the main contribution.",
+      preview: "Abstract This first section explains the main contribution.",
+      char_count: 58,
+      analyzed: false,
+      source_label: "PDF page 1",
+      title: "Abstract",
+      continuation: false
+    }
+  ];
+  let ready = false;
+
+  await page.route(/\/documents\/delayed-pdf$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: "delayed-pdf",
+        title: "Delayed PDF",
+        source_type: "pdf",
+        content: sections[0].text,
+        has_original_file: true,
+        original_mime_type: "application/pdf",
+        created_at: new Date(0).toISOString()
+      })
+    })
+  );
+  await page.route(/\/documents\/delayed-pdf\/sections$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(sections.map((section) => ({ ...section, analyzed: ready })))
+    })
+  );
+  await page.route("**/profile", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: "profile",
+        display_name: "Learner",
+        target_level: "B2",
+        support_language: "Korean",
+        learning_language: "English",
+        auto_analyze_documents: false,
+        onboarding_completed: true,
+        created_at: new Date(0).toISOString()
+      })
+    })
+  );
+  await page.route(/\/documents\/delayed-pdf\/pages\/1\/analyze$/, async (route) => {
+    resolvePageAnalyze?.();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    ready = true;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        document_id: "delayed-pdf",
+        total_pages: 1,
+        total_sections: 1,
+        requested_pages: [1],
+        analyzed_pages: [1],
+        analyzed_sections: [1],
+        skipped_sections: [],
+        status: "completed",
+        message: "Prepared page 1 with 1 section lesson."
+      })
+    });
+  });
+  await page.route(/\/documents\/delayed-pdf\/sections\/0\/analysis$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ...mockAnalysis, document_id: "delayed-pdf" })
+    })
+  );
+  await page.route(/\/documents\/delayed-pdf\/paper-map$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        document_id: "delayed-pdf",
+        total_sections: 1,
+        analyzed_sections: [1],
+        guide: { title: "Reading guide", thesis_so_far: "Ready.", coverage_note: "1 / 1 sections analyzed.", reading_focus: [], next_steps: [] },
+        synthesis: { status: "complete", argument_flow: [], priority_concepts: [], priority_terms: [], reusable_expressions: [], review_plan: [] },
+        top_concepts: [],
+        top_terms: [],
+        top_phrases: [],
+        section_summaries: []
+      })
+    })
+  );
+
+  await page.goto("/analysis/delayed-pdf");
+  await pageAnalyzeStarted;
+
+  await expect(page.getByText("Preparing the first page lesson before opening the PDF viewer.")).toBeVisible();
+  await expect(page.getByText("Original PDF")).toHaveCount(0);
+
+  await expect(page.getByText("Original PDF")).toBeVisible();
   await expect(page.getByText("A confrontational movie dialogue with idiomatic spoken expressions.")).toBeVisible();
-  await expect.poll(() => calls[0]).toBe(0);
 });
 
 test("document section navigator moves by PDF page and highlights current page", async ({ page }) => {

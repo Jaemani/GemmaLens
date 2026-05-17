@@ -191,15 +191,15 @@ The page-batch design makes the demo more credible because it explains why local
 - source-grounded section lessons remain durable review material
 - background preparation turns the full paper into a study map over time
 
-## Implementation Recommendation
+## Implemented Experimental Path
 
-Build this as an experimental path first:
+The experimental path is now implemented:
 
-1. Add `POST /documents/{id}/pages/{page_number}/analyze`.
-2. Add a page-batch schema with `page_number`, `sections[]`, `source_span`, `continuation`, and `analysis`.
-3. Reuse existing `SectionAnalysisRepository` by mapping returned page-local sections into stable document section indices.
-4. Change the frontend auto-preparation policy to first-page-first, then remaining pages.
-5. Keep manual section retry using the current section endpoint.
-6. Add Playwright tests for page navigation, current-page highlighting, first-page readiness, and retry behavior.
+1. `POST /documents/{id}/pages/{page_number}/analyze` prepares one PDF page and stores every page-local section lesson in `SectionAnalysisRepository`.
+2. `POST /documents/{id}/page-batches` prepares the next unready page batches instead of looping section-by-section from the client.
+3. The frontend automatic preparation path now calls page analysis, not section analysis.
+4. The first page lesson is prepared before the PDF viewer is shown, so users do not land in an empty workspace.
+5. Manual retry of the currently selected section remains available through the existing section endpoint.
+6. Playwright coverage verifies first-page readiness, delayed PDF viewer display, page navigation, and current-page highlighting.
 
-This should be the next major product improvement before deeper paper-map synthesis.
+This should still be treated as experimental because page-batch quality needs more real-model output audits on equation-heavy pages, textbooks, references, and appendices. The current fallback section endpoint is intentionally kept for manual repair.

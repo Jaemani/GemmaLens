@@ -5,6 +5,7 @@ import type {
   DocumentRead,
   DocumentSection,
   ModelConfigUpdate,
+  PageBatchAnalysisResponse,
   PaperMap,
   ModelPreset,
   ModelStatus,
@@ -195,6 +196,17 @@ export const api = {
     request<AnalysisResult>(`/documents/${documentId}/sections/${sectionIndex}/analysis`),
   stagedAnalyzeDocument: (documentId: string, payload: { max_sections: number }) =>
     request<StagedAnalysisResponse>(`/documents/${documentId}/staged-analysis`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      timeoutMs: ANALYSIS_TIMEOUT_MS
+    }),
+  analyzeDocumentPage: (documentId: string, pageNumber: number) =>
+    request<PageBatchAnalysisResponse>(`/documents/${documentId}/pages/${pageNumber}/analyze`, {
+      method: "POST",
+      timeoutMs: ANALYSIS_TIMEOUT_MS
+    }),
+  pageBatchAnalyzeDocument: (documentId: string, payload: { max_pages: number }) =>
+    request<PageBatchAnalysisResponse>(`/documents/${documentId}/page-batches`, {
       method: "POST",
       body: JSON.stringify(payload),
       timeoutMs: ANALYSIS_TIMEOUT_MS

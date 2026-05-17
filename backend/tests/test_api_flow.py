@@ -282,6 +282,82 @@ def test_staged_analysis_analyzes_next_unstudied_sections(client):
     assert staged_again.json()["analyzed_sections"] == [3]
 
 
+def test_page_batch_analysis_prepares_all_sections_on_requested_pdf_page(client):
+    created = client.post(
+        "/documents",
+        json={
+            "title": "Page batch PDF",
+            "content": (
+                "[[GEMMALENS_PDF_PAGE:1]]\n"
+                "Abstract Batch Normalization reduces internal covariate shift. "
+                "It uses mini-batch statistics to stabilize training.\n\n"
+                "1 Introduction Stochastic gradient descent can be unstable in deep networks. "
+                "The method allows higher learning rates.\n"
+                "[[GEMMALENS_PDF_PAGE:2]]\n"
+                "2 Background Attention mechanisms connect distant positions in a sequence. "
+                "Self-attention improves parallelization."
+            ),
+            "source_type": "pdf",
+        },
+    )
+    assert created.status_code == 200
+    document_id = created.json()["id"]
+
+    prepared = client.post(f"/documents/{document_id}/pages/1/analyze")
+    assert prepared.status_code == 200
+    body = prepared.json()
+    assert body["requested_pages"] == [1]
+    assert body["analyzed_pages"] == [1]
+    assert body["analyzed_sections"] == [1, 2]
+
+    sections = client.get(f"/documents/{document_id}/sections")
+    assert sections.status_code == 200
+    assert sections.json()[0]["analyzed"] is True
+    assert sections.json()[1]["analyzed"] is True
+    assert sections.json()[2]["analyzed"] is False
+
+    first = client.get(f"/documents/{document_id}/sections/0/analysis")
+    second = client.get(f"/documents/{document_id}/sections/1/analysis")
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json()["summaries"]["one_line"]
+    assert second.json()["summaries"]["one_line"]
+
+
+def test_page_batch_queue_skips_ready_pages_and_prepares_next_page(client):
+    created = client.post(
+        "/documents",
+        json={
+            "title": "Queued page batch PDF",
+            "content": (
+                "[[GEMMALENS_PDF_PAGE:1]]\n"
+                "Abstract Batch Normalization reduces internal covariate shift. "
+                "It uses mini-batch statistics to stabilize training.\n"
+                "[[GEMMALENS_PDF_PAGE:2]]\n"
+                "Background Attention mechanisms connect distant positions in a sequence. "
+                "Self-attention improves parallelization."
+            ),
+            "source_type": "pdf",
+        },
+    )
+    assert created.status_code == 200
+    document_id = created.json()["id"]
+
+    first = client.post(f"/documents/{document_id}/page-batches", json={"max_pages": 1})
+    assert first.status_code == 200
+    assert first.json()["requested_pages"] == [1]
+    assert first.json()["analyzed_pages"] == [1]
+
+    second = client.post(f"/documents/{document_id}/page-batches", json={"max_pages": 1})
+    assert second.status_code == 200
+    assert second.json()["requested_pages"] == [2]
+    assert second.json()["analyzed_pages"] == [2]
+
+    done = client.post(f"/documents/{document_id}/page-batches", json={"max_pages": 1})
+    assert done.status_code == 200
+    assert done.json()["status"] == "nothing_to_do"
+
+
 def test_document_sections_include_pdf_page_labels_when_available(client):
     created = client.post(
         "/documents",

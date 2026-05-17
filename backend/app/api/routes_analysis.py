@@ -8,7 +8,14 @@ from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.section_analysis_repository import SectionAnalysisRepository
 from app.repositories.user_profile_repository import UserProfileRepository
-from app.schemas.analysis_schema import AnalysisResult, PaperMapResponse, StagedAnalysisRequest, StagedAnalysisResponse
+from app.schemas.analysis_schema import (
+    AnalysisResult,
+    PageBatchAnalysisRequest,
+    PageBatchAnalysisResponse,
+    PaperMapResponse,
+    StagedAnalysisRequest,
+    StagedAnalysisResponse,
+)
 from app.services.academic_text_service import AcademicTextService
 from app.services.analysis_normalization_service import AnalysisNormalizationService
 from app.services.analysis_pipeline_service import AnalysisPipelineService
@@ -53,6 +60,46 @@ async def analyze_document_section(document_id: str, section_index: int, db: Ses
     if not result:
         raise not_found("Document section not found")
     return result
+
+
+@router.post("/{document_id}/pages/{page_number}/analyze", response_model=PageBatchAnalysisResponse)
+async def analyze_document_page(document_id: str, page_number: int, db: Session = Depends(get_db)):
+    if page_number <= 0:
+        raise not_found("Document page not found")
+    document = DocumentRepository(db).get(document_id)
+    if not document:
+        raise not_found("Document not found")
+    readable_text = AcademicTextService().readable_section(document.content)
+    sections = DocumentSectionService().split_with_labels(readable_text)
+    pages = _learning_pages(sections)
+    if page_number not in pages:
+        raise not_found("Document page not found")
+    service = AnalysisPipelineService(DocumentRepository(db), AnalysisRepository(db), SectionAnalysisRepository(db))
+    profile = UserProfileRepository(db).get_or_create()
+    try:
+        results = await service.analyze_page_sections(
+            document_id,
+            page_number,
+            target_level=profile.target_level,
+            support_language=profile.support_language,
+            learning_language=profile.learning_language,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    if results is None:
+        raise not_found("Document not found")
+    analyzed = [index + 1 for index, _ in results]
+    return PageBatchAnalysisResponse(
+        document_id=document_id,
+        total_pages=len(pages),
+        total_sections=len(sections),
+        requested_pages=[page_number],
+        analyzed_pages=[page_number] if analyzed else [],
+        analyzed_sections=analyzed,
+        skipped_sections=sorted(index + 1 for index in SectionAnalysisRepository(db).list_indices(document_id) if index + 1 not in analyzed),
+        status="completed" if analyzed else "nothing_to_do",
+        message=f"Prepared page {page_number} with {len(analyzed)} section lesson(s)." if analyzed else f"No learning sections found on page {page_number}.",
+    )
 
 
 @router.get("/{document_id}/sections/{section_index}/analysis", response_model=AnalysisResult)
@@ -152,6 +199,85 @@ async def analyze_next_document_sections(
     )
 
 
+@router.post("/{document_id}/page-batches", response_model=PageBatchAnalysisResponse)
+async def analyze_next_document_pages(
+    document_id: str,
+    payload: PageBatchAnalysisRequest | None = None,
+    db: Session = Depends(get_db),
+):
+    document = DocumentRepository(db).get(document_id)
+    if not document:
+        raise not_found("Document not found")
+    payload = payload or PageBatchAnalysisRequest()
+    readable_text = AcademicTextService().readable_section(document.content)
+    sections = DocumentSectionService().split_with_labels(readable_text)
+    pages = _learning_pages(sections)
+    section_repository = SectionAnalysisRepository(db)
+    analyzed_indices = set(section_repository.list_indices(document_id))
+    if AnalysisRepository(db).get_result(document_id):
+        analyzed_indices.add(0)
+
+    page_to_indices = _page_to_section_indices(sections)
+    candidate_pages = [
+        page
+        for page in pages
+        if any(index not in analyzed_indices for index in page_to_indices.get(page, []))
+    ][: payload.max_pages]
+    if not candidate_pages:
+        return PageBatchAnalysisResponse(
+            document_id=document_id,
+            total_pages=len(pages),
+            total_sections=len(sections),
+            skipped_sections=sorted(index + 1 for index in analyzed_indices),
+            status="nothing_to_do",
+            message="All available pages are already prepared.",
+        )
+
+    service = AnalysisPipelineService(DocumentRepository(db), AnalysisRepository(db), section_repository)
+    profile = UserProfileRepository(db).get_or_create()
+    analyzed_pages: list[int] = []
+    analyzed_sections: list[int] = []
+    for page in candidate_pages:
+        try:
+            results = await service.analyze_page_sections(
+                document_id,
+                page,
+                target_level=profile.target_level,
+                support_language=profile.support_language,
+                learning_language=profile.learning_language,
+            )
+        except RuntimeError as exc:
+            if not analyzed_pages:
+                raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+            return PageBatchAnalysisResponse(
+                document_id=document_id,
+                total_pages=len(pages),
+                total_sections=len(sections),
+                requested_pages=candidate_pages,
+                analyzed_pages=analyzed_pages,
+                analyzed_sections=analyzed_sections,
+                skipped_sections=sorted(index + 1 for index in analyzed_indices),
+                status="partial",
+                message=f"Stopped after {len(analyzed_pages)} page(s): {exc}",
+            )
+        if results is None:
+            break
+        analyzed_pages.append(page)
+        analyzed_sections.extend(index + 1 for index, _ in results)
+
+    return PageBatchAnalysisResponse(
+        document_id=document_id,
+        total_pages=len(pages),
+        total_sections=len(sections),
+        requested_pages=candidate_pages,
+        analyzed_pages=analyzed_pages,
+        analyzed_sections=analyzed_sections,
+        skipped_sections=sorted(index + 1 for index in analyzed_indices),
+        status="completed" if len(analyzed_pages) == len(candidate_pages) else "partial",
+        message=f"Prepared {len(analyzed_pages)} page(s) with {len(analyzed_sections)} section lesson(s).",
+    )
+
+
 @router.get("/{document_id}/analysis", response_model=AnalysisResult)
 def get_analysis(document_id: str, db: Session = Depends(get_db)):
     result = AnalysisRepository(db).get_result(document_id)
@@ -183,3 +309,31 @@ def get_paper_map(document_id: str, db: Session = Depends(get_db)):
     readable_text = AcademicTextService().readable_section(document.content)
     sections = DocumentSectionService().split(readable_text)
     return PaperMapService(AnalysisRepository(db), SectionAnalysisRepository(db)).build(document_id, sections)
+
+
+def _learning_pages(sections) -> list[int]:
+    pages = sorted({page for page in (_page_number(section.source_label, index) for index, section in enumerate(sections)) if page is not None})
+    return pages
+
+
+def _page_to_section_indices(sections) -> dict[int, list[int]]:
+    pages: dict[int, list[int]] = {}
+    for index, section in enumerate(sections):
+        page = _page_number(section.source_label, index)
+        if page is None:
+            continue
+        pages.setdefault(page, []).append(index)
+    return pages
+
+
+def _page_number(label: str | None, index: int) -> int | None:
+    if not label and index == 0:
+        return 1
+    if not label:
+        return None
+    if not label.startswith("PDF page "):
+        return None
+    try:
+        return int(label.removeprefix("PDF page "))
+    except ValueError:
+        return None

@@ -61,6 +61,7 @@ export function DocumentPageReader({
   const hiddenSectionGroupCount = Math.max(sectionGroups.length - visibleSectionGroups.length, 0);
   const currentPageSectionNumber = currentSection ? sectionNumberWithinPdfPage(sections, pageIndex) : null;
   const currentSectionTitle = formatSectionTitle(currentSection);
+  const firstSourcePage = pdfPageFromLabel(firstSection?.source_label ?? null) ?? 1;
   const previousPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, -1);
   const nextPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, 1);
   const currentSectionSummary =
@@ -102,19 +103,20 @@ export function DocumentPageReader({
     setIsBatchAnalyzing(true);
     setBatchStatus("Preparing the first section so the lesson opens ready.");
     api
-      .analyzeDocumentSection(document.id, firstSection.index)
-      .then((result) => {
-        setSections((current) =>
-          current.map((section) => (section.index === firstSection.index ? { ...section, analyzed: true } : section))
-        );
-        if (pageIndex === 0) {
+      .analyzeDocumentPage(document.id, firstSourcePage)
+      .then(async () => {
+        const updatedSections = await api.listDocumentSections(document.id);
+        setSections(updatedSections);
+        const firstIndex = updatedSections.findIndex((section) => section.index === firstSection.index);
+        if (pageIndex === 0 && firstIndex >= 0) {
+          const result = await api.getDocumentSectionAnalysis(document.id, firstSection.index);
           setSectionAnalysis(result);
           setSectionAnalysisIndex(firstSection.index);
-          onSectionLesson?.(buildSectionLessonSelection(result, sections, 0));
+          onSectionLesson?.(buildSectionLessonSelection(result, updatedSections, firstIndex));
         }
         onSectionAnalyzed?.();
         setInitialSectionReady(true);
-        setBatchStatus("First section ready. Preparing the rest in the background.");
+        setBatchStatus("First page ready. Preparing remaining pages in the background.");
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Could not prepare the first section.");
@@ -124,7 +126,7 @@ export function DocumentPageReader({
       .finally(() => {
         setIsBatchAnalyzing(false);
       });
-  }, [document, firstSection?.analyzed, firstSection?.index, initialSectionReady, onSectionAnalyzed, onSectionLesson, pageIndex, sections, sourceReady]);
+  }, [document, firstSection?.analyzed, firstSection?.index, firstSourcePage, initialSectionReady, onSectionAnalyzed, onSectionLesson, pageIndex, sourceReady]);
 
   useEffect(() => {
     if (!initialSectionReady || !autoAnalyzeAll || !sourceReady || autoAnalyzeStartedRef.current || !document || !sections.length || isBatchAnalyzing) return;
@@ -132,7 +134,7 @@ export function DocumentPageReader({
     if (!remaining) return;
     autoAnalyzeStartedRef.current = true;
     const timer = window.setTimeout(() => {
-      autoStudySections(sections.length);
+      autoStudyPages(sections.length);
     }, 1200);
     return () => window.clearTimeout(timer);
   }, [autoAnalyzeAll, document, initialSectionReady, isBatchAnalyzing, sections, sourceReady]);
@@ -143,7 +145,7 @@ export function DocumentPageReader({
 
   useEffect(() => {
     if (!continuePreparationKey || !document || !sections.length || isBatchAnalyzing) return;
-    autoStudySections(sections.length);
+    autoStudyPages(sections.length);
   }, [continuePreparationKey]);
 
   useEffect(() => {
@@ -222,8 +224,8 @@ export function DocumentPageReader({
       return;
     }
     onPreparationStatus?.({
-      message: allSectionsAnalyzed ? "All section lessons are ready." : batchStatus || "Automatic section-by-section preparation is on.",
-      mode: "one-by-one",
+      message: allSectionsAnalyzed ? "All page lessons are ready." : batchStatus || "Automatic page preparation is on.",
+      mode: "page-batch",
       running: isBatchAnalyzing,
       ready: analyzedCount,
       total: sections.length
@@ -231,7 +233,7 @@ export function DocumentPageReader({
     if (isBatchAnalyzing) {
       writeGlobalActivity({
         label: "Analyzing",
-        detail: `${batchStatus || "Preparing sections"} · ${analyzedCount}/${sections.length} ready`,
+        detail: `${batchStatus || "Preparing pages"} · ${analyzedCount}/${sections.length} sections ready`,
         href: `/analysis/${documentId}`,
         updatedAt: Date.now()
       });
@@ -245,7 +247,7 @@ export function DocumentPageReader({
     const timer = window.setInterval(() => {
       writeGlobalActivity({
         label: "Analyzing",
-        detail: `${batchStatus || "Preparing sections"} · ${analyzedCount}/${sections.length} ready`,
+        detail: `${batchStatus || "Preparing pages"} · ${analyzedCount}/${sections.length} sections ready`,
         href: `/analysis/${documentId}`,
         updatedAt: Date.now()
       });
@@ -314,14 +316,14 @@ export function DocumentPageReader({
     setPageIndex(index);
   }
 
-  async function autoStudySections(sectionCount: number) {
-    const plannedIndices = nextUnanalyzedSectionIndices(sections, sectionCount);
-    if (!plannedIndices.length || isBatchAnalyzing) return;
+  async function autoStudyPages(pageLimit: number) {
+    const plannedPages = nextUnanalyzedPageNumbers(sections, pageLimit);
+    if (!plannedPages.length || isBatchAnalyzing) return;
     setIsBatchAnalyzing(true);
     setBatchStatus("");
-    const plannedCount = plannedIndices.length;
+    const plannedCount = plannedPages.length;
     writeAutoStudyProgress(progressStorageKey, {
-      status: `Starting analysis for ${plannedCount} section(s)...`,
+      status: `Starting page preparation for ${plannedCount} page(s)...`,
       completed: 0,
       planned: plannedCount,
       updatedAt: Date.now()
@@ -329,7 +331,7 @@ export function DocumentPageReader({
     let completed = 0;
     let paused = false;
     try {
-      const runningStatus = `Preparing paper in the background: 0 / ${plannedCount} sections ready.`;
+      const runningStatus = `Preparing pages in the background: 0 / ${plannedCount} pages ready.`;
       setBatchStatus(runningStatus);
       writeAutoStudyProgress(progressStorageKey, {
         status: runningStatus,
@@ -337,79 +339,56 @@ export function DocumentPageReader({
         planned: plannedCount,
         updatedAt: Date.now()
       });
-      for (const index of plannedIndices) {
+      for (const pageNumber of plannedPages) {
         if (stopPreparationRef.current) {
-          const status = `Preparation paused: ${completed} section${completed === 1 ? "" : "s"} finished in this run.`;
+          const status = `Preparation paused: ${completed} page${completed === 1 ? "" : "s"} finished in this run.`;
           paused = true;
           setBatchStatus(status);
-          writeAutoStudyProgress(progressStorageKey, {
-            status,
-            completed,
-            planned: plannedCount,
-            updatedAt: Date.now()
-          });
+          writeAutoStudyProgress(progressStorageKey, { status, completed, planned: plannedCount, updatedAt: Date.now() });
           break;
         }
-        const sectionNumber = sections[index].section_number;
-        const statusBefore = `Preparing section ${sectionNumber} / ${sections.length}...`;
+        const statusBefore = `Preparing page ${pageNumber}...`;
         setBatchStatus(statusBefore);
-        const result = await api.analyzeDocumentSection(documentId, sections[index].index);
+        await api.analyzeDocumentPage(documentId, pageNumber);
         completed += 1;
-        setSections((current) =>
-          current.map((section) => (section.index === sections[index].index ? { ...section, analyzed: true } : section))
-        );
+        const updatedSections = await api.listDocumentSections(documentId);
+        setSections(updatedSections);
         onSectionAnalyzed?.();
-        if (index === pageIndex) {
-          setSectionAnalysis(result);
-          setSectionAnalysisIndex(sections[index].index);
-          onSectionLesson?.(buildSectionLessonSelection(result, sections, index));
+        const visibleSection = updatedSections[pageIndex];
+        if (visibleSection?.analyzed) {
+          try {
+            const result = await api.getDocumentSectionAnalysis(documentId, visibleSection.index);
+            setSectionAnalysis(result);
+            setSectionAnalysisIndex(visibleSection.index);
+            onSectionLesson?.(buildSectionLessonSelection(result, updatedSections, pageIndex));
+          } catch {
+            // The page may not contain the currently selected section.
+          }
         }
-        const status = `Prepared ${completed} / ${plannedCount} remaining sections.`;
+        const status = `Prepared ${completed} / ${plannedCount} remaining pages.`;
         setBatchStatus(status);
-        writeAutoStudyProgress(progressStorageKey, {
-          status,
-          completed,
-          planned: plannedCount,
-          updatedAt: Date.now()
-        });
+        writeAutoStudyProgress(progressStorageKey, { status, completed, planned: plannedCount, updatedAt: Date.now() });
         if (stopPreparationRef.current) {
-          const pausedStatus = `Preparation paused after section ${sectionNumber}. Continue when ready.`;
+          const pausedStatus = `Preparation paused after page ${pageNumber}.`;
           paused = true;
           setBatchStatus(pausedStatus);
-          writeAutoStudyProgress(progressStorageKey, {
-            status: pausedStatus,
-            completed,
-            planned: plannedCount,
-            updatedAt: Date.now()
-          });
+          writeAutoStudyProgress(progressStorageKey, { status: pausedStatus, completed, planned: plannedCount, updatedAt: Date.now() });
           break;
         }
       }
-      const updatedSections = await api.listDocumentSections(documentId);
-      setSections(updatedSections);
       if (paused) {
         clearGlobalActivity();
         return;
       }
-      const status = `Background preparation complete: ${completed} section${completed === 1 ? "" : "s"} ready.`;
+      const status = `Background preparation complete: ${completed} page${completed === 1 ? "" : "s"} ready.`;
       setBatchStatus(status);
-      writeAutoStudyProgress(progressStorageKey, {
-        status,
-        completed,
-        planned: plannedCount,
-        updatedAt: Date.now()
-      });
+      writeAutoStudyProgress(progressStorageKey, { status, completed, planned: plannedCount, updatedAt: Date.now() });
     } catch {
       const status = completed
-        ? `Paper prepared through ${completed} section${completed === 1 ? "" : "s"}. Retry to continue.`
-        : "Could not analyze this section. Retry when the local model is ready.";
+        ? `Prepared ${completed} page${completed === 1 ? "" : "s"}. Retry to continue.`
+        : "Could not prepare this page. Retry when the local model is ready.";
       setBatchStatus(status);
-      writeAutoStudyProgress(progressStorageKey, {
-        status,
-        completed,
-        planned: plannedCount,
-        updatedAt: Date.now()
-      });
+      writeAutoStudyProgress(progressStorageKey, { status, completed, planned: plannedCount, updatedAt: Date.now() });
     } finally {
       setIsBatchAnalyzing(false);
     }
@@ -777,7 +756,7 @@ export type SectionReaderState = {
 
 export type SectionPreparationStatus = {
   message: string;
-  mode: "one-by-one";
+  mode: "page-batch";
   running: boolean;
   ready: number;
   total: number;
@@ -989,12 +968,17 @@ function usefulSupportMeaning(value: string | undefined) {
   return normalized;
 }
 
-function nextUnanalyzedSectionIndices(sections: DocumentSection[], limit: number) {
-  return sections
-    .map((section, index) => ({ section, index }))
-    .filter(({ section }) => !section.analyzed)
-    .map(({ index }) => index)
-    .slice(0, limit);
+function nextUnanalyzedPageNumbers(sections: DocumentSection[], limit: number) {
+  const pages: number[] = [];
+  const seen = new Set<number>();
+  sections.forEach((section, index) => {
+    if (section.analyzed) return;
+    const page = pdfPageFromLabel(section.source_label) ?? (index === 0 ? 1 : null);
+    if (!page || seen.has(page)) return;
+    seen.add(page);
+    pages.push(page);
+  });
+  return pages.slice(0, limit);
 }
 
 type AutoStudyProgress = {

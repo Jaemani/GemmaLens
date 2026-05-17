@@ -117,6 +117,85 @@ class AnalysisPipelineService:
             self.section_analyses.upsert(section_index, result)
         return result
 
+    async def analyze_page_sections(
+        self,
+        document_id: str,
+        page_number: int,
+        target_level: str | None = None,
+        support_language: str = "Korean",
+        learning_language: str = "English",
+    ) -> list[tuple[int, AnalysisResult]] | None:
+        document = self.documents.get(document_id)
+        if not document:
+            return None
+        readable_text = self.academic_text.readable_section(document.content)
+        labeled_sections = self.sections.split_with_labels(readable_text)
+        page_sections = [
+            (index, section)
+            for index, section in enumerate(labeled_sections)
+            if section.source_label == f"PDF page {page_number}" or (page_number == 1 and section.source_label is None)
+        ]
+        if not page_sections:
+            return []
+
+        results: list[tuple[int, AnalysisResult]] = []
+        missing_sections: list[tuple[int, object]] = []
+        if self.section_analyses:
+            for index, section in page_sections:
+                cached = self.section_analyses.get_result(document_id, index)
+                if cached:
+                    normalized_cached = self.normalizer.normalize_result(cached, section.text, support_language=support_language, target_level=target_level)
+                    normalized_cached.quality_warnings = [warning for warning in normalized_cached.quality_warnings if not warning.startswith("section:")]
+                    normalized_cached.quality_warnings.append(f"section:{index + 1}/{len(labeled_sections)}")
+                    if "analysis_mode:page_batch" not in normalized_cached.quality_warnings:
+                        normalized_cached.quality_warnings.append("analysis_mode:page_batch")
+                    self.section_analyses.upsert(index, normalized_cached)
+                    results.append((index, normalized_cached))
+                else:
+                    missing_sections.append((index, section))
+        else:
+            missing_sections = page_sections
+
+        if not missing_sections:
+            return results
+
+        page_text = "\n\n".join(section.text for _, section in missing_sections)
+        chunks = self.chunker.chunk(page_text)
+        page_result = await self.adapter.analyze_document(
+            document.id,
+            page_text,
+            chunks[: self.settings.analysis_model_max_chunks],
+            support_language,
+            learning_language,
+            target_level,
+        )
+
+        for index, section in missing_sections:
+            section_result = self.normalizer.normalize_result(page_result, section.text, support_language=support_language, target_level=target_level)
+            section_result.quality_warnings = [
+                warning
+                for warning in section_result.quality_warnings
+                if not warning.startswith("section:") and warning != "analysis_mode:page_batch"
+            ]
+            section_result.quality_warnings.append(f"section:{index + 1}/{len(labeled_sections)}")
+            section_result.quality_warnings.append("analysis_mode:page_batch")
+            if target_level and target_level != "unknown":
+                section_result = section_result.model_copy(
+                    update={
+                        "difficulty": section_result.difficulty.model_copy(
+                            update={
+                                "overall_level": target_level,
+                                "reason": f"Calibrated against your {target_level} reading setting. {section_result.difficulty.reason}",
+                            }
+                        )
+                    }
+                )
+            if self.section_analyses:
+                self.section_analyses.upsert(index, section_result)
+            results.append((index, section_result))
+
+        return sorted(results, key=lambda item: item[0])
+
     def _analysis_text(self, text: str) -> str:
         normalized = " ".join(text.split())
         if len(normalized) <= self.settings.analysis_model_input_chars:

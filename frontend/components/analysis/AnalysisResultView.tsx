@@ -174,6 +174,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
     const isVideoSource = document.source_type === "transcript" || document.source_type === "video_segment";
     const isDocumentSource = documentId !== DEMO_DOCUMENT_ID && !isVideoSource;
     const hasPdfViewer = Boolean(document.source_type === "pdf" && document.has_original_file);
+    const firstLessonReady = (sectionPreparation?.ready ?? 0) > 0 || Boolean(sectionLesson);
     const workspaceContent = (
       <div className="min-w-0 space-y-6">
         {isDocumentSource ? (
@@ -215,6 +216,34 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
         ) : null}
       </div>
     );
+    if (hasPdfViewer && !firstLessonReady) {
+      return (
+        <div className="space-y-6">
+          <section className="rounded-lg border border-blue-200 bg-blue-50 p-5 shadow-material">
+            <p className="text-xs font-semibold uppercase tracking-wide text-accent">Preparing reader</p>
+            <h2 className="mt-1 text-lg font-semibold text-ink">Preparing the first page lesson before opening the PDF viewer.</h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-700">
+              GemmaLens prepares the first page first so the PDF opens with a usable lesson instead of an empty workspace.
+            </p>
+          </section>
+          <div className="hidden">
+            <DocumentPageReader
+              documentId={documentId}
+              onSectionAnalyzed={() => setPaperMapRefreshKey((value) => value + 1)}
+              onSectionLesson={setSectionLesson}
+              onSectionState={setSectionState}
+              onPreparationStatus={setSectionPreparation}
+              stopPreparation={stopSectionPreparation}
+              continuePreparationKey={continueSectionPreparationKey}
+              onSourcePageChange={setRequestedPdfPage}
+              requestedSourcePage={requestedPdfPage}
+              sourceReady
+              hideInlineLesson
+            />
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="space-y-6">
         {hasPdfViewer ? (
@@ -410,8 +439,8 @@ function SectionPreparationPanel({
     return (
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm shadow-material">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Section preparation</p>
-          <p className="mt-1 font-semibold text-ink">All section lessons are ready.</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Page preparation</p>
+          <p className="mt-1 font-semibold text-ink">All page lessons are ready.</p>
         </div>
         <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-emerald-700">
           {status.ready} / {status.total} ready
@@ -427,7 +456,7 @@ function SectionPreparationPanel({
             <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Auto preparation paused</p>
             <h2 className="mt-1 text-base font-semibold text-ink">Choose what to analyze next.</h2>
             <p className="mt-1 text-sm leading-6 text-neutral-700">
-              {status.ready} / {status.total} sections are ready. Select any page or section below, then analyze that section manually, or resume automatic section analysis.
+              {status.ready} / {status.total} sections are ready. Select any page or section below, then analyze manually, or resume automatic page preparation.
             </p>
           </div>
           {canContinue ? (
@@ -436,7 +465,7 @@ function SectionPreparationPanel({
               onClick={onContinue}
               className="rounded-md bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
             >
-              Resume auto analysis
+              Resume page preparation
             </button>
           ) : null}
         </div>
@@ -450,10 +479,10 @@ function SectionPreparationPanel({
     <section className="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-material">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-accent">Section preparation</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent">Page preparation</p>
           <h2 className="mt-1 text-lg font-semibold text-ink">{status.message}</h2>
           <p className="mt-1 text-sm font-medium text-neutral-700">
-            {status.running ? `${status.ready} sections ready so far` : `${status.ready} / ${status.total} ready`}
+            {status.running ? `${status.ready} sections ready so far` : `${status.ready} / ${status.total} sections ready`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -468,7 +497,7 @@ function SectionPreparationPanel({
               disabled={stopRequested}
               className="rounded-md border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-ink hover:bg-blue-100"
             >
-              {stopRequested ? "Stopping after current..." : "Stop after current section"}
+              {stopRequested ? "Stopping after current..." : "Stop after current page"}
             </button>
           ) : canContinue ? (
             <button
@@ -476,7 +505,7 @@ function SectionPreparationPanel({
               onClick={onContinue}
               className="rounded-md bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
             >
-              Resume auto analysis
+              Resume page preparation
             </button>
           ) : null}
         </div>
@@ -485,7 +514,7 @@ function SectionPreparationPanel({
         <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${progress}%` }} />
       </div>
       {stopRequested && status.running ? (
-        <p className="mt-2 text-xs font-semibold text-accent">Stop requested. The current model request will finish, then preparation will pause.</p>
+        <p className="mt-2 text-xs font-semibold text-accent">Stop requested. The current page request will finish, then preparation will pause.</p>
       ) : null}
     </section>
   );
@@ -510,7 +539,7 @@ function SectionLessonPlaceholder({ state }: { state: SectionReaderState | null 
       <div className="mt-4 rounded-md border border-line bg-surface p-4 text-sm leading-6 text-neutral-700">
         {state.isBatchAnalyzing ? (
           <p>
-            GemmaLens is currently analyzing sections in the background. Pause auto analysis first, then analyze this page/section manually if you want this lesson immediately.
+            GemmaLens is currently preparing pages in the background. Pause automatic preparation first, then analyze this page or section manually if you want this lesson immediately.
           </p>
         ) : (
           <p>Analyze this section to build its lesson, then save useful words, expressions, and concepts for review.</p>
