@@ -80,6 +80,7 @@ class DocumentSectionService:
     def _clean(self, text: str) -> str:
         text = normalize_pdf_ligatures(text)
         text = text.replace("\r\n", "\n")
+        text = self._restore_decimal_fragments(text)
         text = self._restore_inline_headings(text)
         text = self._trim_front_matter(text)
         text = self._remove_leading_attention_artifact(text)
@@ -94,6 +95,14 @@ class DocumentSectionService:
         )
         text = re.sub(r"[ \t]+", " ", text)
         return text.strip()
+
+    def _restore_decimal_fragments(self, text: str) -> str:
+        # PDF extraction can split decimal references such as "archives 28.4"
+        # into "archives 28.\n4 ..."; the second line must never become a
+        # numbered section heading.
+        text = re.sub(r"(\b[a-z][A-Za-z-]*\s+\d{1,3})\.\s*\n\s*(\d)(?=\b)", r"\1.\2", text)
+        text = re.sub(r"(\b(?:vol|volume|issue|no|number|archives?|archive)\.?\s+\d{1,3})\s*\n\s*(\d)(?=\b)", r"\1.\2", text, flags=re.IGNORECASE)
+        return text
 
     def _remove_leading_attention_artifact(self, text: str) -> str:
         normalized = text.strip()
@@ -142,6 +151,11 @@ class DocumentSectionService:
         text = re.sub(
             r"\n(\d+(?:\.\d+)?)\s*\n(Introduction|Background|Model Architecture|Encoder and Decoder Stacks|ModelArchitecture)\b",
             r"\n\1 \2\n",
+            text,
+        )
+        text = re.sub(
+            r"(?<=[.!?])\s+(\d{1,2}(?:\.\d+)+\s+(?:Encoder and Decoder Stacks|Scaled Dot-Product Attention|Multi-Head Attention|Applications of Attention in our Model|Position-wise Feed-Forward Networks|Embeddings and Softmax|Positional Encoding)\b)",
+            r"\n\1\n",
             text,
         )
         return text
@@ -220,6 +234,8 @@ class DocumentSectionService:
         normalized = " ".join(line.split()).strip(" .")
         if not normalized or len(normalized) > 110:
             return False
+        if self._looks_like_decimal_or_citation_fragment(normalized):
+            return False
         if normalized.lower() in {"abstract", "introduction", "background", "conclusion", "references"}:
             return True
         if re.match(r"^\d{1,2}\s+[A-Z]", normalized):
@@ -251,6 +267,16 @@ class DocumentSectionService:
             return False
         capitalized = sum(1 for word in words if word[:1].isupper() or word.lower() in {"of", "and", "for", "in", "with"})
         return capitalized >= max(1, len(words) - 2)
+
+    def _looks_like_decimal_or_citation_fragment(self, line: str) -> bool:
+        lowered = line.lower()
+        if re.search(r"\b(?:archives?|archive|vol|volume|issue|number|no)\.?\s+\d{1,3}(?:\.\d+)+\b", lowered):
+            return True
+        if re.match(r"^\d{1,3}(?:\.\d+)+\s*(?:[,;:]|$)", lowered):
+            return True
+        if re.match(r"^\d{1,3}(?:\.\d+)+\s+[a-z]", line):
+            return True
+        return False
 
     def _section_title(self, text: str) -> str | None:
         normalized = " ".join(text.split())

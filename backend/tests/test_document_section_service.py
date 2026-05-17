@@ -36,6 +36,36 @@ def test_document_section_service_uses_inline_headings_as_boundaries():
     assert all(section.source_label == "PDF page 151" for section in sections)
 
 
+def test_document_section_service_never_splits_decimal_archive_references_as_sections():
+    text = (
+        "[[GEMMALENS_PDF_PAGE:28]]\n"
+        "The dataset is available from public archives 28.\n"
+        "4 and includes metadata collected across multiple releases. "
+        "This paragraph explains the source and should remain one learning section, not a numbered heading. "
+        "The following sentence continues the same discussion with enough content for analysis."
+    )
+
+    sections = DocumentSectionService().split_with_labels(text)
+    joined = " ".join(section.text for section in sections)
+
+    assert len(sections) == 1
+    assert "archives 28.4" in joined
+    assert sections[0].title is None
+
+
+def test_document_section_service_keeps_real_numbered_headings_after_decimal_guard():
+    text = (
+        "[[GEMMALENS_PDF_PAGE:4]]\n"
+        "4 Why Self-Attention In this section we compare aspects of self-attention layers to recurrent and convolutional layers. "
+        "The goal is to understand long-range dependencies and computational complexity."
+    )
+
+    sections = DocumentSectionService().split_with_labels(text)
+
+    assert len(sections) == 1
+    assert sections[0].title == "4 Why Self-Attention"
+
+
 def test_document_section_service_tracks_logical_titles_across_pages():
     text = (
         "[[GEMMALENS_PDF_PAGE:1]]\n"

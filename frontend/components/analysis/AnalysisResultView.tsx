@@ -187,7 +187,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
             }}
           />
         ) : null}
-        {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
+        {isDocumentSource && (sectionPreparation?.ready ?? 0) > 0 ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
         {isDocumentSource ? (
           <DocumentPageReader
             documentId={documentId}
@@ -210,7 +210,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
             sectionLabel={sectionLesson.sectionLabel}
             isAnalyzingNext={false}
           />
-        ) : isDocumentSource ? (
+        ) : isDocumentSource && (sectionPreparation?.ready ?? 0) > 0 ? (
           <SectionLessonPlaceholder state={sectionState} />
         ) : null}
       </div>
@@ -274,7 +274,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           }}
         />
       ) : null}
-      {isDocumentSource ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
+      {isDocumentSource && (sectionPreparation?.ready ?? 0) > 0 ? <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} /> : null}
       {isDocumentSource ? (
         <DocumentPageReader
           documentId={documentId}
@@ -297,7 +297,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           sectionLabel={sectionLesson.sectionLabel}
           isAnalyzingNext={false}
         />
-      ) : isDocumentSource ? (
+      ) : isDocumentSource && (sectionPreparation?.ready ?? 0) > 0 ? (
         <SectionLessonPlaceholder state={sectionState} />
       ) : null}
       {isVideoSource ? (

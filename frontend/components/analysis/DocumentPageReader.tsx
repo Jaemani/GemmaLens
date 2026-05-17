@@ -39,14 +39,17 @@ export function DocumentPageReader({
   const [batchStatus, setBatchStatus] = useState("");
   const [isAttaching, setIsAttaching] = useState(false);
   const [autoAnalyzeAll, setAutoAnalyzeAll] = useState(false);
+  const [initialSectionReady, setInitialSectionReady] = useState(false);
   const [sectionAnalysis, setSectionAnalysis] = useState<AnalysisResult | null>(null);
   const [sectionAnalysisIndex, setSectionAnalysisIndex] = useState<number | null>(null);
   const [error, setError] = useState("");
   const attachInputRef = useRef<HTMLInputElement>(null);
   const sectionDrivenPdfPageRef = useRef<number | null>(null);
   const autoAnalyzeStartedRef = useRef(false);
+  const initialSectionStartedRef = useRef(false);
   const stopPreparationRef = useRef(false);
   const currentPageGroupRef = useRef<HTMLDivElement | null>(null);
+  const firstSection = sections[0];
   const currentSection = sections[pageIndex];
   const page = currentSection?.text ?? "";
   const analyzedCount = sections.filter((section) => section.analyzed).length;
@@ -61,7 +64,9 @@ export function DocumentPageReader({
   const previousPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, -1);
   const nextPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, 1);
   const currentSectionSummary =
-    sectionAnalysis && sectionAnalysisIndex === currentSection?.index
+    !initialSectionReady
+      ? "Preparing the first section lesson before opening the workspace."
+      : sectionAnalysis && sectionAnalysisIndex === currentSection?.index
       ? sectionAnalysis.summaries.one_line
       : currentSection?.analyzed
         ? "Loading this section summary..."
@@ -88,7 +93,41 @@ export function DocumentPageReader({
   }, [documentId]);
 
   useEffect(() => {
-    if (!autoAnalyzeAll || !sourceReady || autoAnalyzeStartedRef.current || !document || !sections.length || isBatchAnalyzing) return;
+    if (!sourceReady || !document || !sections.length || initialSectionReady || initialSectionStartedRef.current) return;
+    if (!firstSection || firstSection.analyzed) {
+      setInitialSectionReady(true);
+      return;
+    }
+    initialSectionStartedRef.current = true;
+    setIsBatchAnalyzing(true);
+    setBatchStatus("Preparing the first section so the lesson opens ready.");
+    api
+      .analyzeDocumentSection(document.id, firstSection.index)
+      .then((result) => {
+        setSections((current) =>
+          current.map((section) => (section.index === firstSection.index ? { ...section, analyzed: true } : section))
+        );
+        if (pageIndex === 0) {
+          setSectionAnalysis(result);
+          setSectionAnalysisIndex(firstSection.index);
+          onSectionLesson?.(buildSectionLessonSelection(result, sections, 0));
+        }
+        onSectionAnalyzed?.();
+        setInitialSectionReady(true);
+        setBatchStatus("First section ready. Preparing the rest in the background.");
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Could not prepare the first section.");
+        setInitialSectionReady(true);
+        initialSectionStartedRef.current = false;
+      })
+      .finally(() => {
+        setIsBatchAnalyzing(false);
+      });
+  }, [document, firstSection?.analyzed, firstSection?.index, initialSectionReady, onSectionAnalyzed, onSectionLesson, pageIndex, sections, sourceReady]);
+
+  useEffect(() => {
+    if (!initialSectionReady || !autoAnalyzeAll || !sourceReady || autoAnalyzeStartedRef.current || !document || !sections.length || isBatchAnalyzing) return;
     const remaining = sections.filter((section) => !section.analyzed).length;
     if (!remaining) return;
     autoAnalyzeStartedRef.current = true;
@@ -96,7 +135,7 @@ export function DocumentPageReader({
       autoStudySections(sections.length);
     }, 1200);
     return () => window.clearTimeout(timer);
-  }, [autoAnalyzeAll, document, isBatchAnalyzing, sections, sourceReady]);
+  }, [autoAnalyzeAll, document, initialSectionReady, isBatchAnalyzing, sections, sourceReady]);
 
   useEffect(() => {
     stopPreparationRef.current = stopPreparation;
@@ -199,7 +238,7 @@ export function DocumentPageReader({
     } else {
       clearGlobalActivity();
     }
-  }, [allSectionsAnalyzed, analyzedCount, batchStatus, isBatchAnalyzing, onPreparationStatus, sections.length]);
+  }, [allSectionsAnalyzed, analyzedCount, batchStatus, documentId, isBatchAnalyzing, onPreparationStatus, sections.length]);
 
   useEffect(() => {
     if (!isBatchAnalyzing) return;
@@ -933,11 +972,7 @@ function formatSectionTitle(section: DocumentSection | undefined) {
 }
 
 function compactSectionNavLabel(section: DocumentSection, localNumber: number) {
-  if (!section.title) return `S${localNumber}`;
-  const title = section.continuation ? `${section.title} cont.` : section.title;
-  if (/^\d+(?:\.\d+)?\s+/.test(title)) return title.replace(/\s+/g, " ").slice(0, 18);
-  if (title.length <= 12) return title;
-  return `${title.slice(0, 11)}...`;
+  return `S${localNumber}`;
 }
 
 function usefulSupportMeaning(value: string | undefined) {
