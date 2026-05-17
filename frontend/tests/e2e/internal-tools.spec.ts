@@ -143,6 +143,132 @@ test("document workspace prepares first page before showing paper map", async ({
   await expect.poll(() => pageCalls[0]).toBe(1);
 });
 
+test("upload flow prepares first page before opening reader", async ({ page }) => {
+  const pageCalls: number[] = [];
+  await page.route("**/documents/upload", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: "uploaded-pdf",
+        title: "attention.pdf",
+        source_type: "pdf",
+        content: "Abstract The Transformer is based on attention.",
+        has_original_file: true,
+        original_mime_type: "application/pdf",
+        created_at: new Date(0).toISOString()
+      })
+    })
+  );
+  await page.route(/\/documents\/uploaded-pdf\/pages\/1\/analyze$/, (route) => {
+    pageCalls.push(1);
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        document_id: "uploaded-pdf",
+        total_pages: 1,
+        total_sections: 1,
+        requested_pages: [1],
+        analyzed_pages: [1],
+        analyzed_sections: [1],
+        skipped_sections: [],
+        status: "completed",
+        message: "Prepared page 1."
+      })
+    });
+  });
+  await page.route(/\/documents\/uploaded-pdf$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: "uploaded-pdf",
+        title: "attention.pdf",
+        source_type: "pdf",
+        content: "Abstract The Transformer is based on attention.",
+        has_original_file: true,
+        original_mime_type: "application/pdf",
+        created_at: new Date(0).toISOString()
+      })
+    })
+  );
+  await page.route(/\/documents\/uploaded-pdf\/sections$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          index: 0,
+          section_number: 1,
+          total_sections: 1,
+          text: "Abstract The Transformer is based on attention.",
+          preview: "Abstract The Transformer is based on attention.",
+          char_count: 47,
+          analyzed: true,
+          source_label: "PDF page 1",
+          title: "Abstract",
+          continuation: false
+        }
+      ])
+    })
+  );
+  await page.route(/\/documents\/uploaded-pdf\/sections\/0\/analysis$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ...mockAnalysis, document_id: "uploaded-pdf" })
+    })
+  );
+  await page.route(/\/documents\/uploaded-pdf\/paper-map$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        document_id: "uploaded-pdf",
+        total_sections: 1,
+        analyzed_sections: [1],
+        guide: { title: "Reading guide", thesis_so_far: "Ready.", coverage_note: "1 / 1 sections analyzed.", reading_focus: [], next_steps: [] },
+        synthesis: { status: "complete", argument_flow: [], priority_concepts: [], priority_terms: [], reusable_expressions: [], review_plan: [] },
+        top_concepts: [],
+        top_terms: [],
+        top_phrases: [],
+        section_summaries: []
+      })
+    })
+  );
+  await page.route("**/profile", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: "profile",
+        display_name: "Learner",
+        target_level: "B2",
+        support_language: "Korean",
+        learning_language: "English",
+        auto_analyze_documents: false,
+        onboarding_completed: true,
+        created_at: new Date(0).toISOString()
+      })
+    })
+  );
+
+  await page.goto("/documents");
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Choose file", exact: true }).click();
+  const chooser = await fileChooserPromise;
+  await chooser.setFiles({
+    name: "attention.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF mock")
+  });
+
+  await expect(page.getByText("Preparing the first page lesson so the reader opens ready...")).toBeVisible();
+  await expect.poll(() => pageCalls.length).toBe(1);
+  await expect(page).toHaveURL(/\/analysis\/uploaded-pdf$/);
+});
+
 test("pdf viewer waits until the first page lesson is ready", async ({ page }) => {
   let resolvePageAnalyze: (() => void) | null = null;
   const pageAnalyzeStarted = new Promise<void>((resolve) => {

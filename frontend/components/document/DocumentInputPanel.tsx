@@ -67,12 +67,21 @@ export function DocumentInputPanel() {
   async function uploadAndAnalyze(file: File) {
     await runWithProgress(async () => {
       setProgressTitle("Uploading document");
-      setStep(1);
+      setStep(0);
       setStatus(`Uploading ${file.name} and extracting text...`);
       const document = await api.uploadDocument(file);
+      setStep(2);
+      setProgressTitle("Preparing first page");
+      setStatus("Preparing the first page lesson so the reader opens ready...");
+      try {
+        await api.analyzeDocumentPage(document.id, 1);
+      } catch {
+        // Some non-PDF uploads or unusual extractions may not expose page 1.
+        // The analysis page can still prepare the first available section.
+      }
       setStep(4);
       setProgressTitle("Opening reader");
-      setStatus(`Text extracted from ${file.name}. Opening the source reader...`);
+      setStatus(`First page is ready. Opening ${file.name}...`);
       router.push(`/analysis/${document.id}`);
     });
   }
@@ -158,7 +167,22 @@ export function DocumentInputPanel() {
       </div>
       <aside className="space-y-5">
         {!busy && status ? <p className="rounded-lg border border-line bg-panel px-4 py-3 text-sm font-medium text-neutral-700 shadow-material">{status}</p> : null}
-        {busy ? <AnalysisProgress step={step} elapsed={elapsed} title={progressTitle} currentLabel={status} /> : null}
+        {busy ? (
+          <AnalysisProgress
+            step={step}
+            elapsed={elapsed}
+            title={progressTitle}
+            currentLabel={status}
+            labels={[
+              "Uploading file",
+              "Extracting readable text",
+              "Preparing first page lesson",
+              "Saving section cache",
+              "Opening reader"
+            ]}
+            hint="GemmaLens prepares only the first page before opening the reader; the remaining pages continue in the background."
+          />
+        ) : null}
         {!busy && !status ? (
           <div className="rounded-lg border border-line bg-panel p-5 text-sm leading-6 text-neutral-600 shadow-material">
             <p className="font-semibold text-ink">Learning output</p>
