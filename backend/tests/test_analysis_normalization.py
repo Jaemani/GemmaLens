@@ -463,8 +463,166 @@ def test_attention_background_prior_model_names_are_not_primary_terms():
     assert "Extended Neural GPU" not in terms
     assert "ByteNet" not in terms
     assert "ConvS2S" not in terms
-    assert {"sequential computation", "parallelization", "convolutional neural networks"}.issubset(set(terms))
+    assert {"sequential computation", "in parallel", "convolutional neural networks"}.issubset(set(terms))
     assert "convolutional baseline family" in concepts
+
+
+def test_attention_background_standalone_section_still_promotes_concepts_over_model_names():
+    document = (
+        "2 Background The goal of reducing sequential computation also forms the foundation of the Extended Neural GPU, "
+        "ByteNet and ConvS2S, all of which use convolutional neural networks as basic building block, computing hidden "
+        "representations in parallel for all input and output positions. In these models, the number of operations required "
+        "to relate signals from two arbitrary input or output positions grows in the distance between positions. "
+        "This makes it more difficult to learn dependencies between distant positions."
+    )
+    payload = {
+        "terms": [
+            {"term": "Extended Neural GPU", "meaning": "Prior model aiming to reduce sequential computation."},
+            {"term": "ByteNet", "meaning": "Prior convolutional sequence model."},
+            {"term": "ConvS2S", "meaning": "Prior convolutional sequence-to-sequence model."},
+        ],
+        "phrases": [],
+        "sentences": [],
+        "summaries": {},
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "attention-background-only", document, target_level="C2")
+    terms = [term.term for term in result.terms[:6]]
+
+    assert "Extended Neural GPU" not in terms
+    assert "ByteNet" not in terms
+    assert "ConvS2S" not in terms
+    assert {"sequential computation", "convolutional neural networks", "hidden representations"}.issubset(set(terms))
+
+
+def test_c2_level_filters_incidental_items_and_prioritizes_academic_moves():
+    document = (
+        "First, recurrent models typically factor computation along the symbol positions of the input and output sequences. "
+        "This inherently sequential nature precludes parallelization within training examples. "
+        "The Transformer allows for significantly more parallelization after being trained on eight P100 GPUs. "
+        "The fundamental constraint of sequential computation, however, remains."
+    )
+    payload = {
+        "terms": [
+            {"term": "P100 GPUs", "meaning": "Hardware used to state the training-time result.", "learning_priority": "low_priority", "domain_relevance": "low", "difficulty": "easy"},
+            {"term": "sequential computation", "meaning": "Step-by-step computation the paper aims to reduce.", "learning_priority": "field_term", "domain_relevance": "high", "difficulty": "hard"},
+            {"term": "parallelization", "meaning": "The ability to perform computations simultaneously.", "learning_priority": "field_term", "domain_relevance": "high", "difficulty": "medium"},
+        ],
+        "phrases": [
+            {"phrase": "First", "function": "general", "explanation": "Starts an enumerated explanation.", "learning_priority": "low_priority"},
+            {"phrase": "precludes parallelization", "function": "limitation", "explanation": "States what the sequential design prevents.", "learning_priority": "must_review"},
+            {"phrase": "however, remains", "function": "contrast", "explanation": "Marks a persistent limitation after progress.", "learning_priority": "must_review"},
+        ],
+        "sentences": [],
+        "summaries": {},
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "attention-c2", document, target_level="C2")
+
+    assert "P100 GPUs" not in {term.term for term in result.terms}
+    assert {"sequential computation", "parallelization"}.issubset({term.term for term in result.terms})
+    assert "First" not in {phrase.phrase for phrase in result.phrases}
+    assert {"precludes parallelization", "however, remains"}.issubset({phrase.phrase for phrase in result.phrases})
+
+
+def test_bert_transfer_strategy_section_has_level_appropriate_learning_items_without_model_output():
+    document = (
+        "There are two existing strategies for applying pre-trained language representations to downstream tasks: "
+        "feature-based and fine-tuning. The feature-based approach, such as ELMo, uses task-specific architectures "
+        "that include the pre-trained representations as additional features. The fine-tuning approach introduces "
+        "minimal task-specific parameters, and is trained on the downstream tasks by simply fine-tuning all pre-trained parameters."
+    )
+
+    result = AnalysisNormalizationService().normalize_payload({"terms": [], "phrases": [], "sentences": [], "summaries": {}}, "bert-transfer", document, target_level="C2")
+    terms = {term.term for term in result.terms}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {"pre-trained language representations", "feature-based", "fine-tuning"}.issubset(terms)
+    assert "There are two existing strategies" in phrases
+    assert all("새로 분석하면" not in term.support_language_meaning for term in result.terms)
+
+
+def test_convex_definition_section_has_terms_and_korean_glosses_without_model_output():
+    document = (
+        "4.2 Convex optimization The objective function must be convex. "
+        "Abstract form convex optimization problem It is important to note a subtlety in our definition of convex optimization problem. "
+        "This problem is not a convex optimization problem in standard form since the equality constraint function h1 is not affine."
+    )
+
+    result = AnalysisNormalizationService().normalize_payload({"terms": [], "phrases": [], "sentences": [], "summaries": {}}, "convex-definition", document, target_level="C2")
+    terms = {term.term for term in result.terms}
+    glosses = {term.term: term.support_language_meaning for term in result.terms}
+
+    assert {"convex optimization problem", "objective function", "affine", "equality constraint"}.issubset(terms)
+    assert "목적함수" in glosses["objective function"]
+    assert "등식 제약" in glosses["affine"]
+
+
+def test_climate_report_fallback_extracts_report_terms_and_sentence_for_c2():
+    document = (
+        "Although short-term energy demand remains volatile, climate risk is likely to remain elevated in coastal regions. "
+        "The report recommends adaptation measures in response to projected flooding and faster decarbonization to reduce greenhouse gas emissions."
+    )
+
+    result = AnalysisNormalizationService().normalize_payload({"terms": [], "phrases": [], "sentences": [], "summaries": {}}, "climate-report", document, target_level="C2")
+    terms = {term.term for term in result.terms}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {"climate risk", "adaptation measures", "decarbonization", "greenhouse gas emissions"}.issubset(terms)
+    assert {"is likely to", "in response to"}.issubset(phrases)
+    assert result.sentences[0].core_structure == "Although A, B remains C."
+    assert "rhetorical move" in result.sentences[0].difficulty_reason
+
+
+def test_economics_report_fallback_extracts_policy_terms():
+    document = (
+        "Inflation expectations remain elevated as the labor market tightens. "
+        "The committee notes that monetary policy is associated with slower credit growth over the next quarter."
+    )
+
+    result = AnalysisNormalizationService().normalize_payload({"terms": [], "phrases": [], "sentences": [], "summaries": {}}, "macro-report", document, target_level="C1")
+    terms = {term.term for term in result.terms}
+
+    assert {"inflation expectations", "labor market", "monetary policy"}.issubset(terms)
+    assert result.sentences[0].core_structure == "X is associated with Y, especially when Z."
+
+
+def test_medical_paper_fallback_extracts_evidence_terms():
+    document = (
+        "The randomized controlled trial reports a narrower confidence interval for the primary outcome. "
+        "Adverse events remained elevated in the high-dose group, although the effect size was modest."
+    )
+
+    result = AnalysisNormalizationService().normalize_payload({"terms": [], "phrases": [], "sentences": [], "summaries": {}}, "medical-paper", document, target_level="B2")
+    terms = {term.term for term in result.terms}
+
+    assert {"randomized controlled trial", "confidence interval", "adverse events"}.issubset(terms)
+    assert "main clause first" in result.sentences[0].difficulty_reason
+
+
+def test_video_transcript_fallback_extracts_scene_terms_and_procedural_sentence():
+    transcript = (
+        "Before we deploy the migration, we need to run an idempotent preflight check. "
+        "Otherwise, stale metadata can propagate across worker nodes."
+    )
+
+    result = AnalysisNormalizationService().normalize_payload({"terms": [], "phrases": [], "sentences": [], "summaries": {}}, "video-scene", transcript, target_level="C2")
+    terms = {term.term for term in result.terms}
+    phrases = {phrase.phrase for phrase in result.phrases}
+
+    assert {"idempotent preflight check", "stale metadata", "worker nodes"}.issubset(terms)
+    assert {"before we", "otherwise", "can propagate across"}.issubset(phrases)
+    assert result.sentences[0].core_structure == "Before we do A, we need to do B."
+
+
+def test_level_calibration_changes_sentence_guidance_between_b2_and_c2():
+    document = "The intervention is associated with lower readmission rates, especially when follow-up visits occur within seven days."
+
+    b2 = AnalysisNormalizationService().normalize_payload({"terms": [], "phrases": [], "sentences": [], "summaries": {}}, "level-b2", document, target_level="B2")
+    c2 = AnalysisNormalizationService().normalize_payload({"terms": [], "phrases": [], "sentences": [], "summaries": {}}, "level-c2", document, target_level="C2")
+
+    assert "main clause first" in b2.sentences[0].difficulty_reason
+    assert "rhetorical move" in c2.sentences[0].difficulty_reason
 
 
 def test_attention_architecture_summary_replaces_figure_caption_copy():

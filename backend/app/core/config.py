@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     analysis_model_max_chunks: int = 3
     raw_model_output_path: str | None = None
     upload_storage_dir: str = "tmp/uploads"
+    transcript_cache_dir: str = "tmp/transcript_cache"
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     cors_allow_origin_regex: str | None = None
 

@@ -36,8 +36,8 @@ class AnalysisPipelineService:
         chunks = self.chunker.chunk(readable_text)
         analysis_text = self._analysis_text(readable_text)
         analysis_chunks = chunks[: self.settings.analysis_model_max_chunks]
-        result = await self.adapter.analyze_document(document.id, analysis_text, analysis_chunks, support_language, learning_language)
-        result = self.normalizer.normalize_result(result, analysis_text, support_language=support_language)
+        result = await self.adapter.analyze_document(document.id, analysis_text, analysis_chunks, support_language, learning_language, target_level)
+        result = self.normalizer.normalize_result(result, analysis_text, support_language=support_language, target_level=target_level)
         if target_level and target_level != "unknown":
             result = result.model_copy(
                 update={
@@ -75,7 +75,7 @@ class AnalysisPipelineService:
         if self.section_analyses:
             cached = self.section_analyses.get_result(document_id, section_index)
             if cached:
-                normalized_cached = self.normalizer.normalize_result(cached, section_text, support_language=support_language)
+                normalized_cached = self.normalizer.normalize_result(cached, section_text, support_language=support_language, target_level=target_level)
                 if target_level and target_level != "unknown" and not normalized_cached.difficulty.reason.startswith("Calibrated against your"):
                     normalized_cached = normalized_cached.model_copy(
                         update={
@@ -98,8 +98,9 @@ class AnalysisPipelineService:
             chunks[: self.settings.analysis_model_max_chunks],
             support_language,
             learning_language,
+            target_level,
         )
-        result = self.normalizer.normalize_result(result, section_text, support_language=support_language)
+        result = self.normalizer.normalize_result(result, section_text, support_language=support_language, target_level=target_level)
         result.quality_warnings.append(f"section:{section_index + 1}/{section_count}")
         if target_level and target_level != "unknown":
             result = result.model_copy(

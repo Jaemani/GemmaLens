@@ -343,7 +343,7 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
                 disabled={rerunning}
                 className="rounded-md border border-line bg-panel px-3 py-2 text-xs font-semibold text-ink shadow-material hover:bg-surface disabled:text-neutral-500"
               >
-                {rerunning ? "Rebuilding..." : "Rebuild base analysis"}
+                {rerunning ? "Rebuilding..." : "Rebuild full-document analysis"}
               </button>
             </div>
           ) : null}
@@ -427,7 +427,7 @@ function SectionPreparationPanel({
             <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Auto preparation paused</p>
             <h2 className="mt-1 text-base font-semibold text-ink">Choose what to analyze next.</h2>
             <p className="mt-1 text-sm leading-6 text-neutral-700">
-              {status.ready} / {status.total} sections are ready. Select any page or section below, then analyze that section manually, or resume automatic preparation.
+              {status.ready} / {status.total} sections are ready. Select any page or section below, then analyze that section manually, or resume automatic section analysis.
             </p>
           </div>
           {canContinue ? (
@@ -436,7 +436,7 @@ function SectionPreparationPanel({
               onClick={onContinue}
               className="rounded-md bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
             >
-              Resume auto preparation
+              Resume auto analysis
             </button>
           ) : null}
         </div>
@@ -476,7 +476,7 @@ function SectionPreparationPanel({
               onClick={onContinue}
               className="rounded-md bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
             >
-              Continue preparation
+              Resume auto analysis
             </button>
           ) : null}
         </div>
@@ -510,7 +510,7 @@ function SectionLessonPlaceholder({ state }: { state: SectionReaderState | null 
       <div className="mt-4 rounded-md border border-line bg-surface p-4 text-sm leading-6 text-neutral-700">
         {state.isBatchAnalyzing ? (
           <p>
-            GemmaLens is currently preparing sections in the background. Stop automatic preparation first, then analyze this page/section manually if you want this lesson immediately.
+            GemmaLens is currently analyzing sections in the background. Pause auto analysis first, then analyze this page/section manually if you want this lesson immediately.
           </p>
         ) : (
           <p>Analyze this section to build its lesson, then save useful words, expressions, and concepts for review.</p>

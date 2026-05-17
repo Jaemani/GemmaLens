@@ -1,4 +1,4 @@
-import { BookOpen, BookmarkPlus, FileText, Languages, Map, PanelsTopLeft, ScanText } from "lucide-react";
+import { BookOpen, BookmarkPlus, FileText, Languages, Map, PanelsTopLeft, PlaySquare, ScanText } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 
 const workflow = [
@@ -52,7 +52,7 @@ const expectations = [
   "The PDF pane is the visual source. The section text is extracted text that the model can read, so equations and columns may be imperfect.",
   "A complete paper guide is built from section lessons, not from one huge summary call. This keeps latency low and lets fast local models prepare the rest while you read.",
   "Translation is a support tool for short passages. Full-paper learning should stay in the document reader.",
-  "Video learning uses transcripts as timestamped text sections; it is useful only when captions or subtitles are available."
+  "Video learning uses transcripts as timestamped text sections. YouTube caption endpoints can be rate-limited, so demos should use verified transcript fallback sources or pasted subtitles."
 ];
 
 const runtimes = [
@@ -76,6 +76,25 @@ const levels = [
   { label: "C1", detail: "Can read research writing but benefits from structure, nuance, and reusable expression notes." },
   { label: "C2", detail: "Focuses on precision, rhetoric, field-specific phrasing, and paper-level argument flow." },
   { label: "Domain-heavy", detail: "Difficulty comes mainly from specialist concepts rather than grammar." }
+];
+
+const demoPlan = [
+  {
+    title: "Show the source, not a chatbot",
+    detail: "Open a PDF and keep the original page visible while section lessons prepare beside it."
+  },
+  {
+    title: "Show fast local preparation",
+    detail: "Start from the first page, then let background section preparation fill the paper map."
+  },
+  {
+    title: "Show learner-level output",
+    detail: "Switch between B1/B2/C1/C2 examples and point out how terms, expressions, and sentence guidance change."
+  },
+  {
+    title: "Show video as learning source",
+    detail: "Use one verified demo URL so the transcript path is stable, then analyze the current scene inline."
+  }
 ];
 
 export default function GuidePage() {
@@ -171,6 +190,25 @@ export default function GuidePage() {
               <div key={item} className="rounded-md border border-line bg-surface p-4 text-sm leading-6 text-neutral-700">
                 {item}
               </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
+          <div className="flex items-start gap-3">
+            <div className="rounded-md bg-blue-50 p-2 text-accent">
+              <PlaySquare size={18} />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">Gemma 4 Good demo strategy</h2>
+              <p className="mt-2 text-sm leading-6 text-neutral-600">
+                Position GemmaLens as a local-first learning harness: it converts real academic sources into durable reading skills, not just summaries. The demo should use verified PDF and video sources so the story is about learning quality and local speed, not network availability.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {demoPlan.map((item) => (
+              <GuideItem key={item.title} title={item.title} detail={item.detail} accent />
             ))}
           </div>
         </section>

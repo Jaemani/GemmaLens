@@ -27,6 +27,7 @@ class MockModelAdapter(ModelAdapter):
         chunks: list[str],
         support_language: str = "Korean",
         learning_language: str = "English",
+        target_level: str | None = None,
     ) -> AnalysisResult:
         source = text.strip() or SAMPLE_PARAGRAPH
         first_sentence = source.split(".")[0].strip() + "."

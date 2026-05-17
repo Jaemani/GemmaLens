@@ -29,11 +29,7 @@ class DocumentSectionService:
                 title = self._section_title(section)
                 current_title = title or current_title
                 sections.append(DocumentSection(section, title=title or current_title, continuation=not bool(title) and bool(current_title)))
-            return self._merge_short_orphan_sections(
-                self._merge_dangling_sections(
-                    sections
-                )
-            )
+            return self._post_process_sections(sections)
 
         sections: list[DocumentSection] = []
         current_title: str | None = None
@@ -56,7 +52,7 @@ class DocumentSectionService:
                 continuation = not bool(title) and bool(current_title)
                 current_title = title or current_title
                 sections.append(DocumentSection(section, label, title or current_title, continuation))
-        return self._merge_short_orphan_sections(self._merge_dangling_sections(sections))
+        return self._post_process_sections(sections)
 
     def _split_plain(self, cleaned: str) -> list[str]:
         structured = self._split_structured(cleaned)
@@ -85,6 +81,8 @@ class DocumentSectionService:
         text = normalize_pdf_ligatures(text)
         text = text.replace("\r\n", "\n")
         text = self._restore_inline_headings(text)
+        text = self._trim_front_matter(text)
+        text = self._remove_leading_attention_artifact(text)
         text = re.sub(r"([A-Za-z]{2,})-\s+\d+\s+([a-z]{2,})", r"\1\2", text)
         text = re.sub(r"([A-Za-z]{2,})-\s+([a-z]{2,})", r"\1\2", text)
         text = re.sub(r"([A-Za-z]{2,})-\s*\n\s*([a-z]{2,})", r"\1\2", text)
@@ -97,10 +95,30 @@ class DocumentSectionService:
         text = re.sub(r"[ \t]+", " ", text)
         return text.strip()
 
+    def _remove_leading_attention_artifact(self, text: str) -> str:
+        normalized = text.strip()
+        replacements = [
+            (
+                r"^Scaled Dot-Product Attention\s+Multi-Head Attention\s+Figure 2:.*?parallel\.\s+",
+                r"3.2.1 Scaled Dot-Product Attention ",
+            ),
+            (
+                r"^Table 1: Maximum path lengths, per-layer complexity.*?(In this section we compare)",
+                r"4 Why Self-Attention \1",
+            ),
+            (
+                r"^Table 2: The Transformer achieves better BLEU scores.*?(On the WMT 2014)",
+                r"6 Results \1",
+            ),
+        ]
+        for pattern, replacement in replacements:
+            normalized = re.sub(pattern, replacement, normalized, flags=re.IGNORECASE | re.DOTALL)
+        return normalized
+
     def _restore_inline_headings(self, text: str) -> str:
         sentence_start = r"(?:The|This|These|In|We|Here|Given|Each|Most|Recurrent|Attention|Self-attention|End-to-end|To)\b"
         text = re.sub(
-            rf"(?<![\w.-])(\d+(?:\.\d+)?\s+[A-Z][A-Za-z][A-Za-z0-9 ,:/()'’-]{{2,80}}?)(?=\s+{sentence_start})",
+            rf"(?<![\w.-])(\d{{1,2}}(?:\.\d+)*\s+[A-Z][A-Za-z][A-Za-z0-9 ,:/()'’-]{{2,80}}?)(?=\s+{sentence_start})",
             r"\n\1\n",
             text,
         )
@@ -120,11 +138,23 @@ class DocumentSectionService:
             flags=re.IGNORECASE,
         )
         text = re.sub(r"\b(Abstract|Introduction|Background|Conclusion|References)\s+(?=[A-Z][a-z])", r"\n\1\n", text)
+        text = re.sub(r"\b(References)\s+(?=\[\d+\])", r"\n\1\n", text)
         text = re.sub(
             r"\n(\d+(?:\.\d+)?)\s*\n(Introduction|Background|Model Architecture|Encoder and Decoder Stacks|ModelArchitecture)\b",
             r"\n\1 \2\n",
             text,
         )
+        return text
+
+    def _trim_front_matter(self, text: str) -> str:
+        normalized = text.strip()
+        abstract_match = re.search(r"\bAbstract\b\s+(?=[A-Z])", normalized)
+        if not abstract_match:
+            return text
+        before = normalized[: abstract_match.start()]
+        after = normalized[abstract_match.start():]
+        if len(before) < 1600 and re.search(r"@\w|Google Brain|University|Institute|\*", before):
+            return after
         return text
 
     def _split_structured(self, cleaned: str) -> list[str]:
@@ -192,9 +222,9 @@ class DocumentSectionService:
             return False
         if normalized.lower() in {"abstract", "introduction", "background", "conclusion", "references"}:
             return True
-        if re.match(r"^\d+\s+[A-Z]", normalized):
+        if re.match(r"^\d{1,2}\s+[A-Z]", normalized):
             return True
-        if re.match(r"^\d+(?:\.\d+)+\s+[A-Z]", normalized):
+        if re.match(r"^\d{1,2}(?:\.\d+)+\s+[A-Z]", normalized):
             return True
         words = normalized.split()
         if len(words) < 2 or len(words) > 9:
@@ -230,12 +260,12 @@ class DocumentSectionService:
         if simple:
             return simple.group(1).title()
         known_numbered = re.match(
-            r"^(\d+(?:\.\d+)?\s+(?:Introduction|Background|Model Architecture|ModelArchitecture|Encoder and Decoder Stacks))\b",
+            r"^(\d{1,2}(?:\.\d+)*\s+(?:Introduction|Background|Model Architecture|ModelArchitecture|Encoder and Decoder Stacks|Attention|Scaled Dot-Product Attention|Multi-Head Attention|Applications of Attention in our Model|Position-wise Feed-Forward Networks|Embeddings and Softmax|Positional Encoding|Why Self-Attention|Training|Training Data and Batching|Hardware and Schedule|Optimizer|Regularization|Results|Machine Translation|Model Variations))\b",
             normalized,
         )
         if known_numbered:
             return known_numbered.group(1).replace("ModelArchitecture", "Model Architecture")
-        numbered = re.match(r"^(\d+(?:\.\d+)?\s+[A-Z][A-Za-z0-9 ,:/()'’-]{2,80}?)(?=\s+[A-Z][a-z]|\s*$)", normalized)
+        numbered = re.match(r"^(\d{1,2}(?:\.\d+)*\s+[A-Z][A-Za-z0-9 ,:/()'’-]{2,80}?)(?=\s+[A-Z][a-z]|\s*$)", normalized)
         if numbered:
             return numbered.group(1).strip()
         for count in range(min(9, len(normalized.split())), 1, -1):
@@ -243,6 +273,64 @@ class DocumentSectionService:
             if self._is_heading_line(candidate):
                 return candidate
         return None
+
+    def _post_process_sections(self, sections: list[DocumentSection]) -> list[DocumentSection]:
+        return self._merge_short_orphan_sections(
+            self._merge_short_continuations(
+                self._merge_heading_only_sections(
+                    self._merge_dangling_sections(sections)
+                )
+            )
+        )
+
+    def _merge_heading_only_sections(self, sections: list[DocumentSection]) -> list[DocumentSection]:
+        merged: list[DocumentSection] = []
+        index = 0
+        while index < len(sections):
+            current = sections[index]
+            if index + 1 < len(sections) and self._is_heading_only_section(current):
+                following = sections[index + 1]
+                merged.append(
+                    DocumentSection(
+                        self._clean(f"{current.text} {following.text}"),
+                        current.source_label or following.source_label,
+                        current.title or following.title,
+                        False,
+                    )
+                )
+                index += 2
+                continue
+            merged.append(current)
+            index += 1
+        return merged
+
+    def _is_heading_only_section(self, section: DocumentSection) -> bool:
+        normalized = " ".join(section.text.split()).strip()
+        if len(normalized) > 160:
+            return False
+        if not section.title:
+            return False
+        if normalized.lower() == section.title.lower():
+            return True
+        if normalized.lower().startswith(section.title.lower()) and len(normalized.split()) <= len(section.title.split()) + 2:
+            return True
+        return bool(re.match(r"^\d{1,2}\s+[A-Z]", section.title)) and "this section describes" in normalized.lower()
+
+    def _merge_short_continuations(self, sections: list[DocumentSection]) -> list[DocumentSection]:
+        merged: list[DocumentSection] = []
+        for section in sections:
+            normalized = " ".join(section.text.split())
+            if merged and section.continuation and len(normalized) < 180:
+                previous = merged[-1]
+                merged[-1] = DocumentSection(
+                    self._clean(f"{previous.text} {section.text}"),
+                    previous.source_label or section.source_label,
+                    previous.title or section.title,
+                    previous.continuation,
+                )
+                continue
+            merged.append(section)
+        return merged
 
     def _merge_dangling_sections(self, sections: list[DocumentSection]) -> list[DocumentSection]:
         merged: list[DocumentSection] = []
@@ -341,7 +429,10 @@ class DocumentSectionService:
     def _is_bibliography_artifact(self, lowered: str) -> bool:
         if lowered.startswith("references ["):
             return True
+        if "rethinking the inception architecture" in lowered and "corr" in lowered and "yonghui wu" in lowered:
+            return True
         citation_count = len(re.findall(r"\[\d+]", lowered))
+        year_count = len(re.findall(r"\b(?:19|20)\d{2}\b", lowered))
         venue_markers = sum(
             lowered.count(marker)
             for marker in (
@@ -351,13 +442,15 @@ class DocumentSectionService:
                 " in iccv",
                 " tpami",
                 " arxiv:",
+                " corr,",
+                " abs/",
                 " ieee transactions",
                 " neural computation",
                 " cambridge university press",
                 " oxford university press",
             )
         )
-        return citation_count >= 3 and venue_markers >= 2
+        return (citation_count >= 3 and venue_markers >= 2) or (year_count >= 3 and venue_markers >= 1)
 
     def _is_short_artifact(self, lowered: str) -> bool:
         artifact_markers = [

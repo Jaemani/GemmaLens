@@ -466,7 +466,7 @@ export function DocumentPageReader({
             className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
           >
             <ScanText size={16} />
-            {isAnalyzing ? "Analyzing..." : isBatchAnalyzing ? "Stop auto first" : currentSection?.analyzed ? "Re-analyze section" : "Analyze section"}
+            {isAnalyzing ? "Analyzing..." : isBatchAnalyzing ? "Pause auto first" : currentSection?.analyzed ? "Re-analyze section" : "Analyze section"}
           </button>
         </div>
       </div>
@@ -546,7 +546,7 @@ export function DocumentPageReader({
       {expanded ? (
         <>
           {error ? <p className="mx-5 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-          <article className="max-h-[420px] overflow-y-auto whitespace-pre-wrap p-5 text-sm leading-7 text-neutral-800">{page}</article>
+          <article className="whitespace-pre-wrap p-5 text-sm leading-7 text-neutral-800">{page}</article>
         </>
       ) : error ? (
         <p className="mx-5 my-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>

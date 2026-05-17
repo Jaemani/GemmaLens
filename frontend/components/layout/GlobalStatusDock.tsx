@@ -18,7 +18,7 @@ export function GlobalStatusDock() {
   const [alive, setAlive] = useState<boolean | null>(null);
   const [model, setModel] = useState<ModelStatus | null>(null);
   const [activity, setActivity] = useState<GlobalActivity | null>(null);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const idleDetail = "No active task";
   const aliveTone = alive === null ? "text-neutral-500" : alive ? "text-green-700" : "text-red-700";
 
@@ -81,13 +81,13 @@ export function GlobalStatusDock() {
   return (
     <aside
       className={`fixed bottom-3 right-3 z-40 rounded-lg border border-line bg-panel/95 text-[11px] shadow-material backdrop-blur ${
-        expanded ? "w-[min(260px,calc(100vw-1.5rem))]" : "w-[min(150px,calc(100vw-1.5rem))]"
+        expanded ? "w-[min(260px,calc(100vw-1.5rem))]" : "w-[min(96px,calc(100vw-1.5rem))]"
       }`}
     >
       <div className="flex items-center justify-between gap-2 px-3 py-2">
         <button type="button" onClick={openActivity} className="flex min-w-0 items-center gap-2 text-left font-semibold text-ink disabled:cursor-default" disabled={!activity?.href}>
           <Activity size={13} className={activity ? "shrink-0 animate-pulse text-accent" : "shrink-0 text-neutral-500"} />
-          <span className="truncate">{activity?.label ?? "Idle"}</span>
+          {expanded ? <span className="truncate">{activity?.label ?? "Idle"}</span> : null}
         </button>
         <div className="flex shrink-0 items-center gap-2">
           <div className={`flex items-center gap-1 font-semibold ${aliveTone}`}>

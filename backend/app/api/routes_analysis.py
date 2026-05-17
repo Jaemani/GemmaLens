@@ -71,7 +71,12 @@ def get_document_section_analysis(document_id: str, section_index: int, db: Sess
     if not result:
         raise not_found("Section analysis not found")
     profile = UserProfileRepository(db).get_or_create()
-    normalized = AnalysisNormalizationService().normalize_result(result, section_text, support_language=profile.support_language)
+    normalized = AnalysisNormalizationService().normalize_result(
+        result,
+        section_text,
+        support_language=profile.support_language,
+        target_level=profile.target_level,
+    )
     normalized.quality_warnings = [
         warning
         for warning in normalized.quality_warnings
@@ -161,7 +166,12 @@ def get_analysis(document_id: str, db: Session = Depends(get_db)):
     if len(analysis_text) > settings.analysis_model_input_chars:
         analysis_text = analysis_text[: settings.analysis_model_input_chars].rsplit(" ", 1)[0]
     profile = UserProfileRepository(db).get_or_create()
-    normalized = AnalysisNormalizationService().normalize_result(result, analysis_text, support_language=profile.support_language)
+    normalized = AnalysisNormalizationService().normalize_result(
+        result,
+        analysis_text,
+        support_language=profile.support_language,
+        target_level=profile.target_level,
+    )
     return normalized
 
 

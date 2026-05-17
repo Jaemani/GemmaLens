@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { mockAnalysis } from "./fixtures";
 
 test("internal experiment route is not part of the learner app", async ({ page }) => {
   await page.goto("/experiments");
@@ -9,9 +10,31 @@ test("internal experiment route is not part of the learner app", async ({ page }
 });
 
 test("real analysis pages do not expose experiment controls", async ({ page }) => {
-  await page.goto("/analysis/95a095cf-71fb-42ec-9b76-934c32ce86ca");
+  await page.route("**/documents/real-doc", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: "real-doc",
+        title: "Real document",
+        source_type: "text",
+        content: "You're not gonna get away with this.",
+        has_original_file: false,
+        created_at: new Date(0).toISOString()
+      })
+    })
+  );
+  await page.route("**/documents/real-doc/analysis", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ...mockAnalysis, document_id: "real-doc" })
+    })
+  );
+
+  await page.goto("/analysis/real-doc");
 
   await expect(page.getByText("A/B test panel")).toHaveCount(0);
   await expect(page.getByText("User-fit mode")).toHaveCount(0);
-  await expect(page.getByText("Complete paper learning guide")).toBeVisible();
+  await expect(page.getByText("spoken English")).toBeVisible();
 });

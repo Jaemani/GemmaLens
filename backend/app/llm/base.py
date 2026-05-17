@@ -12,5 +12,6 @@ class ModelAdapter(ABC):
         chunks: list[str],
         support_language: str = "Korean",
         learning_language: str = "English",
+        target_level: str | None = None,
     ) -> AnalysisResult:
         raise NotImplementedError

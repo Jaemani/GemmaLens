@@ -29,15 +29,24 @@ class RemoteGemmaAdapter(ModelAdapter):
         chunks: list[str],
         support_language: str = "Korean",
         learning_language: str = "English",
+        target_level: str | None = None,
     ) -> AnalysisResult:
         try:
-            payload = await self._analyze_atomic(document_id, text, chunks, support_language, learning_language)
-            return self.normalizer.normalize_payload(payload, document_id, text, support_language=support_language)
+            payload = await self._analyze_atomic(document_id, text, chunks, support_language, learning_language, target_level)
+            return self.normalizer.normalize_payload(payload, document_id, text, support_language=support_language, target_level=target_level)
         except (httpx.HTTPError, ValidationError, Exception) as exc:
             logger.exception("Remote Gemma analysis failed")
             raise RuntimeError(f"Remote Gemma analysis failed: {exc}") from exc
 
-    async def _analyze_atomic(self, document_id: str, text: str, chunks: list[str], support_language: str, learning_language: str) -> dict[str, Any]:
+    async def _analyze_atomic(
+        self,
+        document_id: str,
+        text: str,
+        chunks: list[str],
+        support_language: str,
+        learning_language: str,
+        target_level: str | None,
+    ) -> dict[str, Any]:
         task_text = self._task_text(text, chunks)
         meta = self._fast_meta(task_text) if self._is_q4_remote() else await self._json_task(
             "meta",
@@ -45,19 +54,19 @@ class RemoteGemmaAdapter(ModelAdapter):
             max_tokens=self._task_budget("meta"),
             fallback=self._fast_meta(task_text),
         )
-        terms = await self._json_task("terms", self._terms_prompt(task_text, support_language, learning_language), max_tokens=self._task_budget("terms"), fallback={"terms": self._fallback_terms(task_text)})
-        phrases = await self._json_task("phrases", self._phrases_prompt(task_text, support_language, learning_language), max_tokens=self._task_budget("phrases"), fallback={"phrases": self._fallback_phrases(task_text)})
+        terms = await self._json_task("terms", self._terms_prompt(task_text, support_language, learning_language, target_level), max_tokens=self._task_budget("terms"), fallback={"terms": self._fallback_terms(task_text)})
+        phrases = await self._json_task("phrases", self._phrases_prompt(task_text, support_language, learning_language, target_level), max_tokens=self._task_budget("phrases"), fallback={"phrases": self._fallback_phrases(task_text)})
         concepts = (
             {"concepts": self._fallback_concepts(task_text, terms.get("terms", []))}
             if self._is_q4_remote()
             else await self._json_task(
                 "concepts",
-                self._concepts_prompt(task_text),
+                self._concepts_prompt(task_text, target_level),
                 max_tokens=self._task_budget("concepts"),
                 fallback={"concepts": self._fallback_concepts(task_text, terms.get("terms", []))},
             )
         )
-        sentences = await self._json_task("sentences", self._sentences_prompt(task_text), max_tokens=self._task_budget("sentences"), fallback={"sentences": []})
+        sentences = await self._json_task("sentences", self._sentences_prompt(task_text, target_level), max_tokens=self._task_budget("sentences"), fallback={"sentences": []})
         if self._is_q4_remote() or len(terms.get("terms", [])) < 2:
             terms["terms"] = [*terms.get("terms", []), *self._fallback_terms(task_text)]
         if self._is_q4_remote() or len(phrases.get("phrases", [])) < 2:
@@ -401,9 +410,25 @@ class RemoteGemmaAdapter(ModelAdapter):
             f"SOURCE:\n{text}"
         )
 
-    def _terms_prompt(self, text: str, support_language: str = "Korean", learning_language: str = "English") -> str:
+    def _level_guidance(self, target_level: str | None) -> str:
+        level = (target_level or "unknown").upper()
+        if level in {"B1", "B2"}:
+            return (
+                f"Target learner level: {level}. Prefer core field terms and common academic words that unlock the section. "
+                "Avoid incidental model names, hardware, citations, or benchmark labels unless they are the main concept. "
+                "Use plain support-language glosses."
+            )
+        if level in {"C1", "C2"}:
+            return (
+                f"Target learner level: {level}. Prefer high-signal field terms, dense academic collocations, and rhetorical moves. "
+                "Do not waste slots on obvious section markers, enumerators, incidental proper names, hardware, or benchmark labels unless central to the argument."
+            )
+        return "Target learner level: unknown. Prefer source-grounded items that help a serious academic reader."
+
+    def _terms_prompt(self, text: str, support_language: str = "Korean", learning_language: str = "English", target_level: str | None = None) -> str:
         return (
             "Atomic task: extract 2 to 4 important learning terms from SOURCE. "
+            f"{self._level_guidance(target_level)} "
             "Return only JSON with key terms. terms must be an array. "
             "Each term object must include: term, meaning, support_language_meaning, domain_relevance, difficulty, source_sentence, should_save, learning_priority, reason, confidence. "
             f"meaning must be a concise {learning_language} context meaning. support_language_meaning must be a concise {support_language} learner gloss. "
@@ -412,9 +437,11 @@ class RemoteGemmaAdapter(ModelAdapter):
             f"SOURCE:\n{text}"
         )
 
-    def _phrases_prompt(self, text: str, support_language: str = "Korean", learning_language: str = "English") -> str:
+    def _phrases_prompt(self, text: str, support_language: str = "Korean", learning_language: str = "English", target_level: str | None = None) -> str:
         return (
             "Atomic task: extract 1 to 3 reusable academic or technical phrases from SOURCE. "
+            f"{self._level_guidance(target_level)} "
+            "For C1-C2, prefer phrases that express contrast, limitation, method, result claims, or argument positioning. "
             "Return only JSON with key phrases. phrases must be an array. "
             "Each phrase object must include: phrase, function, explanation, support_language_explanation, source_sentence, learning_priority, reason, confidence. "
             f"explanation must be a concise {learning_language} explanation. support_language_explanation must be a concise {support_language} learner gloss for how the phrase works. "
@@ -423,18 +450,20 @@ class RemoteGemmaAdapter(ModelAdapter):
             f"SOURCE:\n{text}"
         )
 
-    def _sentences_prompt(self, text: str) -> str:
+    def _sentences_prompt(self, text: str, target_level: str | None = None) -> str:
         return (
             "Atomic task: choose 1 to 2 difficult sentences from SOURCE and explain their structure for a language learner. "
+            f"{self._level_guidance(target_level)} "
             "Return only JSON with key sentences. sentences must be an array. "
             "Each object must include: sentence, core_structure, simplified_version, korean_explanation, difficulty_reason. "
             "The sentence must be copied exactly from SOURCE. Keep explanations concise.\n\n"
             f"SOURCE:\n{text}"
         )
 
-    def _concepts_prompt(self, text: str) -> str:
+    def _concepts_prompt(self, text: str, target_level: str | None = None) -> str:
         return (
             "Atomic task: extract 2 to 4 source-grounded concepts from SOURCE for paper reading. "
+            f"{self._level_guidance(target_level)} "
             "Concepts are ideas the reader must understand, not just dictionary words. "
             "Return only JSON with key concepts. concepts must be an array. "
             "Each concept object must include: concept, explanation, source_sentence, related_terms, why_it_matters, references, learning_priority, confidence. "

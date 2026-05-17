@@ -38,6 +38,7 @@ class MLXAdapter(ModelAdapter):
         chunks: list[str],
         support_language: str = "Korean",
         learning_language: str = "English",
+        target_level: str | None = None,
     ) -> AnalysisResult:
         try:
             output = await asyncio.to_thread(
@@ -47,13 +48,14 @@ class MLXAdapter(ModelAdapter):
                 chunks,
                 support_language,
                 learning_language,
+                target_level,
             )
             if self.settings.raw_model_output_path:
                 raw_path = Path(self.settings.raw_model_output_path).expanduser()
                 raw_path.parent.mkdir(parents=True, exist_ok=True)
                 raw_path.write_text(output, encoding="utf-8")
             payload = extract_json_object(output)
-            return self.normalizer.normalize_payload(payload, document_id, text, support_language=support_language)
+            return self.normalizer.normalize_payload(payload, document_id, text, support_language=support_language, target_level=target_level)
         except (ImportError, FileNotFoundError, ValidationError, Exception) as exc:
             logger.exception("MLX analysis failed")
             raise RuntimeError(f"MLX analysis failed: {exc}") from exc
@@ -87,9 +89,10 @@ class MLXAdapter(ModelAdapter):
         chunks: list[str],
         support_language: str,
         learning_language: str,
+        target_level: str | None,
     ) -> str:
         model, tokenizer = self._load()
-        prompt = self._build_prompt(document_id, text, chunks, support_language, learning_language)
+        prompt = self._build_prompt(document_id, text, chunks, support_language, learning_language, target_level)
         messages = [
             {"role": "system", "content": "Return only valid JSON. Do not use markdown. Do not output thoughts, analysis, or commentary."},
             {"role": "user", "content": prompt},
@@ -143,7 +146,15 @@ class MLXAdapter(ModelAdapter):
         self.__class__._model_path = model_path
         return self.__class__._model, self.__class__._tokenizer
 
-    def _build_prompt(self, document_id: str, text: str, chunks: list[str], support_language: str, learning_language: str) -> str:
+    def _build_prompt(
+        self,
+        document_id: str,
+        text: str,
+        chunks: list[str],
+        support_language: str,
+        learning_language: str,
+        target_level: str | None = None,
+    ) -> str:
         schema_hint = """
 {
   "document_id": "string",
@@ -180,6 +191,9 @@ class MLXAdapter(ModelAdapter):
         return (
             "Return JSON only. No reasoning. No markdown. "
             "Analyze this academic text for language learning. "
+            f"Target learner level: {target_level or 'unknown'}. "
+            "For B1-B2, prefer core terms and common academic expressions with plain support-language glosses. "
+            "For C1-C2, prefer high-signal field terms, dense academic expressions, and rhetorical moves; exclude incidental names, hardware, and section labels unless central. "
             "Select 3-5 terms, 2-3 academic phrases, 1-2 difficult sentence structures, and short summaries. "
             "Every term and phrase must appear in its source_sentence. "
             "Use context-specific meanings, not generic dictionary-only meanings. "

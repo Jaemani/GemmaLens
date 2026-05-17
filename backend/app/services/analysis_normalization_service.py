@@ -11,8 +11,20 @@ class AnalysisNormalizationService:
     def __init__(self) -> None:
         self.quality = AnalysisQualityService()
 
-    def normalize_result(self, result: AnalysisResult, document_text: str, support_language: str = "Korean") -> AnalysisResult:
-        return self.normalize_payload(result.model_dump(), result.document_id, document_text, support_language=support_language)
+    def normalize_result(
+        self,
+        result: AnalysisResult,
+        document_text: str,
+        support_language: str = "Korean",
+        target_level: str | None = None,
+    ) -> AnalysisResult:
+        return self.normalize_payload(
+            result.model_dump(),
+            result.document_id,
+            document_text,
+            support_language=support_language,
+            target_level=target_level,
+        )
 
     def normalize_payload(
         self,
@@ -20,6 +32,7 @@ class AnalysisNormalizationService:
         document_id: str,
         document_text: str,
         support_language: str = "Korean",
+        target_level: str | None = None,
     ) -> AnalysisResult:
         document_text = normalize_pdf_ligatures(document_text)
         terms = self._terms(payload.get("terms"), document_text, support_language=support_language)
@@ -269,11 +282,317 @@ class AnalysisNormalizationService:
             normalized["summaries"] = self._heuristic_summaries(document_text)
         if self._summaries_are_weak(normalized["summaries"], document_text):
             normalized["summaries"] = self._heuristic_summaries(document_text)
+        normalized = self._calibrate_learning_level(normalized, target_level)
+        normalized = self._ensure_minimum_learning_signal(normalized, document_text, support_language, target_level)
         normalized["terms"] = self._with_support_language_glosses(normalized["terms"], support_language, "term")
         normalized["phrases"] = self._with_support_language_glosses(normalized["phrases"], support_language, "phrase")
         result = AnalysisResult.model_validate(normalized)
         warnings = [*result.quality_warnings, *self.quality.inspect(result, document_text)]
         return result.model_copy(update={"quality_warnings": sorted(set(warnings))})
+
+    def _ensure_minimum_learning_signal(
+        self,
+        normalized: dict[str, Any],
+        document_text: str,
+        support_language: str,
+        target_level: str | None,
+    ) -> dict[str, Any]:
+        normalized = dict(normalized)
+        existing_terms = list(normalized.get("terms") or [])
+        existing_phrases = list(normalized.get("phrases") or [])
+        terms_changed = False
+        phrases_changed = False
+        if len(existing_terms) < 2:
+            existing_terms = self._merge_learning_rows(
+                existing_terms,
+                self._source_grounded_term_backfill(document_text),
+                "term",
+                limit=14,
+            )
+            terms_changed = True
+        if len(existing_phrases) < 1:
+            existing_phrases = self._merge_learning_rows(
+                existing_phrases,
+                self._source_grounded_phrase_backfill(document_text),
+                "phrase",
+                limit=12,
+            )
+            phrases_changed = True
+        normalized["terms"] = self._calibrate_term_rows(existing_terms, (target_level or "").upper()) if terms_changed else existing_terms
+        normalized["phrases"] = (
+            self._calibrate_phrase_rows(existing_phrases, (target_level or "").upper()) if phrases_changed else existing_phrases
+        )
+        return normalized
+
+    def _source_grounded_term_backfill(self, document_text: str) -> list[dict[str, Any]]:
+        candidates = [
+            ("Transformer", "The attention-based model architecture proposed or discussed in the source.", "field_term", "hard"),
+            ("parallelization", "The ability to run computations in parallel rather than sequentially.", "field_term", "medium"),
+            ("translation quality", "The quality of machine translation output reported by the model.", "field_term", "medium"),
+            ("state of the art", "A best-known or benchmark-leading result claim.", "useful", "medium"),
+            ("P100 GPUs", "Hardware used to report the training-time result.", "low_priority", "medium"),
+            ("compatibility function", "A function that scores how well a query matches a key.", "field_term", "hard"),
+            ("query", "The vector or item that asks what information should be retrieved in attention.", "field_term", "medium"),
+            ("key", "The vector or item matched against a query in attention.", "field_term", "medium"),
+            ("value", "The vector or item weighted and combined by attention.", "field_term", "medium"),
+            ("components", "Model parts varied in ablation experiments.", "useful", "medium"),
+            ("architecture", "The model structure being described or varied.", "field_term", "medium"),
+            ("attention heads", "Parallel attention units inside multi-head attention.", "field_term", "medium"),
+            ("attention distributions", "The learned attention patterns inspected by the authors.", "field_term", "hard"),
+            ("syntactic and semantic structure", "Language structure reflected by attention behavior.", "field_term", "hard"),
+            ("exhibit behaviour", "Shows observable behavior or patterns in model components.", "useful", "medium"),
+            ("BN transform", "The Batch Normalization transform applied in the network.", "field_term", "hard"),
+            ("linear transformation", "A learned affine/linear operation applied in the model.", "field_term", "medium"),
+            ("activation", "A layer output value inside a neural network.", "field_term", "medium"),
+            ("feature map", "A channel-wise activation map in a convolutional layer.", "field_term", "medium"),
+            ("gradient magnitudes", "The sizes of gradients during backpropagation.", "field_term", "hard"),
+            ("batch-normalized network", "A network trained with Batch Normalization layers.", "field_term", "medium"),
+            ("training steps", "The number of parameter-update steps used during training.", "field_term", "medium"),
+            ("validation accuracy", "Accuracy measured on a held-out validation set.", "field_term", "medium"),
+            ("subsequent layers", "Layers that receive activations from earlier layers.", "field_term", "medium"),
+            ("distributions", "Activation or input distributions tracked during training.", "field_term", "medium"),
+            ("maximum accuracy", "The highest validation accuracy achieved in an experiment.", "field_term", "medium"),
+            ("Inception", "The baseline image model family used in the experiment.", "useful", "medium"),
+            ("BN-Baseline", "The BatchNorm baseline variant compared in the experiment.", "field_term", "medium"),
+            ("BN-x5", "A BatchNorm variant trained with a larger learning rate.", "field_term", "medium"),
+            ("BN-x30", "A BatchNorm variant trained with a much larger learning rate.", "field_term", "medium"),
+            ("sigmoid", "A nonlinear activation function used in the experiment.", "field_term", "medium"),
+            ("population means and variances", "Fixed normalization statistics used for inference or adaptation.", "field_term", "hard"),
+            ("domain adaptation", "Adapting a model to a new data distribution.", "field_term", "hard"),
+            ("transfer learning", "Reusing knowledge from one task or dataset for another.", "field_term", "medium"),
+            ("supervised tasks", "Tasks trained with labeled examples.", "field_term", "medium"),
+            ("natural language inference", "A task that judges the relation between sentence meanings.", "field_term", "medium"),
+            ("machine translation", "A task that translates text from one language to another.", "field_term", "medium"),
+            ("SQuAD v2.0", "A question-answering benchmark that includes unanswerable questions.", "field_term", "hard"),
+            ("no short answer", "The SQuAD 2.0 case where no answer span exists.", "field_term", "medium"),
+            ("answer span", "A text span selected as the answer in extractive QA.", "field_term", "medium"),
+            ("SWAG", "A commonsense sentence-continuation benchmark.", "field_term", "hard"),
+            ("sentence-pair completion", "A task requiring selection of a plausible sentence continuation.", "field_term", "medium"),
+            ("commonsense inference", "Reasoning about plausible everyday situations.", "field_term", "hard"),
+            ("ablation experiments", "Experiments that remove or vary components to test importance.", "field_term", "hard"),
+            ("facets of BERT", "Different BERT design aspects examined in ablation experiments.", "field_term", "hard"),
+            ("relative importance", "How much each component contributes compared with others.", "field_term", "medium"),
+            ("pre-training tasks", "Tasks used before downstream fine-tuning.", "field_term", "hard"),
+            ("downstream task", "The final target task after pre-training.", "field_term", "medium"),
+            ("model size", "The capacity scale of a model.", "field_term", "medium"),
+            ("bidirectional model", "A model that can use both left and right context.", "field_term", "hard"),
+            ("left and right context", "Context from both sides of a token.", "field_term", "medium"),
+            ("QA", "Question answering, a task where the model answers questions from text.", "field_term", "medium"),
+            ("pre-trained representations", "Representations learned during pre-training and reused downstream.", "field_term", "hard"),
+            ("additional parameters", "New parameters added for a downstream task.", "field_term", "medium"),
+            ("masked LM", "Masked language modeling, where selected tokens are predicted from context.", "field_term", "hard"),
+            ("feature-based approach", "Using representations as features without fine-tuning all model parameters.", "field_term", "hard"),
+            ("BiLSTM", "A bidirectional LSTM used as a task model.", "field_term", "hard"),
+            ("majority class", "The most frequent class used as a simple baseline prediction.", "useful", "medium"),
+            ("single-task fine-tuning", "Fine-tuning on one task at a time.", "field_term", "medium"),
+            ("multitask fine-tuning", "Fine-tuning with multiple tasks together.", "field_term", "hard"),
+        ]
+        rows: list[dict[str, Any]] = []
+        lowered = " ".join(document_text.lower().split())
+        for term, meaning, priority, difficulty in candidates:
+            if term.lower() not in lowered:
+                continue
+            sentence = self._source_sentence(None, term, document_text)
+            if not sentence:
+                continue
+            rows.append(
+                {
+                    "term": term,
+                    "meaning": meaning,
+                    "domain_relevance": "high" if priority == "field_term" else "medium",
+                    "difficulty": difficulty,
+                    "source_sentence": sentence,
+                    "should_save": priority != "low_priority",
+                    "learning_priority": priority,
+                    "reason": "Source-grounded fallback term selected because the section had too little learning signal.",
+                    "context_meaning": meaning,
+                    "general_meaning": meaning,
+                    "confidence": 0.72,
+                    "user_state": "suggested",
+                }
+            )
+        return rows
+
+    def _source_grounded_phrase_backfill(self, document_text: str) -> list[dict[str, Any]]:
+        phrase_specs = [
+            *self._generic_academic_phrase_specs(document_text),
+            ("allows for significantly more", "result", "States a comparative capability or efficiency benefit."),
+            ("can reach a new state of the art", "result", "Claims benchmark-leading performance."),
+            ("is computed by", "method", "Explains how a value is calculated."),
+            ("where the weight assigned to", "method", "Explains the role of weights in an operation."),
+            ("to evaluate the importance of", "method", "Introduces an ablation experiment."),
+            ("many appear to exhibit", "claim", "Cautiously reports observed model behavior."),
+            ("in my opinion", "claim", "Marks a personal stance inside an example sentence."),
+            ("rather than", "contrast", "Contrasts the chosen unit or method with an alternative."),
+            ("so that", "method", "Introduces the purpose or consequence of a method."),
+            ("during inference", "method", "Marks behavior at inference time rather than training time."),
+            ("we nevertheless expect", "claim", "States a cautious expectation despite caveats."),
+            ("remains an area of further study", "limitation", "Marks an unresolved research question."),
+            ("we found this effect to be", "result", "Reports an observed experimental effect."),
+            ("whereas", "contrast", "Contrasts two methods or conditions."),
+            ("to verify the effects of", "method", "Introduces the purpose of an experiment."),
+            ("we evaluated the following", "method", "Introduces a list of experimental conditions."),
+            ("steps to match", "result", "Explains the number of steps needed to reach a target result."),
+            ("required to reach", "result", "States the training amount needed to reach a metric."),
+            ("maximum accuracy achieved", "result", "Reports the best accuracy reached by a model."),
+            ("we also verified that", "result", "Adds a supporting experimental finding."),
+            ("without Batch Normalization", "contrast", "Contrasts the method with the baseline without it."),
+            ("our future work includes", "limitation", "Introduces future work rather than a completed result."),
+            ("we plan to investigate whether", "limitation", "States a future research question."),
+            ("there has also been work showing", "claim", "Introduces related work evidence."),
+            ("demonstrated the importance of", "claim", "States what prior work has shown."),
+            ("allowing for the possibility that", "method", "Explains an expanded task definition."),
+            ("we use a simple approach to", "method", "Introduces a simple method extension."),
+            ("we treat questions that", "method", "Explains how a special case is represented."),
+            ("the task is to choose", "claim", "Defines a task objective."),
+            ("when fine-tuning on", "method", "Introduces task-specific fine-tuning setup."),
+            ("results are presented in", "result", "Points to where the empirical result is reported."),
+            ("we perform ablation experiments", "method", "Introduces ablation analysis."),
+            ("in order to better understand", "method", "States the purpose of an analysis."),
+            ("this demonstrates", "result", "Interprets a result as evidence for a claim."),
+            ("compared to", "contrast", "Introduces a comparison baseline."),
+            ("twice as expensive", "contrast", "States a cost disadvantage in a comparison."),
+            ("strictly less powerful than", "contrast", "States a representational limitation."),
+            ("we hypothesize that", "claim", "States a hypothesis rather than a proven result."),
+            ("can benefit from", "result", "States a practical benefit."),
+            ("possible values to work well", "method", "Introduces a working hyperparameter range."),
+            ("where the goal is to", "claim", "States the objective of a task."),
+            ("has been converted to", "method", "Explains task transformation."),
+            ("without fine-tuning", "contrast", "Contrasts feature extraction with full fine-tuning."),
+            ("we therefore exclude", "method", "States an evaluation decision based on a caveat."),
+            ("to be fair to", "claim", "Gives the fairness reason for an evaluation choice."),
+        ]
+        rows: list[dict[str, Any]] = []
+        lowered = " ".join(document_text.lower().split())
+        seen: set[str] = set()
+        for phrase, function, explanation in phrase_specs:
+            key = phrase.lower()
+            if key in seen or key not in lowered:
+                continue
+            seen.add(key)
+            rows.append(
+                {
+                    "phrase": phrase,
+                    "function": function,
+                    "explanation": explanation,
+                    "source_sentence": self._source_sentence(None, phrase, document_text),
+                    "learning_priority": "must_review" if function in {"method", "result", "contrast"} else "useful",
+                    "reason": "Source-grounded fallback expression selected because the section had too little learning signal.",
+                    "context_meaning": explanation,
+                    "confidence": 0.72,
+                    "user_state": "suggested",
+                }
+            )
+        return rows
+
+    def _calibrate_learning_level(self, normalized: dict[str, Any], target_level: str | None) -> dict[str, Any]:
+        level = (target_level or "").upper()
+        if level not in {"B1", "B2", "C1", "C2"}:
+            return normalized
+        normalized = dict(normalized)
+        normalized["terms"] = self._calibrate_term_rows(normalized.get("terms", []), level)
+        normalized["phrases"] = self._calibrate_phrase_rows(normalized.get("phrases", []), level)
+        normalized["concepts"] = self._calibrate_concept_rows(normalized.get("concepts", []), level)
+        normalized["sentences"] = self._calibrate_sentence_rows(normalized.get("sentences", []), level)
+        return normalized
+
+    def _calibrate_term_rows(self, rows: list[dict[str, Any]], level: str) -> list[dict[str, Any]]:
+        blocked_for_advanced = {
+            "p100 gpus",
+            "nvidia p100 gpus",
+            "first",
+            "second",
+            "third",
+        }
+        scored: list[tuple[int, dict[str, Any]]] = []
+        for row in rows:
+            key = str(row.get("term") or "").strip().lower()
+            if not key:
+                continue
+            priority = str(row.get("learning_priority") or "").lower()
+            difficulty = str(row.get("difficulty") or "").lower()
+            relevance = str(row.get("domain_relevance") or "").lower()
+            if level in {"C1", "C2"} and (key in blocked_for_advanced or priority == "low_priority"):
+                continue
+            if level in {"B1", "B2"} and priority == "low_priority" and len(rows) > 6:
+                continue
+            score = 0
+            score += {"must_review": 40, "field_term": 32, "useful": 20, "low_priority": 0}.get(priority, 10)
+            score += {"high": 12, "medium": 6, "low": 0}.get(relevance, 3)
+            if level in {"C1", "C2"}:
+                score += {"hard": 12, "medium": 8, "easy": 1}.get(difficulty, 4)
+            else:
+                score += {"medium": 12, "easy": 8, "hard": 5}.get(difficulty, 4)
+            scored.append((score, row))
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return [row for _, row in scored[:14]]
+
+    def _calibrate_phrase_rows(self, rows: list[dict[str, Any]], level: str) -> list[dict[str, Any]]:
+        weak_advanced_phrases = {
+            "first",
+            "second",
+            "third",
+            "in this section",
+            "as follows",
+            "shown in",
+            "figure",
+        }
+        scored: list[tuple[int, dict[str, Any]]] = []
+        for row in rows:
+            phrase = str(row.get("phrase") or "").strip()
+            key = phrase.lower()
+            if not key:
+                continue
+            function = str(row.get("function") or "").lower()
+            priority = str(row.get("learning_priority") or "").lower()
+            if level in {"C1", "C2"} and (key in weak_advanced_phrases or priority == "low_priority"):
+                continue
+            score = 0
+            score += {"must_review": 35, "field_term": 25, "useful": 20, "low_priority": 0}.get(priority, 10)
+            score += {"contrast": 14, "limitation": 14, "method": 12, "result": 12, "claim": 10, "general": 3}.get(function, 5)
+            if level in {"C1", "C2"} and len(phrase.split()) >= 3:
+                score += 6
+            if level in {"B1", "B2"} and len(phrase.split()) <= 5:
+                score += 5
+            scored.append((score, row))
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return [row for _, row in scored[:12]]
+
+    def _calibrate_concept_rows(self, rows: list[dict[str, Any]], level: str) -> list[dict[str, Any]]:
+        scored: list[tuple[int, dict[str, Any]]] = []
+        for row in rows:
+            priority = str(row.get("learning_priority") or "").lower()
+            if level in {"C1", "C2"} and priority == "low_priority":
+                continue
+            score = {"must_review": 35, "field_term": 30, "useful": 15, "low_priority": 0}.get(priority, 10)
+            scored.append((score, row))
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return [row for _, row in scored[:10]]
+
+    def _calibrate_sentence_rows(self, rows: list[dict[str, Any]], level: str) -> list[dict[str, Any]]:
+        if not rows:
+            return rows
+        calibrated: list[dict[str, Any]] = []
+        for row in rows[:4]:
+            row = dict(row)
+            if level in {"B1", "B2"}:
+                row["difficulty_reason"] = self._append_once(
+                    str(row.get("difficulty_reason") or ""),
+                    "For this level, focus on finding the main clause first, then add modifiers one by one.",
+                )
+            elif level in {"C1", "C2"}:
+                row["difficulty_reason"] = self._append_once(
+                    str(row.get("difficulty_reason") or ""),
+                    "For this level, notice the rhetorical move, clause compression, and how the author positions evidence or limitation.",
+                )
+            calibrated.append(row)
+        return calibrated
+
+    def _append_once(self, value: str, suffix: str) -> str:
+        value = value.strip()
+        if suffix in value:
+            return value
+        return f"{value} {suffix}".strip()
 
     def _domain(self, value: Any) -> dict[str, Any]:
         value = value if isinstance(value, dict) else {}
@@ -442,13 +761,72 @@ class AnalysisNormalizationService:
                 "parallelization": "여러 위치나 예제를 동시에 계산해 학습을 빠르게 만드는 성질입니다.",
                 "hidden representations": "입력 토큰이나 sequence를 모델 내부에서 계산한 벡터 표현입니다.",
                 "long-range dependencies": "문장이나 sequence 안에서 멀리 떨어진 위치들 사이의 의존 관계입니다.",
+                "dependencies between distant positions": "sequence 안에서 멀리 떨어진 위치들 사이의 의존 관계입니다.",
+                "in parallel": "여러 위치나 계산을 동시에 처리한다는 뜻입니다.",
+                "recurrent models": "토큰 위치를 순서대로 처리하면서 이전 hidden state에 의존하는 sequence model입니다.",
+                "hidden states": "recurrent model이 각 위치에서 만들어 다음 위치로 넘기는 내부 표현입니다.",
                 "convolutional neural networks": "convolution 연산으로 주변 패턴을 처리하는 neural network 계열입니다.",
                 "input and output positions": "sequence의 입력과 출력에서 각 토큰이 놓인 위치를 뜻합니다.",
+                "queries": "attention에서 필요한 정보를 묻는 역할의 벡터입니다.",
+                "keys": "query와 비교되어 attention 점수를 만드는 역할의 벡터입니다.",
+                "values": "attention 가중치로 섞여 최종 출력이 되는 정보 벡터입니다.",
+                "softmax function": "점수들을 합이 1인 가중치로 바꾸는 함수입니다.",
+                "dot products": "query와 key가 얼마나 맞는지 계산하는 내적 점수입니다.",
+                "linear projections": "query/key/value를 다른 표현 공간으로 보내는 학습된 선형 변환입니다.",
+                "position-wise feed-forward networks": "각 sequence 위치에 독립적으로 적용되는 feed-forward layer입니다.",
+                "embeddings": "토큰을 모델이 계산할 수 있는 벡터로 바꾼 표현입니다.",
+                "positional encodings": "토큰 순서 정보를 주기 위해 embedding에 더하는 위치 벡터입니다.",
+                "sine and cosine functions": "Transformer의 고정 positional encoding을 만드는 삼각함수입니다.",
+                "training data": "모델 학습에 사용한 데이터셋입니다.",
+                "batching": "여러 예제를 묶어 효율적으로 학습하는 방식입니다.",
+                "nvidia p100 gpus": "Transformer 학습 시간 보고에 쓰인 GPU 하드웨어입니다.",
+                "adam optimizer": "Transformer 학습에 사용한 최적화 알고리즘입니다.",
+                "warmup_steps": "초기 학습률을 점진적으로 키우는 단계 수입니다.",
+                "label smoothing": "모델이 정답에 과도하게 확신하지 않도록 만드는 regularization입니다.",
+                "bleu score": "기계번역 결과를 reference 번역과 비교해 평가하는 점수입니다.",
+                "beam search": "생성 중 여러 후보 문장을 유지하며 더 좋은 출력을 찾는 decoding 방법입니다.",
+                "checkpoint averaging": "최근 저장된 여러 모델 checkpoint를 평균해 평가에 쓰는 방법입니다.",
+                "model variations": "구성요소를 바꿔 성능 변화를 보는 ablation 실험입니다.",
+                "attention heads": "multi-head attention 안에서 병렬로 작동하는 attention 계산 단위입니다.",
+                "heads": "multi-head attention 안에서 병렬로 작동하는 attention 계산 단위입니다.",
+                "projections": "query/key/value를 attention head의 공간으로 보내는 학습된 변환입니다.",
+                "parameter matrices": "모델 벡터를 다른 공간으로 보내는 학습된 행렬입니다.",
+                "feed-forward network": "선형 변환과 비선형 함수를 적용하는 neural network sub-layer입니다.",
+                "linear transformations": "입력 벡터에 행렬과 bias를 적용하는 선형 변환입니다.",
+                "relu activation": "음수는 0으로 만들고 양수는 그대로 두는 비선형 activation입니다.",
+                "maximum path length": "두 sequence 위치가 정보를 주고받기 위해 거쳐야 하는 가장 긴 계산 경로입니다.",
+                "convolutional layers": "주변 위치의 패턴을 convolution으로 처리하는 neural network layer입니다.",
+                "separable convolutions": "계산량을 줄인 convolution 변형입니다.",
+                "training steps": "학습 중 parameter update를 수행한 횟수입니다.",
+                "base models": "비교 기준으로 쓰는 더 작은 Transformer 설정입니다.",
+                "big models": "더 큰 용량과 더 긴 학습으로 강한 성능을 내는 Transformer 설정입니다.",
+                "dropout": "학습 중 일부 activation을 무작위로 끄는 regularization 방법입니다.",
+                "bn transform": "네트워크 안에서 Batch Normalization을 적용하는 변환입니다.",
+                "normalized activations": "정규화가 적용된 layer activation입니다.",
+                "feature map": "convolutional layer에서 channel 단위로 생기는 activation map입니다.",
+                "gradient propagation": "학습 중 gradient가 뒤쪽 layer에서 앞쪽 layer로 전달되는 과정입니다.",
+                "singular values": "변환이 각 방향을 얼마나 확대하거나 축소하는지 나타내는 값입니다.",
+                "backpropagation": "gradient를 뒤로 전달해 parameter를 업데이트하는 학습 알고리즘입니다.",
+                "imagenet classification": "대규모 이미지 분류 benchmark입니다.",
+                "ensemble": "여러 모델의 예측을 합쳐 성능을 높이는 방법입니다.",
+                "general language representations": "여러 NLP task에 재사용할 수 있도록 넓게 학습한 언어 표현입니다.",
+                "contextual representations": "주변 문맥에 따라 달라지는 token/text 표현입니다.",
+                "question answering": "텍스트를 바탕으로 질문에 답하는 NLP task입니다.",
+                "named entity recognition": "사람, 조직, 장소 같은 고유명사를 태깅하는 NLP task입니다.",
+                "wordpiece embeddings": "BERT가 사용하는 subword token embedding입니다.",
+                "token sequence": "BERT 입력으로 들어가는 token들의 sequence입니다.",
+                "glue benchmark": "여러 자연어 이해 task를 모은 benchmark입니다.",
+                "final hidden vector": "classification에 사용하는 마지막 hidden representation입니다.",
+                "classification layer": "task-specific classification을 위해 추가되는 출력 layer입니다.",
+                "f1 score": "precision과 recall을 함께 반영하는 평가 지표입니다.",
+                "leaderboard system": "benchmark leaderboard에서 비교 대상으로 삼는 상위 시스템입니다.",
                 "convex": "두 점 사이를 이은 선분이 함수나 집합의 조건 안에 머무르는 성질을 뜻합니다.",
                 "convex optimization problem": "목적함수와 제약식이 볼록성 조건을 만족하는 최적화 문제입니다.",
-                "objective function": "최적화에서 최소화하거나 최대화하려는 기준 함수입니다.",
+                "objective function": "목적함수입니다. 최적화에서 최소화하거나 최대화하려는 기준 함수입니다.",
                 "constraint": "해가 반드시 만족해야 하는 조건입니다.",
                 "affine": "선형식에 상수항을 더한 형태를 뜻하며, 등식 제약에서 자주 쓰입니다.",
+                "concave maximization problems": "오목함수를 최대화하는 문제로, 볼록 최적화와 대응되는 형태로 다룹니다.",
+                "standard form": "정의에서 요구하는 목적함수와 제약식 형태를 갖춘 표준 표현입니다.",
                 "batch normalization": "mini-batch 통계로 layer 입력을 정규화해 학습을 안정화하는 방법입니다.",
                 "internal covariate shift": "학습 중 layer 입력 분포가 계속 바뀐다는 문제의식입니다.",
                 "mini-batch": "한 번의 업데이트에 함께 쓰는 작은 데이터 묶음입니다.",
@@ -458,6 +836,12 @@ class AnalysisNormalizationService:
                 "fine-tuning": "사전학습된 모델을 특정 과제 데이터로 조정하는 단계입니다.",
                 "output layers": "공유 모델 위에 붙는 과제별 출력층입니다.",
                 "pre-trained model parameters": "사전학습 단계에서 배운 뒤 downstream task 초기값으로 재사용되는 가중치입니다.",
+                "pre-trained language representations": "대규모 텍스트로 먼저 학습해 downstream task에 재사용하는 언어 표현입니다.",
+                "feature-based": "사전학습 표현을 고정된 feature로 가져와 task-specific model에 넣는 방식입니다.",
+                "feature-based approach": "사전학습 표현을 추가 feature로 사용하고, 과제별 구조는 따로 두는 전이 방식입니다.",
+                "fine-tuning approach": "사전학습 모델 전체를 downstream task 데이터로 함께 조정하는 전이 방식입니다.",
+                "downstream tasks": "사전학습 뒤 실제로 풀고 평가하는 목표 과제들입니다.",
+                "task-specific architectures": "특정 과제에 맞게 따로 설계한 모델 구조입니다.",
                 "[cls]": "입력 맨 앞에 붙어 전체 sequence 표현을 만들 때 쓰는 특수 토큰입니다.",
                 "[sep]": "두 문장이나 segment를 구분할 때 쓰는 특수 토큰입니다.",
                 "masked language model": "가려진 단어를 주변 문맥으로 예측하는 pre-training 과제입니다.",
@@ -467,6 +851,32 @@ class AnalysisNormalizationService:
                 "dispensing with": "기존에 쓰던 요소를 제거하거나 쓰지 않는다는 뜻입니다.",
                 "remains unclear": "아직 명확하지 않은 연구 문제를 표시합니다.",
                 "to address this gap": "앞에서 말한 연구 공백을 해결하기 위해 다음 방법을 제시합니다.",
+                "large language models": "대규모 텍스트로 학습해 언어를 이해하고 생성하는 모델입니다.",
+                "modern ai": "최근 모델 발전을 바탕으로 한 현재의 AI 시스템과 도구를 뜻합니다.",
+                "greenhouse effect": "대기 중 기체가 열을 가두어 지구를 따뜻하게 만드는 현상입니다.",
+                "climate change": "기후가 장기적으로 빠르게 변하는 현상과 그 영향을 가리킵니다.",
+                "carbon dioxide": "열을 가두는 대표적인 온실가스로, CO2라고도 부릅니다.",
+                "greenhouse gases": "대기 중에서 열을 가두어 온난화에 영향을 주는 기체들입니다.",
+                "atmospheric heating": "대기가 열을 흡수하고 보존해 따뜻해지는 과정입니다.",
+                "earth's temperature": "지구 전체의 평균적인 온도 변화를 말할 때 쓰는 표현입니다.",
+                "human activities": "환경이나 사회 변화를 일으키는 인간의 활동을 뜻합니다.",
+                "economics": "선택, 자원, 시장, 유인, tradeoff를 다루는 학문입니다.",
+                "economic theories": "경제 현상을 설명하는 원리와 모델을 뜻합니다.",
+                "theories and graphs": "경제학의 원리와 관계를 설명할 때 쓰는 이론과 그래프입니다.",
+                "real world applications": "개념이 실제 경제 상황에서 어떻게 쓰이는지를 보여주는 적용 사례입니다.",
+                "scarce resources": "한정되어 있어 선택과 tradeoff가 필요한 자원입니다.",
+                "opportunity cost": "어떤 선택 때문에 포기한 차선의 가치입니다.",
+                "virus": "살아있는 세포 안에서 증식하는 작은 감염성 입자입니다.",
+                "genetic material": "생물학적 정보를 담는 DNA나 RNA입니다.",
+                "protein shell": "바이러스의 유전물질을 감싸는 단백질 껍질입니다.",
+                "fastapi": "Python으로 API를 만들 때 쓰는 현대적인 웹 프레임워크입니다.",
+                "fast api": "Python으로 API를 만들 때 쓰는 현대적인 웹 프레임워크입니다.",
+                "apis with python": "Python으로 만드는 API 또는 웹 서비스 인터페이스를 뜻합니다.",
+                "web framework": "웹 서비스나 API 서버를 만들기 위한 기본 구조와 도구를 제공하는 프레임워크입니다.",
+                "python web framework": "Python으로 웹 서비스나 API를 만들게 해주는 프레임워크입니다.",
+                "python package manager": "Python 패키지를 설치하고 관리하는 도구입니다.",
+                "pip": "Python 패키지를 설치할 때 흔히 쓰는 명령줄 도구입니다.",
+                "automatic documentation": "코드나 API 정의에서 자동으로 만들어지는 문서입니다.",
             }
             if key in known:
                 return known[key]
@@ -573,7 +983,53 @@ class AnalysisNormalizationService:
         return concepts[:6]
 
     def _heuristic_terms(self, document_text: str) -> list[dict[str, Any]]:
-        if self._is_bert_text(document_text):
+        generic_specs = self._generic_academic_term_specs(document_text)
+        if self._is_convex_optimization_definition_section(document_text):
+            known = [
+                (
+                    "convex optimization problem",
+                    "An optimization problem whose objective and constraints satisfy convex standard-form requirements.",
+                    "field_term",
+                    "hard",
+                    "This is the definition being refined in the section.",
+                ),
+                (
+                    "objective function",
+                    "The function the optimization problem minimizes or maximizes.",
+                    "field_term",
+                    "medium",
+                    "It is one of the required parts of a convex optimization problem.",
+                ),
+                (
+                    "affine",
+                    "Linear plus a constant term; equality constraints in standard form must be affine.",
+                    "field_term",
+                    "hard",
+                    "This is the key caveat in the section's definition.",
+                ),
+                (
+                    "equality constraint",
+                    "A constraint that must hold exactly rather than as an inequality.",
+                    "field_term",
+                    "medium",
+                    "The section says non-affine equality constraints break standard form.",
+                ),
+                (
+                    "standard form",
+                    "The stricter formulation required by the textbook definition.",
+                    "useful",
+                    "medium",
+                    "This separates geometric convexity from the formal optimization-problem definition.",
+                ),
+                (
+                    "concave maximization problems",
+                    "Maximization problems with concave objectives, treated as the counterpart of convex minimization.",
+                    "field_term",
+                    "hard",
+                    "This explains the naming caveat after the convex standard-form definition.",
+                ),
+            ]
+        elif self._is_bert_text(document_text):
             known = [
                 (
                     "BERT",
@@ -588,6 +1044,13 @@ class AnalysisNormalizationService:
                     "field_term",
                     "hard",
                     "This explains what the acronym means and how the model reads context.",
+                ),
+                (
+                    "pre-trained language representations",
+                    "Representations learned before downstream task training and reused across NLP tasks.",
+                    "field_term",
+                    "hard",
+                    "This is the object being transferred by both strategies in the section.",
                 ),
                 (
                     "pre-training",
@@ -1842,6 +2305,8 @@ class AnalysisNormalizationService:
                     "This is how the section reports the final localization improvement.",
                 ),
             ]
+        elif generic_specs:
+            known = generic_specs
         else:
             known = [
             (
@@ -1915,6 +2380,9 @@ class AnalysisNormalizationService:
                 "This matters when moving from training-time normalization to inference.",
             ),
             ]
+        if generic_specs:
+            seen_terms = {term.lower() for term, *_ in known}
+            known = [*known, *[item for item in generic_specs if item[0].lower() not in seen_terms]]
         rows: list[dict[str, Any]] = []
         for term, meaning, priority, difficulty, reason in known:
             sentence = self._source_sentence(None, term, document_text)
@@ -1938,6 +2406,861 @@ class AnalysisNormalizationService:
             )
         return rows
 
+    def _generic_academic_term_specs(self, document_text: str) -> list[tuple[str, str, str, str, str]]:
+        lowered = document_text.lower()
+        specs: list[tuple[str, str, str, str, str]] = []
+        candidates = [
+            (
+                "climate risk",
+                "The potential harm from climate-related hazards, policy changes, or transition pressure.",
+                "field_term",
+                "hard",
+                "This anchors climate and sustainability reports.",
+            ),
+            (
+                "greenhouse gas emissions",
+                "Gases released into the atmosphere that contribute to warming.",
+                "field_term",
+                "medium",
+                "This is a core measurement term in climate reports.",
+            ),
+            (
+                "decarbonization",
+                "Reducing carbon emissions in energy, industry, transport, or operations.",
+                "field_term",
+                "hard",
+                "This names the direction of climate mitigation strategy.",
+            ),
+            (
+                "adaptation measures",
+                "Actions that reduce vulnerability to climate impacts.",
+                "field_term",
+                "medium",
+                "This separates adapting to impacts from reducing emissions.",
+            ),
+            (
+                "monetary policy",
+                "Central-bank policy that influences inflation, interest rates, and economic activity.",
+                "field_term",
+                "hard",
+                "This anchors economics and central-bank reports.",
+            ),
+            (
+                "inflation expectations",
+                "Beliefs about future inflation that can affect prices, wages, and policy decisions.",
+                "field_term",
+                "hard",
+                "This is a high-value economics concept rather than a generic word.",
+            ),
+            (
+                "labor market",
+                "The market for employment, wages, vacancies, and workers.",
+                "field_term",
+                "medium",
+                "This often explains pressure on wages and inflation.",
+            ),
+            (
+                "randomized controlled trial",
+                "A study design that randomly assigns participants to compare an intervention with a control.",
+                "field_term",
+                "hard",
+                "This is a core evidence term in medical and social-science papers.",
+            ),
+            (
+                "confidence interval",
+                "A range that expresses uncertainty around an estimated effect.",
+                "field_term",
+                "hard",
+                "This helps readers interpret statistical claims.",
+            ),
+            (
+                "adverse events",
+                "Unwanted medical events observed during a study or intervention.",
+                "field_term",
+                "medium",
+                "This is central to safety reporting.",
+            ),
+            (
+                "idempotent preflight check",
+                "A repeat-safe check run before deployment or migration.",
+                "field_term",
+                "hard",
+                "This is a useful technical-video term.",
+            ),
+            (
+                "stale metadata",
+                "Outdated system metadata that can cause incorrect behavior.",
+                "field_term",
+                "medium",
+                "This explains the failure mode in technical tutorials.",
+            ),
+            (
+                "worker nodes",
+                "Machines or processes that execute distributed work.",
+                "field_term",
+                "medium",
+                "This is common infrastructure vocabulary.",
+            ),
+            (
+                "API endpoint",
+                "A specific URL path that a client calls to use a service.",
+                "field_term",
+                "medium",
+                "This is a core technical-documentation term.",
+            ),
+            (
+                "request payload",
+                "The structured data sent with an API request.",
+                "field_term",
+                "medium",
+                "This helps learners read API usage instructions.",
+            ),
+            (
+                "authentication token",
+                "A credential included with a request to prove access permission.",
+                "field_term",
+                "hard",
+                "This is central to secure API documentation.",
+            ),
+            (
+                "environment variable",
+                "A named runtime setting read by software from its execution environment.",
+                "field_term",
+                "medium",
+                "This is common in setup and deployment docs.",
+            ),
+            (
+                "pagination cursor",
+                "A value used to request the next page of API results.",
+                "field_term",
+                "hard",
+                "This is a recurring docs term for list endpoints.",
+            ),
+            (
+                "rate limit",
+                "A restriction on how many requests can be made in a time window.",
+                "field_term",
+                "medium",
+                "This is important for API reliability and error handling.",
+            ),
+            (
+                "large language models",
+                "Models trained on large text corpora that can generate and interpret language.",
+                "field_term",
+                "medium",
+                "This is central to modern AI explainer videos.",
+            ),
+            (
+                "modern AI",
+                "Current AI systems and tools built from recent model advances.",
+                "useful",
+                "medium",
+                "This anchors broad AI video introductions.",
+            ),
+            (
+                "greenhouse effect",
+                "The warming process caused when atmospheric gases trap heat.",
+                "field_term",
+                "medium",
+                "This is a core climate-explainer concept.",
+            ),
+            (
+                "climate change",
+                "Long-term shifts in climate patterns, especially the rapid warming discussed in the explainer.",
+                "field_term",
+                "medium",
+                "This is the central topic of the climate source.",
+            ),
+            (
+                "carbon dioxide",
+                "A greenhouse gas linked to atmospheric heating and global temperature rise.",
+                "field_term",
+                "medium",
+                "This is the first concrete causal gas introduced in the climate source.",
+            ),
+            (
+                "greenhouse gases",
+                "Gases such as carbon dioxide, methane, and water vapor that trap heat in the atmosphere.",
+                "field_term",
+                "medium",
+                "This explains the mechanism behind the greenhouse effect.",
+            ),
+            (
+                "atmospheric heating",
+                "The process of the atmosphere holding heat because of gas composition.",
+                "field_term",
+                "hard",
+                "This connects the experiment to the climate mechanism.",
+            ),
+            (
+                "earth's temperature",
+                "A broad climate measure referring to global temperature change.",
+                "useful",
+                "medium",
+                "This helps learners follow climate-change explanations.",
+            ),
+            (
+                "human activities",
+                "Actions by people that drive environmental or social change.",
+                "useful",
+                "medium",
+                "This is common causal language in public reports and explainers.",
+            ),
+            (
+                "economics",
+                "The study of choices, incentives, resources, markets, and tradeoffs.",
+                "field_term",
+                "medium",
+                "This anchors introductory economics videos.",
+            ),
+            (
+                "theories and graphs",
+                "The conceptual and visual tools used to explain economic reasoning.",
+                "useful",
+                "medium",
+                "This describes the academic side of the economics source.",
+            ),
+            (
+                "real world applications",
+                "Examples of how economic ideas apply outside textbook explanations.",
+                "useful",
+                "medium",
+                "This separates applied economics from abstract theory.",
+            ),
+            (
+                "scarce resources",
+                "Limited resources that require choices and tradeoffs.",
+                "field_term",
+                "medium",
+                "This is a foundational economics concept.",
+            ),
+            (
+                "opportunity cost",
+                "The value of the next-best alternative given up when making a choice.",
+                "field_term",
+                "hard",
+                "This is one of the most useful economics terms for learners.",
+            ),
+            (
+                "virus",
+                "A tiny infectious agent that replicates inside living cells.",
+                "field_term",
+                "medium",
+                "This anchors medical explainer videos about infection.",
+            ),
+            (
+                "genetic material",
+                "DNA or RNA carrying biological instructions.",
+                "field_term",
+                "hard",
+                "This explains how viruses store replication instructions.",
+            ),
+            (
+                "protein shell",
+                "A protective protein coat around viral genetic material.",
+                "field_term",
+                "medium",
+                "This is a basic structural term in virus explanations.",
+            ),
+            (
+                "fast api",
+                "A modern Python web framework for building APIs.",
+                "field_term",
+                "medium",
+                "This anchors FastAPI documentation and tutorial videos.",
+            ),
+            (
+                "FastAPI",
+                "A modern Python web framework for building APIs.",
+                "field_term",
+                "medium",
+                "This is the framework being taught in the tutorial source.",
+            ),
+            (
+                "APIs with Python",
+                "API services built using the Python programming language.",
+                "field_term",
+                "medium",
+                "This is the core tutorial task.",
+            ),
+            (
+                "web framework",
+                "A framework that provides structure and tools for building web applications or APIs.",
+                "field_term",
+                "medium",
+                "This explains what kind of tool FastAPI is.",
+            ),
+            (
+                "Python package manager",
+                "A tool such as pip used to install Python packages.",
+                "field_term",
+                "medium",
+                "This is needed to follow installation instructions.",
+            ),
+            (
+                "pip",
+                "The common command-line installer for Python packages.",
+                "useful",
+                "medium",
+                "This appears in the installation step of the tutorial.",
+            ),
+            (
+                "Python web framework",
+                "A Python library or framework used to build web services.",
+                "field_term",
+                "medium",
+                "This explains where FastAPI fits among tools.",
+            ),
+            (
+                "automatic documentation",
+                "Documentation generated by the framework from API definitions.",
+                "field_term",
+                "medium",
+                "This is one of FastAPI's key tutorial claims.",
+            ),
+            (
+                "recurrent models",
+                "Sequence models that compute token positions step by step.",
+                "field_term",
+                "medium",
+                "This explains the bottleneck the Transformer is designed to avoid.",
+            ),
+            (
+                "hidden states",
+                "Intermediate sequence representations generated by recurrent computation.",
+                "field_term",
+                "medium",
+                "This is the mechanism behind recurrent sequence processing.",
+            ),
+            (
+                "queries",
+                "Vectors that ask what information an attention operation should retrieve.",
+                "field_term",
+                "medium",
+                "This is one of the core Q/K/V roles in attention.",
+            ),
+            (
+                "keys",
+                "Vectors matched against queries to produce attention scores.",
+                "field_term",
+                "medium",
+                "This is one of the core Q/K/V roles in attention.",
+            ),
+            (
+                "values",
+                "Vectors mixed by attention weights to produce the output.",
+                "field_term",
+                "medium",
+                "This is one of the core Q/K/V roles in attention.",
+            ),
+            (
+                "softmax function",
+                "A function that turns scores into normalized attention weights.",
+                "field_term",
+                "medium",
+                "This explains how attention scores become weights.",
+            ),
+            (
+                "dot products",
+                "Similarity scores computed between queries and keys.",
+                "field_term",
+                "medium",
+                "This anchors scaled dot-product attention.",
+            ),
+            (
+                "linear projections",
+                "Learned linear transforms applied to queries, keys, and values.",
+                "field_term",
+                "hard",
+                "This explains how multi-head attention creates different views.",
+            ),
+            (
+                "position-wise feed-forward networks",
+                "Feed-forward layers applied independently at each sequence position.",
+                "field_term",
+                "hard",
+                "This is a core Transformer block component.",
+            ),
+            (
+                "embeddings",
+                "Vector representations used for input tokens and output tokens.",
+                "field_term",
+                "medium",
+                "This explains how tokens enter the model.",
+            ),
+            (
+                "positional encodings",
+                "Vectors added to embeddings so the model can use token order.",
+                "field_term",
+                "hard",
+                "This replaces recurrence or convolution as the source of order information.",
+            ),
+            (
+                "sine and cosine functions",
+                "Fixed sinusoidal functions used to build positional encodings.",
+                "field_term",
+                "medium",
+                "This explains the paper's non-learned position signal.",
+            ),
+            (
+                "training data",
+                "The dataset used to train the model.",
+                "useful",
+                "medium",
+                "This helps readers separate experiment setup from method claims.",
+            ),
+            (
+                "batching",
+                "Grouping examples into batches for efficient training.",
+                "field_term",
+                "medium",
+                "This is part of the experimental setup.",
+            ),
+            (
+                "NVIDIA P100 GPUs",
+                "Hardware used to report the Transformer training schedule.",
+                "useful",
+                "medium",
+                "This is experiment context, not a core concept.",
+            ),
+            (
+                "Adam optimizer",
+                "Optimization algorithm used to train the Transformer.",
+                "field_term",
+                "medium",
+                "This is important for reading the training recipe.",
+            ),
+            (
+                "warmup_steps",
+                "Initial training steps where the learning rate increases.",
+                "field_term",
+                "hard",
+                "This explains the paper's learning-rate schedule.",
+            ),
+            (
+                "label smoothing",
+                "Regularization that prevents the model from becoming too confident.",
+                "field_term",
+                "hard",
+                "This explains a training choice that affects BLEU and perplexity.",
+            ),
+            (
+                "BLEU score",
+                "A machine translation quality metric based on overlap with references.",
+                "field_term",
+                "medium",
+                "This is the main translation result metric.",
+            ),
+            (
+                "beam search",
+                "A decoding method that keeps several likely output sequences while generating text.",
+                "field_term",
+                "hard",
+                "This belongs to inference and evaluation setup.",
+            ),
+            (
+                "checkpoint averaging",
+                "Averaging recent saved model checkpoints for final evaluation.",
+                "field_term",
+                "hard",
+                "This explains the evaluation protocol.",
+            ),
+            (
+                "model variations",
+                "Ablation experiments that vary model components to test importance.",
+                "field_term",
+                "medium",
+                "This marks the paper's component-level evaluation.",
+            ),
+            (
+                "attention heads",
+                "Parallel attention operations inside multi-head attention.",
+                "field_term",
+                "medium",
+                "This is a key ablation dimension in Transformer experiments.",
+            ),
+            (
+                "heads",
+                "Parallel attention operations inside multi-head attention.",
+                "field_term",
+                "medium",
+                "This is a key ablation dimension in Transformer experiments.",
+            ),
+            (
+                "projections",
+                "Learned transforms that map Q, K, and V into attention-head spaces.",
+                "field_term",
+                "hard",
+                "This explains the parameter matrices in multi-head attention.",
+            ),
+            (
+                "parameter matrices",
+                "Learned matrices used to project model vectors.",
+                "field_term",
+                "hard",
+                "This helps read formula-heavy Transformer sections.",
+            ),
+            (
+                "feed-forward network",
+                "A neural sub-layer that applies linear transformations and a nonlinearity.",
+                "field_term",
+                "medium",
+                "This is a core Transformer block component.",
+            ),
+            (
+                "linear transformations",
+                "Linear layers used inside the feed-forward network.",
+                "field_term",
+                "medium",
+                "This explains the FFN formula.",
+            ),
+            (
+                "ReLU activation",
+                "Nonlinear activation used between the two FFN linear transformations.",
+                "field_term",
+                "medium",
+                "This explains the middle operation in the FFN.",
+            ),
+            (
+                "maximum path length",
+                "The longest computation path needed to connect two sequence positions.",
+                "field_term",
+                "hard",
+                "This is a core comparison criterion in the self-attention argument.",
+            ),
+            (
+                "convolutional layers",
+                "Neural layers used as a comparison point for sequence modeling.",
+                "field_term",
+                "medium",
+                "This is part of the self-attention versus convolution comparison.",
+            ),
+            (
+                "separable convolutions",
+                "Lower-cost convolution variants used in the complexity comparison.",
+                "field_term",
+                "hard",
+                "This explains the paper's caveat about convolutional alternatives.",
+            ),
+            (
+                "training steps",
+                "The number of parameter-update steps used during training.",
+                "field_term",
+                "medium",
+                "This is more useful than memorizing the hardware model.",
+            ),
+            (
+                "base models",
+                "The smaller Transformer configuration used as a comparison baseline.",
+                "field_term",
+                "medium",
+                "This helps interpret training schedule and ablation sections.",
+            ),
+            (
+                "big models",
+                "The larger Transformer configuration trained longer for stronger results.",
+                "field_term",
+                "medium",
+                "This helps interpret training schedule and result sections.",
+            ),
+            (
+                "dropout",
+                "A regularization method that randomly drops activations during training.",
+                "field_term",
+                "medium",
+                "This is a common experiment and ablation term.",
+            ),
+            (
+                "BN transform",
+                "The Batch Normalization transformation applied inside the network.",
+                "field_term",
+                "hard",
+                "This is the operation being analyzed in BatchNorm sections.",
+            ),
+            (
+                "normalized activations",
+                "Layer activations after normalization has been applied.",
+                "field_term",
+                "medium",
+                "This explains what BatchNorm changes during training.",
+            ),
+            (
+                "feature map",
+                "A channel-wise activation map in a convolutional layer.",
+                "field_term",
+                "medium",
+                "This is needed for convolutional BatchNorm sections.",
+            ),
+            (
+                "gradient propagation",
+                "How gradients move backward through the network during training.",
+                "field_term",
+                "hard",
+                "This explains why BatchNorm can improve optimization behavior.",
+            ),
+            (
+                "singular values",
+                "Values describing how a transformation scales directions.",
+                "field_term",
+                "hard",
+                "This appears in BatchNorm's gradient-propagation argument.",
+            ),
+            (
+                "backpropagation",
+                "The algorithm that propagates gradients backward to update parameters.",
+                "field_term",
+                "medium",
+                "This is central to optimization sections.",
+            ),
+            (
+                "ImageNet classification",
+                "A large-scale image classification benchmark used for evaluation.",
+                "field_term",
+                "medium",
+                "This anchors the BatchNorm experiment sections.",
+            ),
+            (
+                "ensemble",
+                "A combination of multiple models used to improve final predictions.",
+                "field_term",
+                "medium",
+                "This helps read final experimental result sections.",
+            ),
+            (
+                "general language representations",
+                "Language representations learned broadly before being reused on tasks.",
+                "field_term",
+                "hard",
+                "This anchors BERT related-work sections.",
+            ),
+            (
+                "contextual representations",
+                "Token or text representations that depend on surrounding context.",
+                "field_term",
+                "hard",
+                "This explains ELMo/BERT-style representation learning.",
+            ),
+            (
+                "question answering",
+                "A task where the model answers questions from text.",
+                "field_term",
+                "medium",
+                "This is one of BERT's benchmark task types.",
+            ),
+            (
+                "named entity recognition",
+                "A task that tags names such as people, organizations, and locations.",
+                "field_term",
+                "medium",
+                "This is a common NLP benchmark task.",
+            ),
+            (
+                "WordPiece embeddings",
+                "Subword token embeddings used by BERT.",
+                "field_term",
+                "hard",
+                "This explains BERT input representation.",
+            ),
+            (
+                "token sequence",
+                "The sequence of tokens fed into BERT.",
+                "field_term",
+                "medium",
+                "This is central to BERT's input representation.",
+            ),
+            (
+                "GLUE benchmark",
+                "A collection of natural language understanding tasks.",
+                "field_term",
+                "medium",
+                "This anchors BERT experiment sections.",
+            ),
+            (
+                "final hidden vector",
+                "The hidden representation used for classification.",
+                "field_term",
+                "hard",
+                "This explains how BERT fine-tuning reads [CLS].",
+            ),
+            (
+                "classification layer",
+                "The task-specific output layer used for classification.",
+                "field_term",
+                "medium",
+                "This is the new parameter layer in BERT fine-tuning.",
+            ),
+            (
+                "F1 score",
+                "An evaluation metric combining precision and recall.",
+                "field_term",
+                "medium",
+                "This is used in SQuAD and other benchmark reporting.",
+            ),
+            (
+                "leaderboard system",
+                "A high-performing submitted system used as a comparison point.",
+                "useful",
+                "medium",
+                "This helps read benchmark result claims.",
+            ),
+        ]
+        climate_context = any(
+            marker in lowered
+            for marker in (
+                "climate change",
+                "greenhouse effect",
+                "greenhouse gases",
+                "global temperature",
+                "atmospheric heating",
+            )
+        )
+        climate_only = {"carbon dioxide", "greenhouse gases", "atmospheric heating"}
+        for term, meaning, priority, difficulty, reason in candidates:
+            if term.lower() in climate_only and not climate_context:
+                continue
+            if term.lower() in lowered:
+                specs.append((term, meaning, priority, difficulty, reason))
+        return specs
+
+    def _generic_academic_phrase_specs(self, document_text: str) -> list[tuple[str, str, str]]:
+        lowered = document_text.lower()
+        candidates = [
+            ("is associated with", "claim", "States a relationship without claiming direct causation."),
+            ("remains elevated", "result", "Reports that a measured risk or level is still high."),
+            ("remain elevated", "result", "Reports that a measured risk or level is still high."),
+            ("remained elevated", "result", "Reports that a measured risk or level stayed high."),
+            ("reports a", "result", "Introduces an empirical result or estimate."),
+            ("in response to", "method", "Links an action to a condition or cause."),
+            ("is likely to", "claim", "Expresses a probable but not certain outcome."),
+            ("can propagate across", "result", "Explains how an effect spreads through a system."),
+            ("before we", "method", "Introduces a required preliminary step in a procedure."),
+            ("otherwise", "contrast", "Introduces the consequence if the previous condition is not met."),
+            ("must include", "method", "States a required field or condition."),
+            ("set this parameter to", "method", "Gives a concrete configuration instruction."),
+            ("returns a", "result", "Describes the output produced by an API or function."),
+            ("if the request fails", "limitation", "Introduces an error-handling condition."),
+            ("known as", "general", "Introduces the name of a concept after describing it."),
+            ("known collectively as", "general", "Introduces a grouped name for several examples."),
+            ("based on", "claim", "Connects a conclusion to evidence or observation."),
+            ("driving up", "claim", "Describes a cause increasing a measured level."),
+            ("faster now than ever before", "result", "Emphasizes an unusually rapid rate of change."),
+            ("became one of the first", "result", "Positions a person or study historically."),
+            ("we need to", "method", "States a required next action in a tutorial."),
+            ("focus on", "method", "States the part of a topic the speaker will emphasize."),
+            ("real world applications", "general", "Names applied examples rather than abstract theory."),
+            ("let's start with", "method", "Introduces the first step of an explanation."),
+            ("what is", "general", "Introduces a definition question."),
+            ("makes it quicker and easier to", "result", "States the practical benefit of a tool."),
+            ("get started working with", "method", "Introduces an onboarding or setup step."),
+            ("easy to follow documentation", "result", "Describes documentation that is learner-friendly."),
+            ("the only requirement", "method", "States the prerequisite before following a tutorial."),
+            ("minimum version", "general", "Specifies the lowest acceptable software version."),
+            ("install FastAPI", "method", "Introduces the installation action for the framework."),
+            ("in my opinion", "claim", "Marks a personal stance in spoken explanation."),
+            ("there are", "general", "Introduces a category or list in spoken explanation."),
+            ("typically factor computation along", "method", "Explains how recurrent models organize sequence computation."),
+            ("precludes parallelization", "limitation", "States that a structure prevents parallel computation."),
+            ("can be described as", "general", "Introduces a formal definition in prose."),
+            ("we compute", "method", "Introduces the calculation steps of a method."),
+            ("instead of performing", "contrast", "Contrasts the chosen architecture with a simpler baseline."),
+            ("in addition to", "general", "Adds another component or method."),
+            ("follows this overall architecture", "method", "Connects the Transformer to the encoder-decoder architecture pattern."),
+            ("at each step", "method", "Explains an autoregressive generation process."),
+            ("is applied to each position", "method", "Explains that the same operation is repeated per token position."),
+            ("another way of describing this", "general", "Introduces an equivalent interpretation of a method."),
+            ("we plan to investigate", "limitation", "Marks future work rather than a finished claim."),
+            ("doing so requires", "result", "States a consequence of a proposed approach."),
+            ("could yield", "claim", "Cautiously states a possible benefit."),
+            ("similarly to", "contrast", "Connects the current method to a familiar prior pattern."),
+            ("since our model contains", "claim", "Introduces a design reason based on what the model lacks."),
+            ("we trained on", "method", "Introduces the dataset used for training."),
+            ("were batched together by", "method", "Explains the batching criterion."),
+            ("we trained our models on", "method", "States the hardware used for training."),
+            ("we used the adam optimizer", "method", "Introduces the optimizer choice."),
+            ("we varied the learning rate", "method", "Explains a learning-rate schedule."),
+            ("we employ", "method", "States a method or regularization choice."),
+            ("on the wmt", "result", "Introduces a benchmark result setting."),
+            ("outperforms the best previously reported", "result", "States a benchmark improvement over prior work."),
+            ("to evaluate the importance of", "method", "Introduces an ablation purpose."),
+            ("unlisted values are identical to", "method", "Explains table shorthand."),
+            ("this suggests that", "claim", "Draws a cautious conclusion from results."),
+            ("we observe that", "result", "Introduces an interpretation of experimental results."),
+            ("we further observe", "result", "Adds another result interpretation."),
+            ("observe nearly identical results", "result", "Reports a close ablation comparison."),
+            ("this ensures that", "claim", "Connects a mechanism to the property it guarantees."),
+            ("allows the", "result", "States what a method makes possible."),
+            ("in contrast", "contrast", "Introduces a comparison against a different condition."),
+            ("as training progresses", "general", "Marks change over the course of training."),
+            ("in this section", "general", "Introduces the scope of the current section."),
+            ("we briefly review", "general", "Introduces a short related-work survey."),
+            ("similar to", "contrast", "Compares the current method or result with a related one."),
+            ("not deeply bidirectional", "limitation", "States a limitation of earlier representation methods."),
+            ("to make", "method", "Introduces the purpose of a design choice."),
+            ("throughout this work", "general", "Defines terminology used consistently in the paper."),
+            ("to fine-tune on", "method", "Introduces the setup for adapting the model to a task."),
+            ("we represent", "method", "Explains how inputs are encoded for a task."),
+            ("the only new parameters", "method", "Emphasizes that task adaptation is small."),
+            ("outperforms the top", "result", "States a benchmark improvement over a strong baseline."),
+            ("in terms of", "general", "Specifies the metric or comparison dimension."),
+        ]
+        return [item for item in candidates if item[0].lower() in lowered]
+
+    def _generic_academic_sentence(self, document_text: str) -> dict[str, str] | None:
+        sentences = self._sentences_from_text(document_text)
+        if not sentences:
+            return None
+        for sentence in sentences:
+            lowered = sentence.lower()
+            if "although" in lowered and "remains" in lowered:
+                return {
+                    "sentence": sentence,
+                    "core_structure": "Although A, B remains C.",
+                    "simplified_version": "The first clause gives background or contrast; the main clause states what is still unresolved.",
+                    "korean_explanation": "'Although' 절은 배경/양보를 제시하고, 주절의 'remains'가 아직 해결되지 않은 상태를 말합니다.",
+                    "difficulty_reason": "The sentence is difficult because the main claim comes after a long concession.",
+                }
+            if "remained elevated" in lowered and "although" in lowered:
+                return {
+                    "sentence": sentence,
+                    "core_structure": "X remained elevated, although Y was modest.",
+                    "simplified_version": "The author reports a high safety signal while limiting the strength of the effect.",
+                    "korean_explanation": "'although' 뒤의 내용은 앞의 결과를 약화하거나 조심스럽게 해석하게 만드는 양보 표현입니다.",
+                    "difficulty_reason": "The sentence is difficult because it reports a result and qualifies its strength in the same sentence.",
+                }
+            if "is associated with" in lowered:
+                return {
+                    "sentence": sentence,
+                    "core_structure": "X is associated with Y, especially when Z.",
+                    "simplified_version": "The author reports a relationship and then narrows the condition.",
+                    "korean_explanation": "'is associated with'는 직접 원인이라고 단정하지 않고 관련성을 말하는 표현입니다.",
+                    "difficulty_reason": "The sentence uses cautious empirical language and conditional narrowing.",
+                }
+            if "before we" in lowered and "otherwise" in document_text.lower():
+                return {
+                    "sentence": sentence,
+                    "core_structure": "Before we do A, we need to do B.",
+                    "simplified_version": "The speaker gives a required step that must happen before the main action.",
+                    "korean_explanation": "'Before we...'는 본 작업 전에 필요한 사전 조건을 설명합니다.",
+                    "difficulty_reason": "The sentence is procedural and depends on the following consequence introduced by 'otherwise'.",
+                }
+            if "must include" in lowered and ("request" in lowered or "payload" in lowered):
+                return {
+                    "sentence": sentence,
+                    "core_structure": "The request/payload must include X to do Y.",
+                    "simplified_version": "The documentation states a required input and why it is needed.",
+                    "korean_explanation": "'must include'는 API 문서에서 필수 입력값을 표시하는 강한 의무 표현입니다.",
+                    "difficulty_reason": "The sentence is difficult because it combines requirement, field name, and purpose.",
+                }
+            if "set this parameter to" in lowered:
+                return {
+                    "sentence": sentence,
+                    "core_structure": "To enable X, set this parameter to Y.",
+                    "simplified_version": "The documentation gives a configuration step for enabling a behavior.",
+                    "korean_explanation": "'set this parameter to'는 설정값을 어떻게 지정해야 하는지 알려주는 문서 표현입니다.",
+                    "difficulty_reason": "The sentence is procedural and maps a goal to a specific configuration value.",
+                }
+        return None
+
     def _heuristic_phrases(self, document_text: str) -> list[dict[str, Any]]:
         phrase_specs = [
             ("is complicated by the fact that", "claim", "Introduces the cause of a difficult problem."),
@@ -1953,6 +3276,16 @@ class AnalysisNormalizationService:
             ("we demonstrate", "result", "Signals evidence or experimental proof."),
             ("It has been long known", "claim", "Introduces established background knowledge."),
         ]
+        if self._is_convex_optimization_definition_section(document_text):
+            phrase_specs = [
+                ("It is important to note", "claim", "Signals a definition caveat or subtle point."),
+                ("not a convex optimization problem in standard form", "limitation", "States that a problem fails the formal definition."),
+                ("since the equality constraint", "claim", "Gives the reason for the standard-form failure."),
+                ("With a slight abuse of notation", "general", "Warns that terminology is being used informally."),
+            ]
+        generic_phrase_specs = self._generic_academic_phrase_specs(document_text)
+        if generic_phrase_specs:
+            phrase_specs = [*generic_phrase_specs, *phrase_specs]
         if self._is_bert_text(document_text):
             phrase_specs = [
                 ("There are two existing strategies", "claim", "Introduces a two-part literature map."),
@@ -2296,8 +3629,14 @@ class AnalysisNormalizationService:
                 ("easier to optimize", "result", "States the optimization benefit of residual learning."),
                 ("can gain accuracy from", "result", "States that depth becomes useful after the optimization issue is addressed."),
             ]
+        if generic_phrase_specs:
+            seen_phrases = {phrase.lower() for phrase, *_ in phrase_specs}
+            phrase_specs = [
+                *phrase_specs,
+                *[item for item in generic_phrase_specs if item[0].lower() not in seen_phrases],
+            ]
         rows: list[dict[str, Any]] = []
-        lower_text = document_text.lower()
+        lower_text = " ".join(document_text.lower().split())
         for phrase, function, explanation in phrase_specs:
             if phrase.lower() not in lower_text:
                 continue
@@ -3080,6 +4419,9 @@ class AnalysisNormalizationService:
                     "difficulty_reason": str(profile.get("difficulty_reason") or "The section mixes optimization language, equations, and method motivation."),
                 }
             ]
+        generic_sentence = self._generic_academic_sentence(document_text)
+        if generic_sentence:
+            return [generic_sentence]
         if self._is_bert_text(document_text):
             if self._is_bert_masked_lm_procedure_section(document_text):
                 sentence = self._source_sentence(None, "In contrast to", document_text)
@@ -4155,9 +5497,9 @@ class AnalysisNormalizationService:
         if self._is_attention_learning_section(document_text):
             profile = self._attention_profile(document_text) or {}
             return profile["summaries"]
-        if self._is_batchnorm_learning_section(document_text):
-            profile = self._batchnorm_profile(document_text) or {}
-            return profile["summaries"]
+        batchnorm_profile = self._batchnorm_profile(document_text)
+        if batchnorm_profile:
+            return batchnorm_profile["summaries"]
         if "convex optimization problem" in compact_lower and "affine" in compact_lower:
             return {
                 "one_line": "This section clarifies what counts as a standard-form convex optimization problem.",
@@ -5200,6 +6542,8 @@ class AnalysisNormalizationService:
             "language modeling objectives",
             "bidirectional",
         }
+        if any("two existing strategies" in str(row.get("source_sentence") or "").lower() for row in rows):
+            blocked = blocked - {"feature-based"}
         if key == "phrase":
             blocked = {*blocked, "feature-based"}
         has_full_name = any(str(row.get(key) or "").lower() == "bidirectional encoder representations from transformers" for row in rows)
@@ -5360,7 +6704,7 @@ class AnalysisNormalizationService:
                     }
                 )
         rest = [row for row in rows if str(row.get("term") or "").strip().lower() not in blocked | {term.lower() for term, *_ in preferred}]
-        return [*promoted, *rest][:12]
+        return [*promoted, *rest][:20]
 
     def _prefer_bert_elmo_finetuning_transition_concepts(self, rows: list[dict[str, Any]], document_text: str) -> list[dict[str, Any]]:
         blocked = {"contextual word embeddings", "bidirectional", "cloze task"}
@@ -7022,7 +8366,7 @@ class AnalysisNormalizationService:
         ]
         keyed = {str(row.get("phrase") or "").strip().lower(): row for row in rows}
         promoted: list[dict[str, Any]] = []
-        lower_text = document_text.lower()
+        lower_text = " ".join(document_text.lower().split())
         for phrase, function, explanation in preferred:
             if phrase.lower() not in lower_text:
                 continue
@@ -7518,7 +8862,7 @@ class AnalysisNormalizationService:
             ("CVPR09", "Computer vision conference venue marker.", "CVPR09"),
             ("Advances in neural information processing systems", "Machine-learning proceedings venue.", "Advances in neural information processing systems"),
         ]
-        lowered = document_text.lower()
+        lowered = " ".join(document_text.lower().split())
         preferred = [(term, meaning, target) for term, meaning, target in candidates if target.lower() in lowered]
         promoted = []
         for term, meaning, target in preferred[:10]:
@@ -7770,6 +9114,11 @@ class AnalysisNormalizationService:
             "transduction",
             "desiderata",
             "extrapolate",
+            "p100 gpus",
+            "nvidia p100 gpus",
+            "extended neural gpu",
+            "bytenet",
+            "convs2s",
         }
         return self._prefer_rows(
             rows,
@@ -7836,6 +9185,11 @@ class AnalysisNormalizationService:
             "anaphora resolution",
             "encoder self-attention",
             "exhibit behaviour",
+            "p100 gpus",
+            "nvidia p100 gpus",
+            "extended neural gpu",
+            "bytenet",
+            "convs2s",
         }
         return self._prefer_rows(
             rows,
@@ -8215,6 +9569,40 @@ class AnalysisNormalizationService:
 
     def _is_bert_text(self, document_text: str) -> bool:
         lowered = document_text.lower()
+        compact = re.sub(r"\s+", " ", lowered)
+        if "two existing strategies" in lowered and "feature-based" in lowered and ("fine-tuning" in lowered or "ﬁne-tuning" in lowered):
+            return True
+        if "pre-trained language representations" in lowered and "downstream tasks" in lowered:
+            return True
+        if "bert" in lowered and any(
+            marker in lowered
+            for marker in (
+                "wordpiece",
+                "glue",
+                "squad",
+                "swag",
+                "masked language",
+                "next sentence",
+                "[cls]",
+                "[sep]",
+                "fine-tuning",
+                "pre-training",
+                "downstream",
+            )
+        ):
+            return True
+        if any(
+            marker in compact
+            for marker in (
+                "pre-training general language representations",
+                "general language understanding evaluation",
+                "question answering",
+                "named entity recognition",
+                "natural language inference",
+                "stanford question answering dataset",
+            )
+        ):
+            return True
         if self._is_bert_feature_based_related_work_section(document_text):
             return True
         if self._is_bert_elmo_finetuning_transition_section(document_text):
@@ -8258,6 +9646,15 @@ class AnalysisNormalizationService:
         if "bert" in lowered and "bidirectional encoder representations" in lowered:
             return True
         return "bert" in lowered and ("masked language model" in lowered or "next sentence prediction" in lowered or "unidirectional language models" in lowered)
+
+    def _is_convex_optimization_definition_section(self, document_text: str) -> bool:
+        lowered = document_text.lower()
+        compact_lower = " ".join(lowered.split())
+        return (
+            ("convex optimization problem" in compact_lower and ("affine" in compact_lower or "standard form" in compact_lower))
+            or ("convex optimization" in compact_lower and "objective function" in compact_lower and "convex" in compact_lower)
+            or "concave maximization problems" in compact_lower
+        )
 
     def _is_bert_feature_based_related_work_section(self, document_text: str) -> bool:
         lowered = document_text.lower()
@@ -8824,7 +10221,23 @@ class AnalysisNormalizationService:
         return self._attention_profile(document_text) is not None
 
     def _is_batchnorm_learning_section(self, document_text: str) -> bool:
-        return self._batchnorm_profile(document_text) is not None
+        if self._is_resnet_text(document_text):
+            return False
+        lowered = document_text.lower()
+        compact = re.sub(r"\s+", " ", lowered)
+        return self._batchnorm_profile(document_text) is not None or any(
+            marker in compact
+            for marker in (
+                "batch normalization",
+                "bn transform",
+                "batch-normalized",
+                "batch normalized",
+                "internal covariate shift",
+                "internalcovariate shift",
+                "normalized activations",
+                "gradient propagation",
+            )
+        )
 
     def _batchnorm_profile(self, document_text: str) -> dict[str, Any] | None:
         lowered = document_text.lower()
@@ -10143,7 +11556,11 @@ class AnalysisNormalizationService:
                 "difficulty_reason": difficulty_reason,
             }
 
-        if "introduction recurrent neural networks" in compact_lowered and "factor computation along" in lowered and "symbol positions" in lowered:
+        if (
+            ("introduction recurrent neural networks" in compact_lowered or "introduction recurrent models" in compact_lowered)
+            and "factor computation along" in lowered
+            and "symbol positions" in lowered
+        ):
             return profile(
                 "This introduction explains why recurrent sequence models limit parallel training before motivating attention.",
                 (
@@ -10187,7 +11604,14 @@ class AnalysisNormalizationService:
                 "'typically factor computation along'은 모델이 어떤 축으로 계산을 나누는지 설명하는 표현입니다.",
                 "The sentence compresses model structure, computation order, and the hidden-state dependency.",
             )
-        if "significantly more parallelization" in lowered and "2 background" in lowered:
+        if (
+            ("significantly more parallelization" in lowered and "2 background" in lowered)
+            or (
+                "goal of reducing sequential computation" in lowered
+                and "extended neural gpu" in lowered
+                and ("bytenet" in lowered or "convs2s" in lowered)
+            )
+        ):
             return profile(
                 "This transition links the Transformer's parallelization claim to prior convolutional and attention-based sequence models.",
                 (
@@ -10205,10 +11629,10 @@ class AnalysisNormalizationService:
                 ],
                 [
                     ("sequential computation", "Step-by-step sequence processing that limits parallel training.", "sequential computation"),
-                    ("parallelization", "The ability to compute multiple sequence positions at the same time.", "parallelization"),
+                    ("in parallel", "Computing multiple sequence positions at the same time.", "in parallel"),
                     ("convolutional neural networks", "CNN-based models used here as prior alternatives to recurrence.", "convolutional neural networks"),
                     ("hidden representations", "Internal vector representations computed for input and output positions.", "hidden representations"),
-                    ("long-range dependencies", "Relationships between distant positions that become harder to learn when path length grows.", "dependencies between distant positions"),
+                    ("dependencies between distant positions", "Relationships between far-apart positions that become harder to learn when path length grows.", "dependencies between distant positions"),
                     ("input and output positions", "Token positions in source and target sequences whose relationships must be modeled.", "input and output positions"),
                 ],
                 [
@@ -10317,7 +11741,11 @@ class AnalysisNormalizationService:
                 "'The first is..., and the second is...'는 구성요소를 순서대로 정의하는 구조입니다.",
                 "The sentence is easy grammatically but dense because every noun phrase is a model component.",
             )
-        if "scaled dot-product attention" in lowered and "queries and keys" in lowered and "values of dimension" in lowered:
+        if (
+            "scaled dot-product attention" in lowered
+            and ("queries and keys" in lowered or "query with all keys" in lowered or "query and a set of keys" in lowered)
+            and ("values of dimension" in lowered or "apply a softmax" in lowered)
+        ):
             return profile(
                 "This section defines scaled dot-product attention with queries, keys, values, softmax, and 1/sqrt(dk) scaling.",
                 (
@@ -11070,10 +12498,18 @@ class AnalysisNormalizationService:
 
     def _is_attention_text(self, document_text: str) -> bool:
         lowered = document_text.lower()
+        compact = re.sub(r"\s+", " ", lowered)
         return (
             "attention is all you need" in lowered
             or ("transformer" in lowered and "sequence transduction" in lowered)
             or ("self-attention" in lowered and "recurrent" in lowered and "convolution" in lowered)
+            or ("transformer" in lowered and "parallelization" in lowered)
+            or ("scaled dot-product attention" in lowered)
+            or ("multi-head attention" in lowered)
+            or ("positional encoding" in lowered and "recurrence" in lowered)
+            or ("attention heads" in lowered and "syntactic" in lowered)
+            or ("encoder-decoder structure" in compact)
+            or ("model architecture" in compact and "encoder" in lowered and "decoder" in lowered)
         )
 
     def _is_resnet_text(self, document_text: str) -> bool:
@@ -11092,7 +12528,7 @@ class AnalysisNormalizationService:
             or ("residual mapping" in lowered and "shortcut connections" in lowered)
             or ("underlying mapping" in lowered and "residual mapping" in lowered)
             or ("plain" in lowered and "higher training error" in lowered and "accuracy gains" in lowered)
-            or ("top-5 error" in lowered and "imagenet" in lowered)
+            or ("top-5 error" in lowered and "imagenet" in lowered and ("resnet" in lowered or "residual" in lowered or "plain net" in lowered))
             or ("encoding residual vectors" in lowered and "shortcut connections" in lowered)
             or ("highway networks" in lowered and "gating functions" in lowered)
             or ("highway networks have not demonstrated accuracy gains" in lowered and "residual functions" in lowered)

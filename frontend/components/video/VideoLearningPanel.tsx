@@ -21,6 +21,34 @@ type YouTubePlayer = {
   destroy?: () => void;
 };
 
+const demoSources = [
+  {
+    label: "ML",
+    url: "https://www.youtube.com/watch?v=eMlx5fFNoYc",
+    detail: "Transformer attention explainer"
+  },
+  {
+    label: "Climate",
+    url: "https://www.youtube.com/watch?v=9PFhrpyWV-w",
+    detail: "Climate change explainer"
+  },
+  {
+    label: "Economics",
+    url: "https://www.youtube.com/watch?v=3ez10ADR_gM",
+    detail: "Intro economics"
+  },
+  {
+    label: "Medical",
+    url: "https://www.youtube.com/watch?v=cUP8bGWln6M",
+    detail: "Virus explainer"
+  },
+  {
+    label: "FastAPI",
+    url: "https://www.youtube.com/watch?v=7t2alSnE2-I",
+    detail: "API tutorial"
+  }
+];
+
 export function VideoLearningPanel() {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [videoId, setVideoId] = useState<string | null>(null);
@@ -206,6 +234,25 @@ export function VideoLearningPanel() {
               {busyLabel === "Fetching YouTube transcript" ? "Fetching..." : "Fetch transcript"}
             </button>
           </div>
+          <div className="mt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Verified demo sources</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {demoSources.map((source) => (
+                <button
+                  key={source.url}
+                  type="button"
+                  onClick={() => {
+                    setYoutubeUrl(source.url);
+                    setError(null);
+                  }}
+                  className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink hover:border-accent hover:text-accent"
+                  title={source.detail}
+                >
+                  {source.label}
+                </button>
+              ))}
+            </div>
+          </div>
           {busyLabel ? (
             <p className="mt-3 rounded-md bg-blue-50 px-3 py-2 text-sm font-medium text-accent">{busyLabel}. This depends on caption availability and local network access.</p>
           ) : null}
@@ -256,6 +303,14 @@ export function VideoLearningPanel() {
               </>
             ) : null}
             {error ? <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">{error}</p> : null}
+            {error ? (
+              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">
+                <p className="font-semibold">Transcript unavailable for this URL</p>
+                <p className="mt-1">
+                  YouTube captions can be blocked or missing. Use a verified demo source above, paste .srt/.vtt text here, or choose a video with public captions.
+                </p>
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="rounded-lg border border-line bg-panel p-4 shadow-material">

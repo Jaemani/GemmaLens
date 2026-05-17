@@ -53,7 +53,8 @@ def test_document_section_service_tracks_logical_titles_across_pages():
 
     titles = [section.title for section in sections]
     assert titles[:2] == ["Abstract", "1 Introduction"]
-    assert any(section.title == "1 Introduction" and section.continuation for section in sections)
+    introduction = next(section for section in sections if section.title == "1 Introduction")
+    assert "precludes parallelization within training examples" in introduction.text
     assert "2 Background" in titles
     assert "3 Model Architecture" in titles
     assert "3.1 Encoder and Decoder Stacks" in titles
