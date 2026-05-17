@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -44,7 +44,7 @@ async def analyze_document(document_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{document_id}/sections/{section_index}/analyze", response_model=AnalysisResult)
-async def analyze_document_section(document_id: str, section_index: int, db: Session = Depends(get_db)):
+async def analyze_document_section(document_id: str, section_index: int, force: bool = Query(False), db: Session = Depends(get_db)):
     service = AnalysisPipelineService(DocumentRepository(db), AnalysisRepository(db), SectionAnalysisRepository(db))
     profile = UserProfileRepository(db).get_or_create()
     try:
@@ -54,6 +54,7 @@ async def analyze_document_section(document_id: str, section_index: int, db: Ses
             target_level=profile.target_level,
             support_language=profile.support_language,
             learning_language=profile.learning_language,
+            force=force,
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc

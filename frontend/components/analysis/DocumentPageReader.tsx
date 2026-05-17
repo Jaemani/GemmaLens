@@ -262,7 +262,7 @@ export function DocumentPageReader({
     setIsAnalyzing(true);
     setError("");
     try {
-      const created = await api.analyzeDocumentSection(document.id, section.index);
+      const created = await api.analyzeDocumentSection(document.id, section.index, { force: section.analyzed });
       if (options.showLesson !== false && (!options.stayOnCurrent || index === pageIndex)) {
         setSectionAnalysis(created);
         setSectionAnalysisIndex(section.index);
@@ -400,10 +400,10 @@ export function DocumentPageReader({
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Current section</p>
           <h2 className="mt-1 text-lg font-semibold">
-            {currentSectionTitle || `Source p.${currentPdfPage ?? "?"} · S${currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1}`}
+            {currentSectionTitle || `Page ${currentPdfPage ?? "?"} · S${currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1}`}
           </h2>
           <p className="mt-1 text-xs font-semibold text-neutral-600">
-            Source p.{currentPdfPage ?? "?"} · S{currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1} · document section{" "}
+            Page {currentPdfPage ?? "?"} · S{currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1} · document section{" "}
             {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
           </p>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-700">
@@ -872,7 +872,7 @@ function groupSectionsByPdfPage(sections: DocumentSection[]) {
       groups.push(group);
     }
     group.items.push({ section, index, localNumber: group.items.length + 1 });
-    group.label = pdfPage ? `Source p.${pdfPage}` : "Source page unknown";
+    group.label = pdfPage ? `Page ${pdfPage}` : "Page unknown";
   });
 
   return groups;
@@ -939,7 +939,7 @@ function formatSectionLabel(section: DocumentSection | undefined, pdfPage: numbe
   const global = section?.section_number ?? null;
   const total = section?.total_sections ?? null;
   const title = formatSectionTitle(section);
-  const pageLabel = pdfPage ? `Source p.${pdfPage}` : "Source page unknown";
+  const pageLabel = pdfPage ? `Page ${pdfPage}` : "Page unknown";
   const localLabel = localSection ? `S${localSection} on this page` : "section on page unknown";
   const globalLabel = global && total ? `document section ${global} / ${total}` : "document section unknown";
   return title ? `${title} · ${pageLabel} · ${localLabel} · ${globalLabel}` : `${pageLabel} · ${localLabel} · ${globalLabel}`;

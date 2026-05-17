@@ -109,6 +109,35 @@ def test_document_section_service_skips_pdf_attribution_sections():
     assert any("Recurrent neural networks" in section.text for section in sections)
 
 
+def test_document_section_service_keeps_attention_abstract_before_author_notes():
+    text = (
+        "[[GEMMALENS_PDF_PAGE:1]]\n"
+        "Attention Is All You Need Ashish Vaswani Google Brain Abstract "
+        "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks. "
+        "We propose a new simple network architecture, the Transformer, based solely on attention mechanisms. "
+        "1 Introduction Recurrent neural networks and long short-term memory networks have been firmly established. "
+        "Numerous efforts have pushed recurrent language models and encoder-decoder architectures. "
+        "∗Equal contribution. Listing order is random. Jakob proposed replacing RNNs with self-attention and started the effort. "
+        "Noam proposed scaled dot-product attention, multi-head attention and tensor2tensor details. "
+        "†Work performed while at Google Brain. 31st Conference on Neural Information Processing Systems (NIPS 2017), Long Beach, CA, USA.\n"
+        "[[GEMMALENS_PDF_PAGE:2]]\n"
+        "Recurrent models typically factor computation along the symbol positions of the input and output sequences. "
+        "This inherently sequential nature precludes parallelization within training examples. "
+        "2 Background The goal of reducing sequential computation also forms the foundation of ByteNet and ConvS2S."
+    )
+
+    sections = DocumentSectionService().split_with_labels(text)
+    joined = " ".join(section.text for section in sections)
+
+    assert sections[0].source_label == "PDF page 1"
+    assert sections[0].title == "Abstract"
+    assert "The dominant sequence transduction models" in sections[0].text
+    assert any(section.title == "1 Introduction" for section in sections)
+    assert "Equal contribution" not in joined
+    assert "tensor2tensor" not in joined
+    assert "Conference on Neural Information Processing Systems" not in joined
+
+
 def test_document_section_service_skips_short_equation_fragments():
     text = (
         "[[GEMMALENS_PDF_PAGE:1]]\n"

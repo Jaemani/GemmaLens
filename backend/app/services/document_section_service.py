@@ -83,6 +83,7 @@ class DocumentSectionService:
         text = self._restore_decimal_fragments(text)
         text = self._restore_inline_headings(text)
         text = self._trim_front_matter(text)
+        text = self._remove_author_note_tail(text)
         text = self._remove_leading_attention_artifact(text)
         text = re.sub(r"([A-Za-z]{2,})-\s+\d+\s+([a-z]{2,})", r"\1\2", text)
         text = re.sub(r"([A-Za-z]{2,})-\s+([a-z]{2,})", r"\1\2", text)
@@ -123,6 +124,22 @@ class DocumentSectionService:
         for pattern, replacement in replacements:
             normalized = re.sub(pattern, replacement, normalized, flags=re.IGNORECASE | re.DOTALL)
         return normalized
+
+    def _remove_author_note_tail(self, text: str) -> str:
+        # Academic PDFs often put contribution footnotes and conference metadata
+        # after the abstract/first introduction paragraph on page 1. Treat that
+        # as page furniture, not as a reason to discard the whole learning page.
+        patterns = [
+            r"\s+[*∗]\s*Equal contribution\..*$",
+            r"\s+(?:Jakob proposed|Ashish, with Illia|Noam proposed|Niki designed|Llion also|Lukasz and Aidan)\b.*$",
+            r"\s+†\s*Work performed while.*$",
+            r"\s+‡\s*Work performed while.*$",
+            r"\s+\d{1,2}(?:st|nd|rd|th) Conference on .*$",
+        ]
+        cleaned = text
+        for pattern in patterns:
+            cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+        return cleaned
 
     def _restore_inline_headings(self, text: str) -> str:
         sentence_start = r"(?:The|This|These|In|We|Here|Given|Each|Most|Recurrent|Attention|Self-attention|End-to-end|To)\b"
@@ -346,7 +363,7 @@ class DocumentSectionService:
         merged: list[DocumentSection] = []
         for section in sections:
             normalized = " ".join(section.text.split())
-            if merged and section.continuation and len(normalized) < 180:
+            if merged and section.continuation and len(normalized) < 520:
                 previous = merged[-1]
                 merged[-1] = DocumentSection(
                     self._clean(f"{previous.text} {section.text}"),
@@ -423,9 +440,6 @@ class DocumentSectionService:
         non_content_markers = [
             "work performed while",
             "conference on neural information processing systems",
-            "spent countless long days",
-            "initial codebase",
-            "tensor2tensor",
             "provided proper attribution",
         ]
         if any(marker in lowered for marker in non_content_markers):

@@ -63,6 +63,7 @@ class AnalysisPipelineService:
         target_level: str | None = None,
         support_language: str = "Korean",
         learning_language: str = "English",
+        force: bool = False,
     ) -> AnalysisResult | None:
         document = self.documents.get(document_id)
         if not document:
@@ -72,7 +73,7 @@ class AnalysisPipelineService:
         if not section:
             return None
         section_text, section_count = section
-        if self.section_analyses:
+        if self.section_analyses and not force:
             cached = self.section_analyses.get_result(document_id, section_index)
             if cached:
                 normalized_cached = self.normalizer.normalize_result(cached, section_text, support_language=support_language, target_level=target_level)

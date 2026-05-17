@@ -384,13 +384,13 @@ test("document section navigator moves by PDF page and highlights current page",
 
   await page.goto("/analysis/nav-doc");
 
-  await expect(page.getByText("Source p.1 · S1 · document section 1 / 4")).toBeVisible();
-  await expect(page.locator('[data-current-page="true"]').getByText("Source p.1", { exact: true })).toBeVisible();
+  await expect(page.getByText("Page 1 · S1 · document section 1 / 4")).toBeVisible();
+  await expect(page.locator('[data-current-page="true"]').getByText("Page 1", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Next PDF page" }).click();
-  await expect(page.getByText("Source p.2 · S1 · document section 3 / 4")).toBeVisible();
-  await expect(page.locator('[data-current-page="true"]').getByText("Source p.2", { exact: true })).toBeVisible();
+  await expect(page.getByText("Page 2 · S1 · document section 3 / 4")).toBeVisible();
+  await expect(page.locator('[data-current-page="true"]').getByText("Page 2", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Previous section" }).click();
-  await expect(page.getByText("Source p.1 · S2 · document section 2 / 4")).toBeVisible();
+  await expect(page.getByText("Page 1 · S2 · document section 2 / 4")).toBeVisible();
 });

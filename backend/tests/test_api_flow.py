@@ -205,6 +205,11 @@ def test_document_section_analysis_stays_on_parent_document(client):
     assert cached.status_code == 200
     assert cached.json() == body
 
+    refreshed = client.post(f"/documents/{created.json()['id']}/sections/1/analyze?force=true")
+    assert refreshed.status_code == 200
+    assert refreshed.json()["document_id"] == created.json()["id"]
+    assert refreshed.json()["summaries"]["one_line"]
+
     sections_after_analysis = client.get(f"/documents/{created.json()['id']}/sections")
     assert sections_after_analysis.status_code == 200
     assert sections_after_analysis.json()[1]["analyzed"] is True
