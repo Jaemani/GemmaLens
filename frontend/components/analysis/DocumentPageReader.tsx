@@ -528,6 +528,7 @@ export function DocumentPageReader({
             <div
               key={group.key}
               ref={isCurrentPageGroup ? currentPageGroupRef : null}
+              data-current-page={isCurrentPageGroup ? "true" : "false"}
               className={`shrink-0 rounded-md border px-2 py-1.5 transition ${
                 isCurrentPageGroup ? "border-accent bg-blue-50 shadow-sm" : "border-line bg-surface"
               }`}

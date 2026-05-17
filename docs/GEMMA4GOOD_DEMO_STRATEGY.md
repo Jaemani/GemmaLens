@@ -50,7 +50,8 @@ These URLs have curated transcript/article fallback because YouTube caption endp
 ## What To Emphasize
 
 - Local-first: the model can run on local or edge hardware.
-- Fast perceived UX: the first page is usable while background section analysis continues.
+- Fast perceived UX: the first page is usable while background preparation continues.
+- Page-batch direction: real-PDF measurement shows page-batch preparation can cut section-preparation requests by `63.8%` and ThinkPad remote Q4 model calls by an estimated `87.9%` across the audited Attention, BatchNorm, and BERT PDFs. See `docs/PAGE_BATCH_ANALYSIS_EXPERIMENT.md`.
 - Learning quality: outputs are not just summaries; they are structured for language acquisition.
 - Source grounding: every term, expression, and sentence pattern is tied back to source text.
 - Learner level: B1/B2/C1/C2 changes guidance depth and review priority.
@@ -67,4 +68,3 @@ These URLs have curated transcript/article fallback because YouTube caption endp
 ## One-Minute Pitch
 
 GemmaLens helps non-native English-speaking students read technical material locally. Instead of translating a sentence and leaving the learner dependent, it turns each section into concepts, terms, reusable academic expressions, and sentence patterns. A paper becomes a study path, and the system prepares later sections while the learner reads the current one. The same structure also works for captioned videos, making local Gemma models useful as a practical academic reading companion.
-
