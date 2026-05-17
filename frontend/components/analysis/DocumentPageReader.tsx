@@ -57,6 +57,7 @@ export function DocumentPageReader({
   const visibleSectionGroups = getVisibleSectionGroups(sectionGroups, currentPdfPage);
   const hiddenSectionGroupCount = Math.max(sectionGroups.length - visibleSectionGroups.length, 0);
   const currentPageSectionNumber = currentSection ? sectionNumberWithinPdfPage(sections, pageIndex) : null;
+  const currentSectionTitle = formatSectionTitle(currentSection);
   const previousPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, -1);
   const nextPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, 1);
   const currentSectionSummary =
@@ -381,10 +382,11 @@ export function DocumentPageReader({
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Current section</p>
           <h2 className="mt-1 text-lg font-semibold">
-            Source p.{currentPdfPage ?? "?"} · S{currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1}
+            {currentSectionTitle || `Source p.${currentPdfPage ?? "?"} · S${currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1}`}
           </h2>
           <p className="mt-1 text-xs font-semibold text-neutral-600">
-            Document section {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
+            Source p.{currentPdfPage ?? "?"} · S{currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1} · document section{" "}
+            {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
           </p>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-700">
             {currentSectionSummary || "Choose a section from the strip below."}
@@ -513,7 +515,7 @@ export function DocumentPageReader({
                       section.analyzed ? " analyzed" : " not analyzed"
                     }`}
                   >
-                    <span>S{localNumber}</span>
+                    <span>{compactSectionNavLabel(section, localNumber)}</span>
                   </button>
                 ))}
               </div>
@@ -917,10 +919,25 @@ function buildSectionLessonSelection(analysis: AnalysisResult, sections: Documen
 function formatSectionLabel(section: DocumentSection | undefined, pdfPage: number | null, localSection: number | null) {
   const global = section?.section_number ?? null;
   const total = section?.total_sections ?? null;
+  const title = formatSectionTitle(section);
   const pageLabel = pdfPage ? `Source p.${pdfPage}` : "Source page unknown";
   const localLabel = localSection ? `S${localSection} on this page` : "section on page unknown";
   const globalLabel = global && total ? `document section ${global} / ${total}` : "document section unknown";
-  return `${pageLabel} · ${localLabel} · ${globalLabel}`;
+  return title ? `${title} · ${pageLabel} · ${localLabel} · ${globalLabel}` : `${pageLabel} · ${localLabel} · ${globalLabel}`;
+}
+
+function formatSectionTitle(section: DocumentSection | undefined) {
+  const title = section?.title?.trim();
+  if (!title) return "";
+  return section?.continuation ? `${title} (continued)` : title;
+}
+
+function compactSectionNavLabel(section: DocumentSection, localNumber: number) {
+  if (!section.title) return `S${localNumber}`;
+  const title = section.continuation ? `${section.title} cont.` : section.title;
+  if (/^\d+(?:\.\d+)?\s+/.test(title)) return title.replace(/\s+/g, " ").slice(0, 18);
+  if (title.length <= 12) return title;
+  return `${title.slice(0, 11)}...`;
 }
 
 function usefulSupportMeaning(value: string | undefined) {

@@ -56,3 +56,5 @@ class DocumentSectionRead(BaseModel):
     char_count: int
     analyzed: bool = False
     source_label: str | None = None
+    title: str | None = None
+    continuation: bool = False

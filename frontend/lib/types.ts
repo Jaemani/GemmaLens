@@ -28,6 +28,8 @@ export type DocumentSection = {
   char_count: number;
   analyzed: boolean;
   source_label: string | null;
+  title?: string | null;
+  continuation?: boolean;
 };
 
 export type AnalysisResult = {

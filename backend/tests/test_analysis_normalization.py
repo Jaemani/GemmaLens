@@ -434,6 +434,39 @@ def test_attention_intro_summary_replaces_long_first_sentence_copy():
     assert "hidden-state chain" in {concept.concept for concept in result.concepts}
 
 
+def test_attention_background_prior_model_names_are_not_primary_terms():
+    document = (
+        "The Transformer allows for significantly more parallelization and can reach a new state of the art in translation quality "
+        "after being trained for as little as twelve hours on eight P100 GPUs. "
+        "2 Background The goal of reducing sequential computation also forms the foundation of the Extended Neural GPU, ByteNet and ConvS2S, "
+        "all of which use convolutional neural networks as basic building block, computing hidden representations in parallel for all input and output positions. "
+        "In these models, the number of operations required to relate signals from two arbitrary input or output positions grows in the distance between positions. "
+        "This makes it more difficult to learn dependencies between distant positions."
+    )
+    payload = {
+        "terms": [
+            {"term": "P100 GPUs", "meaning": "Hardware used to state the training-time result."},
+            {"term": "Extended Neural GPU", "meaning": "Prior model aiming to reduce sequential computation."},
+            {"term": "ByteNet", "meaning": "Prior convolutional sequence model."},
+            {"term": "ConvS2S", "meaning": "Prior convolutional sequence-to-sequence model."},
+        ],
+        "phrases": [],
+        "sentences": [],
+        "summaries": {},
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "attention-background", document)
+    terms = [term.term for term in result.terms[:6]]
+    concepts = {concept.concept for concept in result.concepts}
+
+    assert "P100 GPUs" not in terms
+    assert "Extended Neural GPU" not in terms
+    assert "ByteNet" not in terms
+    assert "ConvS2S" not in terms
+    assert {"sequential computation", "parallelization", "convolutional neural networks"}.issubset(set(terms))
+    assert "convolutional baseline family" in concepts
+
+
 def test_attention_architecture_summary_replaces_figure_caption_copy():
     document = (
         "Figure 1: The Transformer - model architecture. The encoder is composed of a stack of 6 identical layers. "

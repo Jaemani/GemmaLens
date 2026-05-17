@@ -8,6 +8,8 @@ from app.services.text_cleanup_service import normalize_pdf_ligatures
 class DocumentSection:
     text: str
     source_label: str | None = None
+    title: str | None = None
+    continuation: bool = False
 
 
 class DocumentSectionService:
@@ -19,21 +21,41 @@ class DocumentSectionService:
 
     def split_with_labels(self, text: str) -> list[DocumentSection]:
         if not self.page_marker_pattern.search(text):
+            current_title: str | None = None
+            sections = []
+            for section in self._split_plain(self._clean(text)):
+                if not self._is_learning_section(section):
+                    continue
+                title = self._section_title(section)
+                current_title = title or current_title
+                sections.append(DocumentSection(section, title=title or current_title, continuation=not bool(title) and bool(current_title)))
             return self._merge_short_orphan_sections(
                 self._merge_dangling_sections(
-                    [DocumentSection(section) for section in self._split_plain(self._clean(text)) if self._is_learning_section(section)]
+                    sections
                 )
             )
 
         sections: list[DocumentSection] = []
+        current_title: str | None = None
         parts = self.page_marker_pattern.split(text)
         leading = parts[0]
-        sections.extend(DocumentSection(section) for section in self._split_plain(self._clean(leading)) if self._is_learning_section(section))
+        for section in self._split_plain(self._clean(leading)):
+            if not self._is_learning_section(section):
+                continue
+            title = self._section_title(section)
+            current_title = title or current_title
+            sections.append(DocumentSection(section, title=title or current_title, continuation=not bool(title) and bool(current_title)))
         for index in range(1, len(parts), 2):
             page_number = parts[index]
             page_text = parts[index + 1] if index + 1 < len(parts) else ""
             label = f"PDF page {page_number}"
-            sections.extend(DocumentSection(section, label) for section in self._split_plain(self._clean(page_text)) if self._is_learning_section(section))
+            for section in self._split_plain(self._clean(page_text)):
+                if not self._is_learning_section(section):
+                    continue
+                title = self._section_title(section)
+                continuation = not bool(title) and bool(current_title)
+                current_title = title or current_title
+                sections.append(DocumentSection(section, label, title or current_title, continuation))
         return self._merge_short_orphan_sections(self._merge_dangling_sections(sections))
 
     def _split_plain(self, cleaned: str) -> list[str]:
@@ -76,7 +98,12 @@ class DocumentSectionService:
         return text.strip()
 
     def _restore_inline_headings(self, text: str) -> str:
-        text = re.sub(r"\b(\d+(?:\.\d+)+)\s+([A-Z][A-Za-z][A-Za-z0-9 ,:/()'’-]{2,80}?)(?=\s+[A-Z][a-z])", r"\n\1 \2\n", text)
+        sentence_start = r"(?:The|This|These|In|We|Here|Given|Each|Most|Recurrent|Attention|Self-attention|End-to-end|To)\b"
+        text = re.sub(
+            rf"(?<![\w.-])(\d+(?:\.\d+)?\s+[A-Z][A-Za-z][A-Za-z0-9 ,:/()'’-]{{2,80}}?)(?=\s+{sentence_start})",
+            r"\n\1\n",
+            text,
+        )
         heading_tail = (
             r"(?:problems?|problem|form|sets?|functions?|constraints?|duality|algorithms?|methods?|examples?|applications?|"
             r"theory|geometry|optimality|conditions)"
@@ -91,6 +118,12 @@ class DocumentSectionService:
             r"\n\1\n",
             text,
             flags=re.IGNORECASE,
+        )
+        text = re.sub(r"\b(Abstract|Introduction|Background|Conclusion|References)\s+(?=[A-Z][a-z])", r"\n\1\n", text)
+        text = re.sub(
+            r"\n(\d+(?:\.\d+)?)\s*\n(Introduction|Background|Model Architecture|Encoder and Decoder Stacks|ModelArchitecture)\b",
+            r"\n\1 \2\n",
+            text,
         )
         return text
 
@@ -157,6 +190,10 @@ class DocumentSectionService:
         normalized = " ".join(line.split()).strip(" .")
         if not normalized or len(normalized) > 110:
             return False
+        if normalized.lower() in {"abstract", "introduction", "background", "conclusion", "references"}:
+            return True
+        if re.match(r"^\d+\s+[A-Z]", normalized):
+            return True
         if re.match(r"^\d+(?:\.\d+)+\s+[A-Z]", normalized):
             return True
         words = normalized.split()
@@ -185,6 +222,28 @@ class DocumentSectionService:
         capitalized = sum(1 for word in words if word[:1].isupper() or word.lower() in {"of", "and", "for", "in", "with"})
         return capitalized >= max(1, len(words) - 2)
 
+    def _section_title(self, text: str) -> str | None:
+        normalized = " ".join(text.split())
+        if not normalized:
+            return None
+        simple = re.match(r"^(Abstract|Introduction|Background|Conclusion|References)\b", normalized, flags=re.IGNORECASE)
+        if simple:
+            return simple.group(1).title()
+        known_numbered = re.match(
+            r"^(\d+(?:\.\d+)?\s+(?:Introduction|Background|Model Architecture|ModelArchitecture|Encoder and Decoder Stacks))\b",
+            normalized,
+        )
+        if known_numbered:
+            return known_numbered.group(1).replace("ModelArchitecture", "Model Architecture")
+        numbered = re.match(r"^(\d+(?:\.\d+)?\s+[A-Z][A-Za-z0-9 ,:/()'’-]{2,80}?)(?=\s+[A-Z][a-z]|\s*$)", normalized)
+        if numbered:
+            return numbered.group(1).strip()
+        for count in range(min(9, len(normalized.split())), 1, -1):
+            candidate = " ".join(normalized.split()[:count])
+            if self._is_heading_line(candidate):
+                return candidate
+        return None
+
     def _merge_dangling_sections(self, sections: list[DocumentSection]) -> list[DocumentSection]:
         merged: list[DocumentSection] = []
         index = 0
@@ -192,7 +251,14 @@ class DocumentSectionService:
             current = sections[index]
             if index + 1 < len(sections) and self._is_dangling_section(current.text):
                 following = sections[index + 1]
-                merged.append(DocumentSection(self._clean(f"{current.text} {following.text}"), current.source_label or following.source_label))
+                merged.append(
+                    DocumentSection(
+                        self._clean(f"{current.text} {following.text}"),
+                        current.source_label or following.source_label,
+                        current.title or following.title,
+                        current.continuation,
+                    )
+                )
                 index += 2
                 continue
             merged.append(current)
@@ -213,6 +279,8 @@ class DocumentSectionService:
                 merged[-1] = DocumentSection(
                     self._clean(f"{previous.text} {section.text}"),
                     previous.source_label or section.source_label,
+                    previous.title or section.title,
+                    previous.continuation,
                 )
                 continue
             merged.append(section)

@@ -208,6 +208,8 @@ def _read_section(index: int, section, total: int, analyzed: bool = False) -> Do
         char_count=len(section.text),
         analyzed=analyzed,
         source_label=section.source_label,
+        title=section.title,
+        continuation=section.continuation,
     )
 
 

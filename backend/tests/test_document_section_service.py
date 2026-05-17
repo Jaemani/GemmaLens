@@ -36,6 +36,29 @@ def test_document_section_service_uses_inline_headings_as_boundaries():
     assert all(section.source_label == "PDF page 151" for section in sections)
 
 
+def test_document_section_service_tracks_logical_titles_across_pages():
+    text = (
+        "[[GEMMALENS_PDF_PAGE:1]]\n"
+        "Abstract The Transformer is an attention-only architecture for sequence transduction. "
+        "It improves parallelization and translation quality. "
+        "1 Introduction Recurrent models process tokens sequentially and limit parallelization. "
+        "[[GEMMALENS_PDF_PAGE:2]]\n"
+        "This inherently sequential nature precludes parallelization within training examples. "
+        "2 Background The goal of reducing sequential computation also forms the foundation of ByteNet and ConvS2S. "
+        "3 Model Architecture Most competitive neural sequence transduction models have an encoder-decoder structure. "
+        "3.1 Encoder and Decoder Stacks Encoder: The encoder is composed of a stack of layers."
+    )
+
+    sections = DocumentSectionService().split_with_labels(text)
+
+    titles = [section.title for section in sections]
+    assert titles[:2] == ["Abstract", "1 Introduction"]
+    assert any(section.title == "1 Introduction" and section.continuation for section in sections)
+    assert "2 Background" in titles
+    assert "3 Model Architecture" in titles
+    assert "3.1 Encoder and Decoder Stacks" in titles
+
+
 def test_document_section_service_skips_pdf_attribution_sections():
     text = (
         "[[GEMMALENS_PDF_PAGE:1]]\n"
