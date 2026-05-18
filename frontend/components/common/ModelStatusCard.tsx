@@ -54,13 +54,20 @@ const GEMMA4_EDGE = [
   { id: "e4b", name: "E4B", speed: "Balanced", desc: "Best local lesson quality" },
 ] as const;
 
-// GGUF paths for local llama.cpp inference (backend config reference)
-// 26B: ~/Models/gemma4-25.8B/gemma4-25.8B-Q4_K_M.gguf
-// 31B: ~/Models/gemma4-31.3b/gemma4-31.3B-Q4_K_M.gguf
+// Optional larger local MLX routes:
+// 26B: ~/Models/mlx/gemma-4-26B-A4B-it-OptiQ-4bit
+// 31B: ~/Models/mlx/gemma-4-31b-4bit
 const GEMMA4_FULL = [
   { id: "26b", name: "26B A4B", speed: "High capability", desc: "Sparse MoE for paper maps", Icon: SparseIcon },
   { id: "31b", name: "31B",     speed: "Max quality",     desc: "Dense model for deep recaps",  Icon: DenseIcon },
 ] as const;
+
+type GlobalActivity = {
+  label: string;
+  detail: string;
+  href?: string;
+  updatedAt: number;
+};
 
 function detectActive(label: string): string | null {
   const l = label.toLowerCase();
@@ -72,15 +79,16 @@ function detectActive(label: string): string | null {
 }
 
 function findPreset(presets: ModelPreset[], lineupId: string): ModelPreset | undefined {
-  return presets.find((p) => {
+  const matches = presets.filter((p) => {
     const l = p.label.toLowerCase();
     const pid = p.id.toLowerCase();
     if (lineupId === "e2b") return l.includes("e2b") || pid.includes("e2b");
     if (lineupId === "e4b") return l.includes("e4b") || pid.includes("e4b");
-    if (lineupId === "26b") return l.includes("26b") || pid === "gemma4-26b-gguf";
-    if (lineupId === "31b") return l.includes("31b") || pid === "gemma4-31b-gguf";
+    if (lineupId === "26b") return l.includes("26b") || pid === "gemma4-26b-mlx-q4";
+    if (lineupId === "31b") return l.includes("31b") || pid === "gemma4-31b-mlx-q4";
     return false;
   });
+  return matches.find((p) => p.availability === "ready") ?? matches.find((p) => p.availability !== "missing") ?? matches[0];
 }
 
 function modeLabel(provider: string, activeId: string | null): string {
@@ -99,24 +107,72 @@ export function ModelStatusCard({ status, compact = false }: { status: ModelStat
   const [presets, setPresets] = useState<ModelPreset[]>([]);
   const [busyPreset, setBusyPreset] = useState<string | null>(null);
   const [showPresets, setShowPresets] = useState(false);
+  const [activeWork, setActiveWork] = useState<GlobalActivity | null>(null);
 
   useEffect(() => {
-    api.listModelPresets().then(setPresets).catch(() => setPresets([]));
+    setCurrent(status);
+  }, [status]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRuntime() {
+      try {
+        const [nextStatus, nextPresets] = await Promise.all([api.getModelStatus(), api.listModelPresets()]);
+        if (cancelled) return;
+        setCurrent(nextStatus);
+        setPresets(nextPresets);
+      } catch {
+        if (cancelled) return;
+        setPresets([]);
+      }
+    }
+    void loadRuntime();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    function readActiveWork() {
+      try {
+        const raw = window.localStorage.getItem("gemmalens:active-task");
+        if (!raw) {
+          setActiveWork(null);
+          return;
+        }
+        const parsed = JSON.parse(raw) as GlobalActivity;
+        if (!parsed.updatedAt || Date.now() - parsed.updatedAt > 120_000) {
+          setActiveWork(null);
+          return;
+        }
+        setActiveWork(parsed);
+      } catch {
+        setActiveWork(null);
+      }
+    }
+    readActiveWork();
+    const timer = window.setInterval(readActiveWork, 1500);
+    window.addEventListener("storage", readActiveWork);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("storage", readActiveWork);
+    };
   }, []);
 
   async function selectPreset(preset: ModelPreset) {
+    if (activeWork) return;
     setBusyPreset(preset.id);
     try {
       const updated = await api.updateModelConfig({ preset_id: preset.id });
       setCurrent(updated);
+      api.getModelStatus().then(setCurrent).catch(() => {});
     } finally {
       setBusyPreset(null);
     }
   }
 
   async function selectById(lineupId: string) {
+    if (activeWork) return;
     const preset = findPreset(presets, lineupId);
-    if (!preset) return;
+    if (!preset || preset.availability === "missing") return;
     await selectPreset(preset);
   }
 
@@ -131,6 +187,10 @@ export function ModelStatusCard({ status, compact = false }: { status: ModelStat
   }
 
   const activeId = detectActive(current.preset_label);
+  const switchLocked = Boolean(activeWork);
+  const lockTitle = activeWork
+    ? `Model switching is locked while ${activeWork.label.toLowerCase()} is running.`
+    : undefined;
 
   // ── Compact mode: Gemma Engine panel ─────────────────────────────────────
 
@@ -155,14 +215,17 @@ export function ModelStatusCard({ status, compact = false }: { status: ModelStat
           <div className="space-y-2.5">
             {GEMMA4_EDGE.map((m) => {
               const isActive = m.id === activeId;
-              const isBusy = busyPreset === findPreset(presets, m.id)?.id;
+              const preset = findPreset(presets, m.id);
+              const isMissing = preset?.availability === "missing";
+              const isBusy = busyPreset === preset?.id;
               const EdgeIcon = m.id === "e2b" ? Zap : Gauge;
               return (
                 <button
                   key={m.id}
                   type="button"
                   onClick={() => selectById(m.id)}
-                  disabled={isBusy || busyPreset !== null}
+                  disabled={switchLocked || isMissing || isBusy || busyPreset !== null}
+                  title={lockTitle}
                   className={`w-full flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                     isActive ? "border-accent/25 bg-accent-soft" : "border-line bg-white hover:border-accent/20 hover:bg-[#F8FBFF]"
                   }`}
@@ -179,7 +242,7 @@ export function ModelStatusCard({ status, compact = false }: { status: ModelStat
                         isActive ? "bg-accent/10 text-accent/80" : "bg-surface text-secondary"
                       }`}>{m.speed}</span>
                     </div>
-                    <p className="mt-1 truncate text-[13px] leading-[1.35] text-secondary">{m.desc}</p>
+                    <p className="mt-1 truncate text-[13px] leading-[1.35] text-secondary">{isMissing ? "Install MLX 4-bit model to enable" : m.desc}</p>
                   </div>
                   {isActive && <CheckCircle2 size={15} className="shrink-0 text-accent" />}
                 </button>
@@ -194,7 +257,8 @@ export function ModelStatusCard({ status, compact = false }: { status: ModelStat
                   key={m.id}
                   type="button"
                   onClick={() => selectById(m.id)}
-                  disabled={isBusy || busyPreset !== null}
+                  disabled={switchLocked || isBusy || busyPreset !== null}
+                  title={lockTitle}
                   className={`w-full flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                     isActive ? "border-accent/25 bg-accent-soft" : "border-line bg-white hover:border-accent/20 hover:bg-[#F8FBFF]"
                   }`}
@@ -242,9 +306,11 @@ export function ModelStatusCard({ status, compact = false }: { status: ModelStat
         <button
           type="button"
           onClick={() => setShowPresets((v) => !v)}
-          className="flex w-full items-center justify-between gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold text-secondary transition-colors hover:bg-subtle hover:text-ink"
+          disabled={switchLocked}
+          title={lockTitle}
+          className="flex w-full items-center justify-between gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold text-secondary transition-colors hover:bg-subtle hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Change model
+          {switchLocked ? "Model locked during active work" : "Change model"}
           {showPresets ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
         {showPresets ? (
@@ -256,7 +322,8 @@ export function ModelStatusCard({ status, compact = false }: { status: ModelStat
                   key={preset.id}
                   preset={preset}
                   selected={current.preset_id === preset.id}
-                  busy={busyPreset !== null}
+                  busy={switchLocked || busyPreset !== null}
+                  lockedReason={lockTitle}
                   onSelect={selectPreset}
                 />
               ))}
@@ -271,11 +338,13 @@ function PresetButton({
   preset,
   selected,
   busy,
+  lockedReason,
   onSelect
 }: {
   preset: ModelPreset;
   selected: boolean;
   busy: boolean;
+  lockedReason?: string;
   onSelect: (preset: ModelPreset) => void;
 }) {
   const Icon = runtimeIcon[preset.runtime];
@@ -285,6 +354,7 @@ function PresetButton({
       type="button"
       onClick={() => onSelect(preset)}
       disabled={disabled || busy}
+      title={lockedReason}
       className={`w-full rounded-lg border p-3 text-left transition-colors ${
         selected ? "border-accent/30 bg-accent-soft" : "border-line bg-white hover:bg-surface"
       } disabled:cursor-not-allowed disabled:opacity-50`}

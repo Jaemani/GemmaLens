@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     raw_model_output_path: str | None = None
     upload_storage_dir: str = "tmp/uploads"
     transcript_cache_dir: str = "tmp/transcript_cache"
+    local_media_library_enabled: bool = False
     local_video_library_dir: str = "~/Movies"
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     cors_allow_origin_regex: str | None = None

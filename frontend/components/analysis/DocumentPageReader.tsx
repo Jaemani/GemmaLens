@@ -58,8 +58,6 @@ export function DocumentPageReader({
   const progressStorageKey = `gemmalens:auto-study:${documentId}`;
   const sectionGroups = groupSectionsByPdfPage(sections);
   const currentPdfPage = pdfPageFromLabel(currentSection?.source_label ?? null);
-  const visibleSectionGroups = getVisibleSectionGroups(sectionGroups, currentPdfPage);
-  const hiddenSectionGroupCount = Math.max(sectionGroups.length - visibleSectionGroups.length, 0);
   const currentPageSectionNumber = currentSection ? sectionNumberWithinPdfPage(sections, pageIndex) : null;
   const currentSectionTitle = formatSectionTitle(currentSection);
   const firstSourcePage = pdfPageFromLabel(firstSection?.source_label ?? null) ?? 1;
@@ -512,14 +510,14 @@ export function DocumentPageReader({
               {isBatchAnalyzing ? <span className="ml-1.5 text-accent">· Preparing…</span> : null}
             </span>
             <div className="flex items-center gap-2">
-              {hiddenSectionGroupCount ? <span>{sectionGroups.length} pages</span> : null}
+              {sectionGroups.length ? <span>{sectionGroups.length} pages</span> : null}
               <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-accent" /> Current</span>
               <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Ready</span>
               <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-neutral-300" /> Not ready</span>
             </div>
           </div>
           <div className="flex gap-2 overflow-x-auto">
-          {visibleSectionGroups.map((group) => {
+          {sectionGroups.map((group) => {
             const isCurrentPageGroup = group.pdfPage === currentPdfPage;
             return (
             <div
@@ -724,17 +722,45 @@ export function SectionLessonCard({
         ) : null}
         {activeTab === "patterns" ? (
           firstSentence ? (
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-ink">{firstSentence.core_structure}</p>
-              <p className="text-sm leading-6 text-neutral-700">{stripFiller(firstSentence.simplified_version)}</p>
-              {firstSentence.korean_explanation ? (
-                <p className="text-sm leading-6 text-blue-700">{firstSentence.korean_explanation}</p>
-              ) : null}
-              {firstSentence.sentence ? (
-                <p className="border-l-2 border-blue-200 pl-3 text-xs leading-5 text-neutral-500">
-                  {truncateText(firstSentence.sentence, 320)}
-                </p>
-              ) : null}
+            <div className="rounded-md border border-line bg-surface p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <p className="text-sm font-semibold text-ink">{firstSentence.core_structure}</p>
+                  <p className="text-sm leading-6 text-neutral-700">{stripFiller(firstSentence.simplified_version)}</p>
+                  {firstSentence.korean_explanation ? (
+                    <p className="text-sm leading-6 text-blue-700">{firstSentence.korean_explanation}</p>
+                  ) : null}
+                  {firstSentence.sentence ? (
+                    <p className="border-l-2 border-blue-200 pl-3 text-xs leading-5 text-neutral-500">
+                      {truncateText(firstSentence.sentence, 320)}
+                    </p>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    saveItem({
+                      item_type: "sentence",
+                      text: firstSentence.core_structure,
+                      meaning: [
+                        stripFiller(firstSentence.simplified_version),
+                        firstSentence.korean_explanation,
+                        firstSentence.difficulty_reason
+                      ].filter(Boolean).join(" "),
+                      source_sentence: firstSentence.sentence
+                    })
+                  }
+                  disabled={saved.has(`sentence:${firstSentence.core_structure}`) || saving === `sentence:${firstSentence.core_structure}`}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:text-green-700"
+                >
+                  {saved.has(`sentence:${firstSentence.core_structure}`) ? <CheckCircle2 size={12} /> : <BookmarkPlus size={12} />}
+                  {saved.has(`sentence:${firstSentence.core_structure}`)
+                    ? "Saved"
+                    : saving === `sentence:${firstSentence.core_structure}`
+                      ? "…"
+                      : "Save"}
+                </button>
+              </div>
             </div>
           ) : (
             <p className="text-sm text-neutral-500">No sentence patterns found for this section.</p>
@@ -981,17 +1007,6 @@ function groupSectionsByPdfPage(sections: DocumentSection[]) {
   });
 
   return groups;
-}
-
-function getVisibleSectionGroups<T extends { pdfPage: number | null }>(groups: T[], currentPdfPage: number | null) {
-  if (groups.length <= 14) return groups;
-  const currentIndex = Math.max(
-    0,
-    groups.findIndex((group) => group.pdfPage === currentPdfPage)
-  );
-  const start = Math.max(0, currentIndex - 4);
-  const end = Math.min(groups.length, currentIndex + 5);
-  return groups.slice(start, end);
 }
 
 function sectionNumberWithinPdfPage(sections: DocumentSection[], index: number) {

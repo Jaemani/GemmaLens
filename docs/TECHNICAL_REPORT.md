@@ -36,7 +36,7 @@ Rule-compliance notes from the Kaggle rules provided by the user:
 - Hackathon submission should be submitted once by the team.
 - External tools and models should be publicly available, reasonably accessible, and documented.
 - If submitted as a winning project, source code and reproduction instructions must be deliverable.
-- Winning submission license is CC-BY 4.0 according to the pasted rules.
+- Repository code is Apache-2.0. Kaggle writeups, videos, and final submission artifacts may be subject to competition-specific publication and licensing rules.
 - No competition data is provided, so this prototype uses user-provided documents and public model/tool dependencies.
 
 This is not legal advice; it is an engineering compliance checklist based on the pasted rules.

@@ -87,6 +87,8 @@ backend/
 model layer/
   provider-neutral adapter
   MLX local Gemma route
+  optional MLX 4-bit larger Gemma routes
+  optional GGUF/llama.cpp bridge
   Ollama scaffold
   remote/private Gemma route
   mock mode for UI and CI smoke tests
@@ -166,6 +168,45 @@ For Apple Silicon:
 
 The model adapter can be switched through the app model card or the backend model config endpoint.
 
+Default validated local presets:
+
+```txt
+gemma4-e2b-mlx -> ~/Models/mlx/gemma-4-e2b-it-bf16
+gemma4-e4b-mlx -> ~/Models/mlx/gemma-4-e4b-it-bf16
+```
+
+Optional larger MLX 4-bit presets are exposed only as local paths. They show as
+`missing` until the model folder exists:
+
+```bash
+./scripts/download_gemma4_mlx.sh \
+  mlx-community/gemma-4-26B-A4B-it-OptiQ-4bit \
+  ~/Models/mlx/gemma-4-26B-A4B-it-OptiQ-4bit
+
+./scripts/download_gemma4_mlx.sh \
+  mlx-community/gemma-4-31b-4bit \
+  ~/Models/mlx/gemma-4-31b-4bit
+```
+
+GGUF is also supported as an optional bridge through llama.cpp. It is not the
+default demo path because it requires a separate local `llama-server` process
+and a valid GGUF file:
+
+```bash
+./scripts/run_gguf_server.sh
+```
+
+Then point the backend remote route at the wrapper:
+
+```bash
+MODEL_PROVIDER=remote \
+REMOTE_GEMMA_BASE_URL=http://localhost:11445 \
+REMOTE_GEMMA_MODEL=gemma4-26b-gguf \
+./scripts/run_funnel_backend.sh
+```
+
+For judging, the stable path is the validated MLX E2B/E4B route.
+
 For quick local model validation:
 
 ```bash
@@ -197,6 +238,10 @@ GEMMALENS_API_KEY=...
 ```
 
 The browser should not receive private backend keys. See `docs/DEPLOYMENT.md` for setup notes.
+
+Current public judging demo note: the Vercel frontend uses a private Gemma 4
+runtime on the developer's Mac through a protected backend proxy. This temporary
+model host is for judging only and will be shut down after judging ends.
 
 ## Testing
 
@@ -238,6 +283,11 @@ This repository intentionally does not include:
 - browser-local quiz drafts
 - agent workspace files
 
+Submission planning docs may appear under `docs/` when they are public-safe.
+Final video files, downloaded demo media, private transcripts, and bulk
+screenshots should stay outside the repository unless the rights are clear and
+the file is intentionally part of the public project presentation.
+
 Useful docs:
 
 - `docs/DEPLOYMENT.md`
@@ -247,4 +297,11 @@ Useful docs:
 
 ## License
 
-Add the final project license before public submission.
+Code in this repository is released under the Apache License 2.0. See
+`LICENSE`.
+
+Gemma model weights are not included in this repository and remain under their
+own license and usage terms. Demo sources, videos, papers, subtitles, local
+databases, and model outputs are not redistributed here unless their rights are
+clear. Kaggle writeups, videos, and final submission artifacts may also be
+subject to the competition-specific publication and licensing rules.

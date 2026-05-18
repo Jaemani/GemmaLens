@@ -27,6 +27,7 @@ MODEL_PROVIDER=mlx \
 MODEL_SWITCHING_ENABLED=true \
 MODEL_RUNTIME_CONFIG_PATH="${RUNTIME_CONFIG}" \
 DATABASE_URL="${DATABASE_URL}" \
+LOCAL_MEDIA_LIBRARY_ENABLED="${LOCAL_MEDIA_LIBRARY_ENABLED:-true}" \
 REMOTE_GEMMA_BASE_URL="${REMOTE_GEMMA_BASE_URL:-http://localhost:11444}" \
 CORS_ALLOW_ORIGIN_REGEX='https?://(localhost|127\.0\.0\.1|10\..*|192\.168\..*|100\..*|172\.(1[6-9]|2[0-9]|3[0-1])\..*)?(:[0-9]+)?' \
 .venv-mlx/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port "${BACKEND_PORT}" &

@@ -14,6 +14,10 @@ viewer failures.
 Browser -> Vercel frontend -> /api/backend/* proxy -> Tailscale Funnel -> local FastAPI
 ```
 
+For the public judging demo, the model host is a personal Mac running local
+Gemma 4. This is intentionally temporary. The Mac backend should remain online
+only for the judging window and should be shut down afterward.
+
 ## Vercel + Tailscale Funnel Backend
 
 On the local backend machine:
@@ -40,6 +44,23 @@ GEMMALENS_API_KEY=use-a-long-random-demo-key
 
 Do not set `NEXT_PUBLIC_GEMMALENS_API_KEY` for this recommended setup. The
 server-side proxy attaches `GEMMALENS_API_KEY` when forwarding requests.
+
+Security checklist for this mode:
+
+- Use a demo-only `BACKEND_API_KEY`; rotate it after judging.
+- Use the Vercel server-side proxy. Do not expose the key through
+  `NEXT_PUBLIC_GEMMALENS_API_KEY`.
+- Keep the backend bound to the demo API only; do not expose SSH, file sharing,
+  local databases, model directories, or arbitrary filesystem routes.
+- Store demo uploads in the temporary SQLite/database path created by
+  `scripts/run_funnel_backend.sh`.
+- Use Tailscale Funnel only for the backend port needed by the demo.
+- Keep `LOCAL_MEDIA_LIBRARY_ENABLED=false` for public judging unless you point
+  `LOCAL_VIDEO_LIBRARY_DIR` at a curated demo-only folder. This prevents the
+  public demo from listing or serving the Mac's broader `~/Movies` library.
+- Shut down Funnel and the backend after judging.
+- Do not commit private PDFs, videos, transcripts, model weights, runtime JSON,
+  SQLite databases, or raw evaluation outputs.
 
 ### Direct Browser Mode
 
@@ -108,6 +129,8 @@ Keep the current model adapter boundary:
 
 - `mock`: shared UI/product testing
 - `mlx`: local Mac runtime
+- optional larger MLX 4-bit presets: local folders under `~/Models/mlx`
+- optional GGUF bridge: local llama.cpp wrapper on `localhost:11445`
 - `ollama`: local or LAN runtime
 - future `android-local`: device-managed model download and inference
 - future `hosted`: controlled cloud fallback

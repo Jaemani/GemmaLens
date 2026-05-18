@@ -154,7 +154,7 @@ rtk npm run build
 Actual PDF section-level audit:
 
 ```bash
-DATABASE_URL=sqlite:////Users/jaeman/Codes/GemmaLens/backend/gemmalens.db PYTHONPATH=backend rtk proxy backend/.venv-mlx/bin/python - <<'PY'
+DATABASE_URL=sqlite:///backend/gemmalens.db PYTHONPATH=backend rtk proxy backend/.venv-mlx/bin/python - <<'PY'
 from app.db.session import SessionLocal
 from app.models.document import Document
 from app.services.document_section_service import DocumentSectionService

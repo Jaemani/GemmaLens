@@ -174,7 +174,7 @@ class VideoTranscriptService:
             return
 
     def _youtube_unavailable_detail(self, error: str) -> str:
-        reason = "YouTube caption fetch failed."
+        reason = "YouTube refused or blocked the caption fetch from this backend environment."
         lowered = error.lower()
         if "too many requests" in lowered or "429" in lowered:
             reason = "YouTube rate-limited the caption endpoint for this environment."
@@ -184,9 +184,10 @@ class VideoTranscriptService:
         if len(compact_error) > 260:
             compact_error = f"{compact_error[:260].rstrip()}..."
         return (
-            f"{reason} GemmaLens already tried youtube-transcript-api, yt-dlp caption tracks, known public transcript sources, and local cache. "
-            "Use a verified demo source, paste the YouTube transcript text, or upload/paste an .srt/.vtt subtitle file. "
-            "For videos without accessible captions, the remaining fallback is local audio transcription. "
+            f"{reason} This is a YouTube/API availability issue, not a GemmaLens analysis error. "
+            "Try again from a different network/IP, wait a few hours for the rate limit to clear, use a verified demo source, "
+            "or paste/upload an .srt/.vtt subtitle file. GemmaLens already tried youtube-transcript-api, yt-dlp caption tracks, "
+            "known public transcript sources, and local cache. "
             f"Caption error: {compact_error}"
         )
 

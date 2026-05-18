@@ -44,12 +44,12 @@ export default async function DashboardPage() {
           <div className="flex h-full flex-col gap-4">
             {/* Hero */}
             <section
-              className="relative min-h-[220px] flex-1 rounded-xl border border-[#D5D9EF] shadow-material"
+              className="relative min-h-[220px] flex-1 overflow-hidden rounded-xl border border-[#D5D9EF] shadow-material"
               style={{ background: "#F1F3FA" }}
             >
               {/* Hero PNG — right side, contained */}
               <div className="pointer-events-none absolute inset-y-0 right-0 hidden lg:block" style={{ width: "46%" }}>
-                <Image src="/gemmalens_hero.png" alt="" fill className="object-contain object-center" priority />
+                <Image src="/gemmalens_hero.webp" alt="" fill className="object-cover object-center opacity-90" priority />
               </div>
 
               {/* Gradient: white left → transparent center */}
@@ -79,6 +79,9 @@ export default async function DashboardPage() {
                     <SecondaryAction href="/video" label="Study a video" icon={<Video size={15} />} />
                     <SecondaryAction href="/settings" label="Set learning profile" icon={<ArrowRight size={15} />} />
                   </div>
+                  <p className="mt-4 max-w-[410px] rounded-lg border border-[#DBEAFE] bg-white/75 px-3 py-2 text-[12px] leading-[1.5] text-secondary">
+                    Public judging demo: this Vercel app routes model work to a private Gemma 4 runtime on the developer's Mac. The temporary model host will be shut down after judging.
+                  </p>
                 </div>
               </div>
             </section>

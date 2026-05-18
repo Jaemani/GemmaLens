@@ -47,6 +47,7 @@ export function VideoLearningPanel() {
   const [localVideoName, setLocalVideoName] = useState("");
   const [localMediaRoot, setLocalMediaRoot] = useState("");
   const [localMediaItems, setLocalMediaItems] = useState<LocalMediaItem[]>([]);
+  const [localMediaDisabled, setLocalMediaDisabled] = useState(false);
   const [selectedLocalMedia, setSelectedLocalMedia] = useState<LocalMediaItem | null>(null);
   const [selectedKoreanSubtitle, setSelectedKoreanSubtitle] = useState<LocalSubtitleFile | null>(null);
   const [activeSubtitleLanguage, setActiveSubtitleLanguage] = useState<string | null>(null);
@@ -218,10 +219,18 @@ export function VideoLearningPanel() {
     setLocalMediaLoading(true);
     try {
       const library = await api.listLocalMedia();
+      setLocalMediaDisabled(false);
       setLocalMediaRoot(library.root);
       setLocalMediaItems(library.items);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not read the Mac Movies library.");
+      const message = err instanceof Error ? err.message : "Could not read the Mac Movies library.";
+      if (message.toLowerCase().includes("local media library browsing is disabled")) {
+        setLocalMediaDisabled(true);
+        setLocalMediaRoot("");
+        setLocalMediaItems([]);
+      } else {
+        setError(message);
+      }
     } finally {
       setLocalMediaLoading(false);
     }
@@ -320,7 +329,11 @@ export function VideoLearningPanel() {
       setSourceName("subtitle.srt");
       if (result.source_id) setVideoId(result.source_id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not fetch YouTube transcript.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "YouTube refused the caption fetch from this backend. Try another network/IP, wait a few hours, or upload .srt/.vtt subtitles."
+      );
       setShowSubtitleFallback(true);
     } finally {
       setBusy(false);
@@ -537,6 +550,7 @@ export function VideoLearningPanel() {
               selectedLocalMedia={selectedLocalMedia}
               selectedKoreanSubtitle={selectedKoreanSubtitle}
               localMediaLoading={localMediaLoading}
+              localMediaDisabled={localMediaDisabled}
               localPickerOpen={localPickerOpen}
               busy={busy}
               busyLabel={busyLabel}
@@ -632,6 +646,7 @@ function LocalVideoSetup({
   selectedLocalMedia,
   selectedKoreanSubtitle,
   localMediaLoading,
+  localMediaDisabled,
   localPickerOpen,
   busy,
   busyLabel,
@@ -648,6 +663,7 @@ function LocalVideoSetup({
   selectedLocalMedia: LocalMediaItem | null;
   selectedKoreanSubtitle: LocalSubtitleFile | null;
   localMediaLoading: boolean;
+  localMediaDisabled: boolean;
   localPickerOpen: boolean;
   busy: boolean;
   busyLabel: string | null;
@@ -738,7 +754,11 @@ function LocalVideoSetup({
           </div>
         ) : (
           <p className="mt-3 rounded-md border border-dashed border-line bg-panel p-3 text-sm leading-6 text-neutral-600">
-            {localMediaLoading ? "Scanning Movies..." : "No videos found yet. Put the movie folder under ~/Movies, or use the manual file picker below."}
+            {localMediaLoading
+              ? "Scanning Movies..."
+              : localMediaDisabled
+                ? "Local media browsing is disabled for the public demo. Use the manual file picker below, or enable it only for a curated demo folder."
+                : "No videos found yet. Put the movie folder under ~/Movies, or use the manual file picker below."}
           </p>
         )}
         {selectedKoreanSubtitle ? (

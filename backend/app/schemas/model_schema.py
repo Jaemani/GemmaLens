@@ -6,6 +6,8 @@ ModelPresetId = Literal[
     "mock",
     "gemma4-e2b-mlx",
     "gemma4-e4b-mlx",
+    "gemma4-26b-mlx-q4",
+    "gemma4-31b-mlx-q4",
     "gemma4-e4b-ollama",
     "gemma4-e2b-thinkpad",
     "gemma4-e2b-thinkpad-q4",

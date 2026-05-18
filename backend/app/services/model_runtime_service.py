@@ -29,6 +29,22 @@ PRESETS: dict[str, dict[str, str]] = {
         "speed": "Best local quality",
         "description": "Full-precision bf16 Gemma 4 E4B for highest local quality.",
     },
+    "gemma4-26b-mlx-q4": {
+        "label": "Gemma 4 26B A4B (MLX 4-bit)",
+        "provider": "mlx",
+        "mlx_model_path": "~/Models/mlx/gemma-4-26B-A4B-it-OptiQ-4bit",
+        "size": "26B A4B",
+        "speed": "High capability",
+        "description": "Optional local MLX 4-bit route for stronger paper maps and recap quality.",
+    },
+    "gemma4-31b-mlx-q4": {
+        "label": "Gemma 4 31B (MLX 4-bit)",
+        "provider": "mlx",
+        "mlx_model_path": "~/Models/mlx/gemma-4-31b-4bit",
+        "size": "31B",
+        "speed": "Max quality",
+        "description": "Optional local MLX 4-bit route for maximum comprehension quality.",
+    },
     "gemma4-e4b-ollama": {
         "label": "Gemma 4 E4B (Ollama)",
         "provider": "ollama",
@@ -84,7 +100,7 @@ class ModelRuntimeService:
             remote_gemma_model=config["remote_gemma_model"],
             remote_gemma_base_url=config["remote_gemma_base_url"],
             mlx_model_path=str(mlx_path),
-            mlx_model_available=mlx_path.exists(),
+            mlx_model_available=self._mlx_model_available(mlx_path),
             mock_fallback=self.settings.app_demo_mode,
             demo_mode=self.settings.app_demo_mode,
         )
@@ -109,7 +125,7 @@ class ModelRuntimeService:
             availability = "external" if runtime in {"ollama", "remote"} else "ready"
             if runtime == "mlx":
                 path = Path(preset["mlx_model_path"]).expanduser()
-                availability = "ready" if path.exists() else "missing"
+                availability = "ready" if self._mlx_model_available(path) else "missing"
             presets.append(
                 ModelPreset(
                     id=preset_id,
@@ -148,12 +164,22 @@ class ModelRuntimeService:
             except json.JSONDecodeError:
                 pass
         mlx_model_path = str(config["mlx_model_path"]).lower()
-        if config["provider"] == "mlx" and "e4b" in mlx_model_path:
+        if config["provider"] == "mlx" and ("26b" in mlx_model_path or "a4b" in mlx_model_path):
+            config.update(self._preset_config("gemma4-26b-mlx-q4"))
+        elif config["provider"] == "mlx" and "31b" in mlx_model_path:
+            config.update(self._preset_config("gemma4-31b-mlx-q4"))
+        elif config["provider"] == "mlx" and "e4b" in mlx_model_path:
             config.update(self._preset_config("gemma4-e4b-mlx"))
         elif config["provider"] == "mlx" and "e2b" in mlx_model_path:
             config.update(self._preset_config("gemma4-e2b-mlx"))
         elif config["provider"] == "mlx" and ("optiq" in mlx_model_path or "4bit" in mlx_model_path or "4-bit" in mlx_model_path):
             config.update(self._preset_config("gemma4-e4b-mlx"))
+        elif config["provider"] == "remote" and "q4" in str(config["remote_gemma_model"]).lower():
+            config.update(self._preset_config("gemma4-e2b-thinkpad-q4"))
+        elif config["provider"] == "remote" and "e4b" in str(config["remote_gemma_model"]).lower():
+            config.update(self._preset_config("gemma4-e4b-thinkpad"))
+        elif config["provider"] == "remote" and "e2b" in str(config["remote_gemma_model"]).lower():
+            config.update(self._preset_config("gemma4-e2b-thinkpad"))
         elif config["provider"] == "mock" and not self.settings.app_demo_mode:
             config.update(self._preset_config("gemma4-e2b-mlx"))
         elif config["preset_id"] == "mock" and not self.settings.app_demo_mode:
@@ -178,3 +204,10 @@ class ModelRuntimeService:
         if self.settings.app_demo_mode:
             return PRESETS
         return {key: value for key, value in PRESETS.items() if key != "mock"}
+
+    def _mlx_model_available(self, path: Path) -> bool:
+        if not path.exists() or not (path / "config.json").exists():
+            return False
+        if any(path.glob(".cache/huggingface/download/*.lock")):
+            return False
+        return any(path.glob("*.safetensors"))

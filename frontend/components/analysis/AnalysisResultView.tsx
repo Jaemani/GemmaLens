@@ -183,16 +183,8 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
     const hasPdfViewer = Boolean(document.source_type === "pdf" && document.has_original_file);
     const workspaceContent = (
       <div className="min-w-0 space-y-4">
-        {isDocumentSource ? (
-          <SectionPreparationPanel
-            status={sectionPreparation}
-            onStop={() => setStopSectionPreparation(true)}
-            stopRequested={stopSectionPreparation}
-            onContinue={() => {
-              setStopSectionPreparation(false);
-              setContinueSectionPreparationKey((value) => value + 1);
-            }}
-          />
+        {isDocumentSource && (sectionPreparation?.running || (sectionPreparation?.ready ?? 0) > 0) ? (
+          <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} />
         ) : null}
         {isDocumentSource ? (
           <DocumentPageReader
@@ -209,9 +201,6 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
             hideInlineLesson
           />
         ) : null}
-        {isDocumentSource && (sectionPreparation?.running || (sectionPreparation?.ready ?? 0) > 0) ? (
-          <PaperMapProgressPanel documentId={documentId} refreshKey={paperMapRefreshKey} />
-        ) : null}
         {sectionLesson ? (
           <SectionLessonCard
             analysis={sectionLesson.analysis}
@@ -222,6 +211,17 @@ export function AnalysisResultView({ documentId }: { documentId: string }) {
           />
         ) : isDocumentSource && (sectionPreparation?.ready ?? 0) > 0 ? (
           <SectionLessonPlaceholder state={sectionState} />
+        ) : null}
+        {isDocumentSource ? (
+          <SectionPreparationPanel
+            status={sectionPreparation}
+            onStop={() => setStopSectionPreparation(true)}
+            stopRequested={stopSectionPreparation}
+            onContinue={() => {
+              setStopSectionPreparation(false);
+              setContinueSectionPreparationKey((value) => value + 1);
+            }}
+          />
         ) : null}
       </div>
     );

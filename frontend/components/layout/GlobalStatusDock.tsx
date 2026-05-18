@@ -31,7 +31,6 @@ export function GlobalStatusDock() {
       } catch {
         if (cancelled) return;
         setAlive(false);
-        setModel(null);
       }
     }
     poll();
@@ -59,7 +58,9 @@ export function GlobalStatusDock() {
     if (activity?.href) router.push(activity.href);
   }
 
-  const backendTone = alive === null ? "text-muted" : alive ? "text-green-600" : "text-red-500";
+  const backendTone = alive === null ? "text-amber-600" : alive ? "text-green-600" : "text-red-500";
+  const backendLabel = alive === null ? "Checking" : alive ? "Alive" : "Off";
+  const modelLabel = model?.preset_label ?? (alive === null ? "Checking model..." : alive ? "Model status loading" : "Model unavailable");
 
   return (
     <aside className="rounded-lg border border-line bg-surface text-xs">
@@ -79,7 +80,7 @@ export function GlobalStatusDock() {
         </button>
         <div className={`flex shrink-0 items-center gap-1.5 text-[12px] ${backendTone}`}>
           <Circle size={7} fill="currentColor" className={alive ? "animate-pulse" : ""} />
-          <span className="font-bold">{alive === null ? "…" : alive ? "Alive" : "Off"}</span>
+          <span className="font-bold">{backendLabel}</span>
         </div>
       </div>
 
@@ -87,7 +88,7 @@ export function GlobalStatusDock() {
       <div className="border-t border-line px-3 py-2">
         <div className="flex items-center gap-2 font-semibold text-ink">
           <Cpu size={14} className="shrink-0 text-muted" />
-          <span className="truncate">{model?.preset_label ?? "Model unknown"}</span>
+          <span className="truncate">{modelLabel}</span>
         </div>
         <button
           type="button"

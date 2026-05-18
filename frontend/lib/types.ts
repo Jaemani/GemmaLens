@@ -182,12 +182,12 @@ export type ModelStatus = {
     | "mock"
     | "gemma4-e2b-mlx"
     | "gemma4-e4b-mlx"
+    | "gemma4-26b-mlx-q4"
+    | "gemma4-31b-mlx-q4"
     | "gemma4-e4b-ollama"
     | "gemma4-e2b-thinkpad"
     | "gemma4-e2b-thinkpad-q4"
-    | "gemma4-e4b-thinkpad"
-    | "gemma4-26b-gguf"
-    | "gemma4-31b-gguf";
+    | "gemma4-e4b-thinkpad";
   preset_label: string;
   ollama_model: string;
   ollama_base_url: string;
