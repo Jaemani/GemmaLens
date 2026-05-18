@@ -55,6 +55,10 @@ export type AnalysisResult = {
     difficulty: string;
     source_sentence: string;
     should_save: boolean;
+    learning_priority?: string;
+    reason?: string;
+    context_meaning?: string;
+    confidence?: number;
   }>;
   phrases: Array<{
     phrase: string;
@@ -62,10 +66,14 @@ export type AnalysisResult = {
     explanation: string;
     support_language_explanation?: string;
     source_sentence: string;
+    learning_priority?: string;
+    reason?: string;
+    confidence?: number;
   }>;
   concepts?: Array<{
     concept: string;
     explanation: string;
+    support_language_explanation?: string;
     source_sentence: string;
     related_terms: string[];
     why_it_matters: string;
@@ -169,7 +177,7 @@ export type UserProfile = {
 };
 
 export type ModelStatus = {
-  provider: "mock" | "mlx" | "ollama" | "remote";
+  provider: "mock" | "mlx" | "ollama" | "remote" | "gguf";
   preset_id:
     | "mock"
     | "gemma4-e2b-mlx"
@@ -177,7 +185,9 @@ export type ModelStatus = {
     | "gemma4-e4b-ollama"
     | "gemma4-e2b-thinkpad"
     | "gemma4-e2b-thinkpad-q4"
-    | "gemma4-e4b-thinkpad";
+    | "gemma4-e4b-thinkpad"
+    | "gemma4-26b-gguf"
+    | "gemma4-31b-gguf";
   preset_label: string;
   ollama_model: string;
   ollama_base_url: string;
@@ -218,6 +228,30 @@ export type TranscriptResponse = {
   segments: TranscriptSegment[];
   plain_text: string;
   warning: string | null;
+};
+
+export type LocalSubtitleFile = {
+  path: string;
+  name: string;
+  language: string | null;
+};
+
+export type LocalMediaItem = {
+  path: string;
+  name: string;
+  title: string;
+  subtitles: LocalSubtitleFile[];
+};
+
+export type LocalMediaLibraryResponse = {
+  root: string;
+  items: LocalMediaItem[];
+};
+
+export type LocalSubtitleContent = {
+  path: string;
+  name: string;
+  content: string;
 };
 
 export type TranslationResponse = {

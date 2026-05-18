@@ -113,6 +113,83 @@ def test_normalizer_replaces_non_korean_support_glosses_when_korean_requested():
     assert re.search(r"[가-힣]", result.phrases[0].support_language_explanation)
 
 
+def test_normalizer_blocks_cjk_support_text_when_english_requested():
+    text = (
+        "Trying to build AGI is the most exciting journey that humans have ever embarked on. "
+        "It feels like we're on the cusp of some incredible things happening."
+    )
+    payload = {
+        "terms": [
+            {
+                "term": "AGI",
+                "meaning": "Artificial general intelligence.",
+                "support_language_meaning": "通用智能",
+            }
+        ],
+        "phrases": [
+            {
+                "phrase": "on the cusp of",
+                "explanation": "Being at the beginning of an imminent development.",
+                "support_language_explanation": "곧 중요한 변화가 시작될 때 쓰는 표현입니다.",
+            }
+        ],
+        "sentences": [
+            {
+                "sentence": "It feels like we're on the cusp of some incredible things happening.",
+                "core_structure": "It feels like X.",
+                "simplified_version": "Something important may happen soon.",
+                "korean_explanation": "곧 중요한 일이 일어날 것 같다는 뜻입니다.",
+            }
+        ],
+        "summaries": {"one_line": "The paper explains AGI."},
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(
+        payload,
+        "english-support",
+        text,
+        support_language="English",
+        source_type="video_segment",
+    )
+
+    assert result.terms[0].support_language_meaning == "Artificial general intelligence."
+    assert result.phrases[0].support_language_explanation == "Being at the beginning of an imminent development."
+    assert not re.search(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]", result.sentences[0].korean_explanation)
+    assert "paper" not in result.summaries.one_line.lower()
+
+
+def test_video_guardrails_keep_spoken_idioms_as_phrases_not_concepts():
+    transcript = (
+        "AI has been advancing at breakneck speed. "
+        "It feels like we're on the cusp of some incredible things happening. "
+        "And if we pull this off, it'll be the biggest thing ever."
+    )
+    payload = {
+        "concepts": [
+            {"concept": "breakneck speed", "explanation": "very fast progress"},
+            {"concept": "on the cusp of", "explanation": "about to happen"},
+            {"concept": "AI", "explanation": "Artificial intelligence"},
+        ],
+        "terms": [{"term": "AI", "meaning": "Artificial intelligence.", "domain_relevance": "high"}],
+        "phrases": [{"phrase": "to make", "explanation": "weak fragment"}],
+        "sentences": [],
+        "summaries": {"one_line": "The paper explains AI progress."},
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(
+        payload,
+        "video-guardrails",
+        transcript,
+        source_type="video_segment",
+    )
+
+    assert "breakneck speed" not in {concept.concept for concept in result.concepts}
+    assert "on the cusp of" not in {concept.concept for concept in result.concepts}
+    assert {"breakneck speed", "on the cusp of", "pull this off"}.issubset({phrase.phrase for phrase in result.phrases})
+    assert "to make" not in {phrase.phrase for phrase in result.phrases}
+    assert "paper" not in result.summaries.one_line.lower()
+
+
 def test_markdown_wrapped_json_can_be_extracted_and_normalized():
     raw = """
 ```json

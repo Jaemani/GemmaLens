@@ -137,7 +137,7 @@ test("document workspace prepares first page before showing paper map", async ({
 
   await page.goto("/analysis/first-section-doc");
 
-  await expect(page.getByText("Preparing the first section lesson before opening the workspace.")).toBeVisible();
+  await expect(page.getByText("Preparing the first lesson before opening the workspace.")).toBeVisible();
   await expect(page.getByText("Video lesson")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "A confrontational movie dialogue with idiomatic spoken expressions." })).toBeVisible();
   await expect.poll(() => pageCalls[0]).toBe(1);
@@ -264,12 +264,11 @@ test("upload flow prepares first page before opening reader", async ({ page }) =
     buffer: Buffer.from("%PDF mock")
   });
 
-  await expect(page.getByText("Preparing the first page lesson so the reader opens ready...")).toBeVisible();
   await expect.poll(() => pageCalls.length).toBe(1);
   await expect(page).toHaveURL(/\/analysis\/uploaded-pdf\?ready=1$/);
 });
 
-test("pdf viewer waits until the first page lesson is ready", async ({ page }) => {
+test("pdf viewer opens immediately while the first page lesson prepares", async ({ page }) => {
   let resolvePageAnalyze: (() => void) | null = null;
   const pageAnalyzeStarted = new Promise<void>((resolve) => {
     resolvePageAnalyze = resolve;
@@ -374,13 +373,8 @@ test("pdf viewer waits until the first page lesson is ready", async ({ page }) =
   );
 
   await page.goto("/analysis/delayed-pdf");
-  await pageAnalyzeStarted;
-
-  await expect(page.getByText("Preparing the first page lesson before opening the PDF viewer.")).toBeVisible();
-  await expect(page.getByText("Original PDF")).toHaveCount(0);
-
   await expect(page.getByText("Original PDF")).toBeVisible();
-  await expect(page.getByText("A confrontational movie dialogue with idiomatic spoken expressions.")).toBeVisible();
+  await expect(page.getByText("Preparing the first page lesson before opening the PDF viewer.")).toHaveCount(0);
 });
 
 test("document section navigator moves by PDF page and highlights current page", async ({ page }) => {
@@ -510,13 +504,14 @@ test("document section navigator moves by PDF page and highlights current page",
 
   await page.goto("/analysis/nav-doc");
 
-  await expect(page.getByText("Page 1 · S1 · document section 1 / 4")).toBeVisible();
+  await expect(page.getByText("Page 1 · Part 1 · 1 / 4 lessons")).toBeVisible();
+  await page.getByText("Paper parts").click();
   await expect(page.locator('[data-current-page="true"]').getByText("Page 1", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Next PDF page" }).click();
-  await expect(page.getByText("Page 2 · S1 · document section 3 / 4")).toBeVisible();
+  await expect(page.getByText("Page 2 · Part 1 · 3 / 4 lessons", { exact: true })).toBeVisible();
   await expect(page.locator('[data-current-page="true"]').getByText("Page 2", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Previous section" }).click();
-  await expect(page.getByText("Page 1 · S2 · document section 2 / 4")).toBeVisible();
+  await expect(page.getByText("Page 1 · Part 2 · 2 / 4 lessons", { exact: true })).toBeVisible();
 });

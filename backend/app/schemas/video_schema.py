@@ -26,3 +26,27 @@ class TranscriptResponse(BaseModel):
     segments: list[TranscriptSegment]
     plain_text: str
     warning: str | None = None
+
+
+class LocalSubtitleFile(BaseModel):
+    path: str
+    name: str
+    language: str | None = None
+
+
+class LocalMediaItem(BaseModel):
+    path: str
+    name: str
+    title: str
+    subtitles: list[LocalSubtitleFile] = Field(default_factory=list)
+
+
+class LocalMediaLibraryResponse(BaseModel):
+    root: str
+    items: list[LocalMediaItem]
+
+
+class LocalSubtitleContent(BaseModel):
+    path: str
+    name: str
+    content: str

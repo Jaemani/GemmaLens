@@ -36,8 +36,14 @@ class AnalysisPipelineService:
         chunks = self.chunker.chunk(readable_text)
         analysis_text = self._analysis_text(readable_text)
         analysis_chunks = chunks[: self.settings.analysis_model_max_chunks]
-        result = await self.adapter.analyze_document(document.id, analysis_text, analysis_chunks, support_language, learning_language, target_level)
-        result = self.normalizer.normalize_result(result, analysis_text, support_language=support_language, target_level=target_level)
+        result = await self.adapter.analyze_document(document.id, analysis_text, analysis_chunks, support_language, learning_language, target_level, document.source_type)
+        result = self.normalizer.normalize_result(
+            result,
+            analysis_text,
+            support_language=support_language,
+            target_level=target_level,
+            source_type=document.source_type,
+        )
         if target_level and target_level != "unknown":
             result = result.model_copy(
                 update={
@@ -76,7 +82,13 @@ class AnalysisPipelineService:
         if self.section_analyses and not force:
             cached = self.section_analyses.get_result(document_id, section_index)
             if cached:
-                normalized_cached = self.normalizer.normalize_result(cached, section_text, support_language=support_language, target_level=target_level)
+                normalized_cached = self.normalizer.normalize_result(
+                    cached,
+                    section_text,
+                    support_language=support_language,
+                    target_level=target_level,
+                    source_type=document.source_type,
+                )
                 if target_level and target_level != "unknown" and not normalized_cached.difficulty.reason.startswith("Calibrated against your"):
                     normalized_cached = normalized_cached.model_copy(
                         update={
@@ -100,8 +112,15 @@ class AnalysisPipelineService:
             support_language,
             learning_language,
             target_level,
+            document.source_type,
         )
-        result = self.normalizer.normalize_result(result, section_text, support_language=support_language, target_level=target_level)
+        result = self.normalizer.normalize_result(
+            result,
+            section_text,
+            support_language=support_language,
+            target_level=target_level,
+            source_type=document.source_type,
+        )
         result.quality_warnings.append(f"section:{section_index + 1}/{section_count}")
         if target_level and target_level != "unknown":
             result = result.model_copy(
@@ -145,7 +164,13 @@ class AnalysisPipelineService:
             for index, section in page_sections:
                 cached = self.section_analyses.get_result(document_id, index)
                 if cached:
-                    normalized_cached = self.normalizer.normalize_result(cached, section.text, support_language=support_language, target_level=target_level)
+                    normalized_cached = self.normalizer.normalize_result(
+                        cached,
+                        section.text,
+                        support_language=support_language,
+                        target_level=target_level,
+                        source_type=document.source_type,
+                    )
                     normalized_cached.quality_warnings = [warning for warning in normalized_cached.quality_warnings if not warning.startswith("section:")]
                     normalized_cached.quality_warnings.append(f"section:{index + 1}/{len(labeled_sections)}")
                     if "analysis_mode:page_batch" not in normalized_cached.quality_warnings:
@@ -169,10 +194,17 @@ class AnalysisPipelineService:
             support_language,
             learning_language,
             target_level,
+            document.source_type,
         )
 
         for index, section in missing_sections:
-            section_result = self.normalizer.normalize_result(page_result, section.text, support_language=support_language, target_level=target_level)
+            section_result = self.normalizer.normalize_result(
+                page_result,
+                section.text,
+                support_language=support_language,
+                target_level=target_level,
+                source_type=document.source_type,
+            )
             section_result.quality_warnings = [
                 warning
                 for warning in section_result.quality_warnings

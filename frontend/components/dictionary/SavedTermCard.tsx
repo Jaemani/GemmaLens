@@ -14,7 +14,7 @@ export function SavedTermCard({ item }: { item: DictionaryItem }) {
       </div>
       {item.meaning ? <p className="mt-3 text-sm text-neutral-700">{item.meaning}</p> : null}
       <p className="mt-3 text-xs text-neutral-500">
-        Saved hits {item.encounter_count} · opened {item.view_count}
+        Saved {item.encounter_count} time{item.encounter_count === 1 ? "" : "s"} · reviewed {item.view_count} time{item.view_count === 1 ? "" : "s"}
       </p>
     </article>
   );

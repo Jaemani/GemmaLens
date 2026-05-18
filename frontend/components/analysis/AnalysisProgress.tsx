@@ -24,7 +24,8 @@ export function AnalysisProgress({
   hint?: string;
 }) {
   const progressLabels = customLabels ?? labels;
-  const activeLabel = currentLabel ?? progressLabels[Math.min(step, progressLabels.length - 1)];
+  const activeIndex = Math.min(step, progressLabels.length - 1);
+  const activeLabel = currentLabel ?? progressLabels[activeIndex];
   const defaultHint =
     step >= 2
       ? "Local model analysis is running. Warmed-up short tasks are faster; long documents still need staged analysis."
@@ -45,8 +46,12 @@ export function AnalysisProgress({
       <div className="mt-5 space-y-3">
         {progressLabels.map((label, index) => (
           <div key={label} className="flex items-center gap-3 text-sm">
-            <span className={`h-2.5 w-2.5 rounded-full ${index <= step ? "bg-accent" : "bg-line"}`} />
-            <span className={index <= step ? "text-ink" : "text-neutral-500"}>{label}</span>
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${
+                index < activeIndex ? "bg-accent" : index === activeIndex ? "animate-pulse bg-accent" : "bg-line"
+              }`}
+            />
+            <span className={index <= activeIndex ? "text-ink" : "text-neutral-500"}>{label}</span>
           </div>
         ))}
       </div>

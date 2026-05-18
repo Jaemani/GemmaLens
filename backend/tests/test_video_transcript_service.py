@@ -42,3 +42,20 @@ def test_known_youtube_text_source_returns_segments_without_youtube_caption_api(
     assert "scarce resources" in result.plain_text
     assert "known public transcript/article page" in (result.warning or "")
 
+
+def test_parse_plain_timestamp_transcript():
+    service = VideoTranscriptService()
+
+    result = service.parse_subtitle(
+        """
+        00:00:00 hello guys welcome to my video
+        00:00:02 about the Transformer
+        00:00:05 recurrent neural networks existed before the Transformer
+        """,
+        "youtube-timestamp.txt",
+    )
+
+    assert len(result.segments) == 3
+    assert result.segments[0].start == 0
+    assert result.segments[0].end == 2
+    assert "about the Transformer" in result.plain_text

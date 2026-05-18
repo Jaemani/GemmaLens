@@ -27,6 +27,10 @@ def migrate_sqlite() -> None:
             connection.execute(text("ALTER TABLE user_profiles ADD COLUMN auto_analyze_documents BOOLEAN DEFAULT 1"))
         if "onboarding_completed" not in profile_columns:
             connection.execute(text("ALTER TABLE user_profiles ADD COLUMN onboarding_completed BOOLEAN DEFAULT 0"))
+        connection.execute(text("UPDATE user_profiles SET learning_language = 'English' WHERE learning_language IS NULL OR learning_language = ''"))
+        connection.execute(text("UPDATE user_profiles SET support_language = 'Korean' WHERE support_language IS NULL OR support_language = ''"))
+        connection.execute(text("UPDATE user_profiles SET target_level = 'C2' WHERE target_level IS NULL OR target_level = '' OR target_level = 'unknown'"))
+        connection.execute(text("UPDATE user_profiles SET auto_analyze_documents = 1 WHERE auto_analyze_documents IS NULL"))
 
         document_columns = {row[1] for row in connection.execute(text("PRAGMA table_info(documents)"))}
         if "original_file_path" not in document_columns:

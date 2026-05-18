@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw, Save } from "lucide-react";
+import { RefreshCw, Save, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
@@ -44,6 +44,7 @@ export default function QuizPage() {
         );
         const ready = settled.flatMap((entry) => (entry.status === "fulfilled" ? [entry.value] : []));
         if (cancelled) return;
+        pruneQuizDrafts(new Set(ready.map((source) => source.document.id)), dictionary.length > 0);
         setSources(ready);
         setDictionaryItems(dictionary);
         setSelectedId(dictionary.length ? DICTIONARY_SOURCE_ID : (ready[0]?.document.id ?? ""));
@@ -63,8 +64,13 @@ export default function QuizPage() {
 
   useEffect(() => {
     if (selectedDictionary) {
+      if (!dictionaryItems.length) {
+        window.localStorage.removeItem(CACHE_PREFIX + DICTIONARY_SOURCE_ID);
+        setItems([]);
+        return;
+      }
       const cached = window.localStorage.getItem(CACHE_PREFIX + DICTIONARY_SOURCE_ID);
-      setItems(cached ? JSON.parse(cached) : buildDictionaryQuiz(dictionaryItems));
+      setItems(cached ? JSON.parse(cached) : []);
       return;
     }
     if (!selected) {
@@ -72,7 +78,7 @@ export default function QuizPage() {
       return;
     }
     const cached = window.localStorage.getItem(CACHE_PREFIX + selected.document.id);
-    setItems(cached ? JSON.parse(cached) : buildQuiz(selected));
+    setItems(cached ? JSON.parse(cached) : []);
   }, [dictionaryItems, selected, selectedDictionary]);
 
   function regenerate() {
@@ -87,6 +93,16 @@ export default function QuizPage() {
     const title = selectedDictionary ? "Saved dictionary" : selected!.document.title;
     window.localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(items));
     setStatus(`Cached ${items.length} quiz items for ${title}.`);
+  }
+
+  function clearAllQuizDrafts() {
+    const keys = Array.from({ length: window.localStorage.length }, (_, index) => window.localStorage.key(index))
+      .filter((key): key is string => Boolean(key?.startsWith(CACHE_PREFIX)));
+    for (const key of keys) {
+      window.localStorage.removeItem(key);
+    }
+    setItems([]);
+    setStatus(keys.length ? `Cleared ${keys.length} saved quiz draft${keys.length !== 1 ? "s" : ""}.` : "No saved quiz drafts to clear.");
   }
 
   async function markQuizItemViewed(item: QuizItem, open: boolean) {
@@ -165,6 +181,10 @@ export default function QuizPage() {
                 <Save size={16} />
                 Save draft
               </button>
+              <button type="button" onClick={clearAllQuizDrafts} className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-surface">
+                <Trash2 size={16} />
+                Clear drafts
+              </button>
             </div>
           </div>
           <div className="mt-5 space-y-3">
@@ -182,7 +202,7 @@ export default function QuizPage() {
               </details>
             )) : (
               <div className="rounded-lg border border-dashed border-line bg-surface p-6 text-sm leading-6 text-neutral-600">
-                Analyze a document first, then return here to generate review prompts.
+                No saved quiz draft for this source. Choose a source and press Regenerate to create review prompts.
               </div>
             )}
           </div>
@@ -230,6 +250,18 @@ function buildDictionaryQuiz(items: DictionaryItem[]): QuizItem[] {
       dictionaryItemId: item.id
     };
   });
+}
+
+function pruneQuizDrafts(validDocumentIds: Set<string>, hasDictionaryItems: boolean) {
+  const keys = Array.from({ length: window.localStorage.length }, (_, index) => window.localStorage.key(index))
+    .filter((key): key is string => Boolean(key?.startsWith(CACHE_PREFIX)));
+  for (const key of keys) {
+    const sourceId = key.slice(CACHE_PREFIX.length);
+    const valid = sourceId === DICTIONARY_SOURCE_ID ? hasDictionaryItems : validDocumentIds.has(sourceId);
+    if (!valid) {
+      window.localStorage.removeItem(key);
+    }
+  }
 }
 
 function buildQuiz(source: Source): QuizItem[] {

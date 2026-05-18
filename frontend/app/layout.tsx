@@ -3,7 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "GemmaLens",
-  description: "GemmaLens: Multimodal Language Learning from Any Content"
+  description: "GemmaLens: Multimodal Language Learning from Any Content",
+  icons: { icon: "/favicon.ico" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

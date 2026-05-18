@@ -5,15 +5,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#202124",
-        surface: "#f8fafd",
+        ink: "#111827",
+        surface: "#F7F8FA",
         panel: "#ffffff",
-        line: "#dadce0",
-        accent: "#1a73e8",
+        line: "#E5E7EB",
+        "strong-line": "#CBD5E1",
+        subtle: "#F1F5F9",
+        accent: "#2563EB",
+        "accent-hover": "#1D4ED8",
+        "accent-soft": "#EFF6FF",
+        "accent-subtle": "#DBEAFE",
+        secondary: "#4B5563",
+        muted: "#9CA3AF",
         amber: "#f29900"
       },
       boxShadow: {
-        material: "0 1px 2px rgba(60, 64, 67, 0.18), 0 1px 3px rgba(60, 64, 67, 0.12)"
+        material: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.08)",
+        "material-md": "0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)"
       }
     }
   },

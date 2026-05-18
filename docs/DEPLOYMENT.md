@@ -2,6 +2,59 @@
 
 ## Current Recommendation
 
+Use Vercel for the frontend and keep the real FastAPI/Gemma backend on a local
+machine exposed through Tailscale Funnel for demos. Protect the backend with a
+shared API key and let the Vercel frontend call it through the same-origin
+`/api/backend/*` proxy.
+
+This avoids putting the API key in browser JavaScript and avoids most CORS/PDF
+viewer failures.
+
+```txt
+Browser -> Vercel frontend -> /api/backend/* proxy -> Tailscale Funnel -> local FastAPI
+```
+
+## Vercel + Tailscale Funnel Backend
+
+On the local backend machine:
+
+```bash
+export BACKEND_API_KEY="use-a-long-random-demo-key"
+./scripts/run_funnel_backend.sh
+```
+
+Expose the backend through Tailscale Funnel:
+
+```bash
+tailscale funnel 8012
+```
+
+Use the HTTPS URL printed by Tailscale as the backend URL.
+
+On Vercel, set:
+
+```txt
+BACKEND_INTERNAL_URL=https://YOUR-MACHINE.YOUR-TAILNET.ts.net
+GEMMALENS_API_KEY=use-a-long-random-demo-key
+```
+
+Do not set `NEXT_PUBLIC_GEMMALENS_API_KEY` for this recommended setup. The
+server-side proxy attaches `GEMMALENS_API_KEY` when forwarding requests.
+
+### Direct Browser Mode
+
+Only use this for quick internal testing:
+
+```txt
+NEXT_PUBLIC_API_BASE_URL=https://YOUR-MACHINE.YOUR-TAILNET.ts.net
+NEXT_PUBLIC_GEMMALENS_API_KEY=use-a-long-random-demo-key
+```
+
+This exposes the key to the browser bundle. It is acceptable for a temporary
+demo key, but the proxy mode above is safer.
+
+## Older Cloud Mock Backend Option
+
 Use Vercel for the frontend and a model-free FastAPI backend for team testing.
 
 This gives the team a real shared flow:

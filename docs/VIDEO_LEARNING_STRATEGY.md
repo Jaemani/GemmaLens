@@ -77,14 +77,31 @@ Example object:
   - `POST /video/transcripts/youtube`
   - SRT/VTT parser
   - optional `youtube-transcript-api` integration
+  - local media library scanning
+  - local subtitle file loading
 - Frontend:
   - `/video`
   - YouTube iframe player
+  - local video player
   - timestamped transcript panel
   - click transcript line to seek
+  - hover-only Study action on transcript lines
+  - line-study block below the subtitle timeline
+  - live cues from the current subtitle window
+  - current-scene analysis
+  - watched-part recap
   - inline video lesson result after analysis, without navigating away to a document analysis page
 
 Current product rule: video analysis should keep the learner on the video page. The transcript/player remains the source context, and the lesson appears beside it. A separate document-style analysis page makes video learning feel detached from watching.
+
+Recent fixes:
+
+- YouTube `t=` and `start=` parameters are parsed for initial player position.
+- Online transcript sync offset was corrected back to zero after testing.
+- Active subtitle selection handles overlapping captions by choosing the latest matching segment.
+- Study button clicks do not seek the video line by accident.
+- Video-derived saves fill missing meanings with source-grounded fallback text instead of blank dictionary entries.
+- Weak placeholder meanings are filtered before save/display.
 
 ## Risks
 
@@ -94,8 +111,7 @@ Current product rule: video analysis should keep the learner on the video page. 
 
 ## Next Work
 
-- Add transcript chunk analysis endpoint.
 - Add video-specific prompt for spoken phrases and tone/register.
 - Add timestamp fields to dictionary items.
-- Add local SRT/VTT upload instead of paste-only.
 - Add saved phrase replay links.
+- Add durable backend review sessions for video-derived quiz items.

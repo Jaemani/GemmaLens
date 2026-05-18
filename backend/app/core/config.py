@@ -15,15 +15,17 @@ class Settings(BaseSettings):
     remote_gemma_base_url: str = "http://127.0.0.1:11444"
     remote_gemma_model: str = "e2b"
     mlx_model_path: str = "~/Models/mlx/gemma-4-e4b-it-bf16"
-    mlx_max_tokens: int = 768
+    mlx_max_tokens: int = 1536
     mlx_temperature: float = 0.1
-    analysis_model_input_chars: int = 2500
+    analysis_model_input_chars: int = 3500
     analysis_model_max_chunks: int = 3
     raw_model_output_path: str | None = None
     upload_storage_dir: str = "tmp/uploads"
     transcript_cache_dir: str = "tmp/transcript_cache"
+    local_video_library_dir: str = "~/Movies"
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     cors_allow_origin_regex: str | None = None
+    backend_api_key: str | None = None
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -17,6 +17,7 @@ class AnalysisNormalizationService:
         document_text: str,
         support_language: str = "Korean",
         target_level: str | None = None,
+        source_type: str | None = None,
     ) -> AnalysisResult:
         return self.normalize_payload(
             result.model_dump(),
@@ -24,6 +25,7 @@ class AnalysisNormalizationService:
             document_text,
             support_language=support_language,
             target_level=target_level,
+            source_type=source_type,
         )
 
     def normalize_payload(
@@ -33,6 +35,7 @@ class AnalysisNormalizationService:
         document_text: str,
         support_language: str = "Korean",
         target_level: str | None = None,
+        source_type: str | None = None,
     ) -> AnalysisResult:
         document_text = normalize_pdf_ligatures(document_text)
         terms = self._terms(payload.get("terms"), document_text, support_language=support_language)
@@ -149,8 +152,12 @@ class AnalysisNormalizationService:
             "difficulty": self._difficulty(payload.get("difficulty")),
             "terms": terms,
             "phrases": phrases,
-            "concepts": self._concepts(payload.get("concepts"), document_text, terms),
-            "sentences": self._sentences(payload.get("sentences") or payload.get("sentence_structures") or payload.get("sentence_decomposition"), document_text),
+            "concepts": self._concepts(payload.get("concepts"), document_text, terms, support_language),
+            "sentences": self._sentences(
+                payload.get("sentences") or payload.get("sentence_structures") or payload.get("sentence_decomposition"),
+                document_text,
+                support_language=support_language,
+            ),
             "summaries": self._summaries(payload.get("summaries"), document_text),
             "quality_warnings": self._fresh_quality_warnings(payload.get("quality_warnings")),
         }
@@ -286,9 +293,167 @@ class AnalysisNormalizationService:
         normalized = self._ensure_minimum_learning_signal(normalized, document_text, support_language, target_level)
         normalized["terms"] = self._with_support_language_glosses(normalized["terms"], support_language, "term")
         normalized["phrases"] = self._with_support_language_glosses(normalized["phrases"], support_language, "phrase")
+        normalized = self._apply_quality_eval_guardrails(normalized, document_text, support_language, source_type)
         result = AnalysisResult.model_validate(normalized)
         warnings = [*result.quality_warnings, *self.quality.inspect(result, document_text)]
         return result.model_copy(update={"quality_warnings": sorted(set(warnings))})
+
+    def _apply_quality_eval_guardrails(
+        self,
+        normalized: dict[str, Any],
+        document_text: str,
+        support_language: str,
+        source_type: str | None,
+    ) -> dict[str, Any]:
+        normalized = dict(normalized)
+        normalized["sentences"] = self._with_support_sentence_explanations(
+            list(normalized.get("sentences") or []),
+            support_language,
+        )
+        if source_type in {"video_segment", "transcript"}:
+            normalized["terms"] = self._dedupe_rows_by_key(list(normalized.get("terms") or []), "term")
+            normalized["phrases"] = self._dedupe_rows_by_key(
+                [row for row in list(normalized.get("phrases") or []) if self._is_reusable_phrase_row(row)],
+                "phrase",
+            )
+            normalized["concepts"] = self._remove_video_phrase_concepts(list(normalized.get("concepts") or []))
+            normalized["summaries"] = self._video_safe_summaries(normalized.get("summaries") or {}, document_text)
+            normalized["phrases"] = self._promote_video_spoken_phrases(normalized["phrases"], document_text, support_language)
+        return normalized
+
+    def _dedupe_rows_by_key(self, rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+        seen: set[str] = set()
+        deduped: list[dict[str, Any]] = []
+        for row in rows:
+            value = self._learning_key(str(row.get(key) or ""))
+            if not value or value in seen:
+                continue
+            seen.add(value)
+            deduped.append(row)
+        return deduped
+
+    def _remove_video_phrase_concepts(self, concepts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        seen: set[str] = set()
+        filtered: list[dict[str, Any]] = []
+        for row in concepts:
+            key = self._learning_key(str(row.get("concept") or ""))
+            if not key or key in seen:
+                continue
+            if self._looks_like_spoken_phrase(key):
+                continue
+            seen.add(key)
+            filtered.append(row)
+        return filtered[:8]
+
+    def _is_reusable_phrase_row(self, row: dict[str, Any]) -> bool:
+        phrase = str(row.get("phrase") or "").strip()
+        key = self._learning_key(phrase)
+        if not key:
+            return False
+        if len(key.split()) == 1 and key not in {"nevertheless", "however", "therefore"}:
+            return False
+        if len(key.split()) > 8:
+            return False
+        blocked = {
+            "on the wmt",
+            "to make",
+            "based on",
+            "allows the",
+            "answer questions",
+            "the thinking game",
+        }
+        if key in blocked:
+            return False
+        if re.search(r"\b(?:wmt|p100|gpu|gpus|bert|squad|swag|glue|imagenet)\b", key) and len(key.split()) <= 3:
+            return False
+        return True
+
+    def _learning_key(self, value: str) -> str:
+        value = normalize_pdf_ligatures(value).lower()
+        value = re.sub(r"[\"'“”‘’`.,;:!?()\[\]{}]", "", value)
+        value = re.sub(r"\s+", " ", value).strip()
+        value = re.sub(r"^(?:the|a|an)\s+", "", value)
+        return value
+
+    def _looks_like_spoken_phrase(self, key: str) -> bool:
+        return key in {"on the cusp of", "breakneck speed", "embarked on", "pull this off", "in my opinion", "keepers of a secret"}
+
+    def _with_support_sentence_explanations(self, rows: list[dict[str, str]], support_language: str) -> list[dict[str, str]]:
+        updated: list[dict[str, str]] = []
+        for row in rows:
+            row = dict(row)
+            explanation = normalize_pdf_ligatures(str(row.get("korean_explanation") or "")).strip()
+            if not self._is_valid_sentence_support(explanation, support_language):
+                row["korean_explanation"] = self._sentence_support_explanation(row, support_language)
+            updated.append(row)
+        return updated
+
+    def _is_valid_sentence_support(self, value: str, support_language: str) -> bool:
+        if not value or value == "Explanation not provided.":
+            return False
+        language = (support_language or "").strip().lower()
+        if language in {"korean", "ko", "한국어"}:
+            return bool(re.search(r"[가-힣]", value))
+        if language not in {"chinese", "zh", "中文", "japanese", "ja", "日本語"} and self._contains_cjk(value):
+            return False
+        return True
+
+    def _sentence_support_explanation(self, row: dict[str, str], support_language: str) -> str:
+        structure = str(row.get("core_structure") or "the sentence structure").strip()
+        simplified = str(row.get("simplified_version") or row.get("sentence") or "").strip()
+        language = (support_language or "").strip().lower()
+        if language in {"korean", "ko", "한국어"}:
+            return f"핵심 구조는 '{structure}'입니다. 쉽게 말하면: {simplified}"
+        return f"Core structure: {structure}. In simpler words: {simplified}"
+
+    def _video_safe_summaries(self, summaries: dict[str, Any], document_text: str) -> dict[str, Any]:
+        fixed = dict(summaries)
+        for key in ("one_line", "simple", "academic"):
+            value = normalize_pdf_ligatures(str(fixed.get(key) or "")).strip()
+            value = re.sub(r"\b[Tt]he paper\b", "this scene", value)
+            value = re.sub(r"\b[Tt]his paper\b", "this scene", value)
+            value = re.sub(r"\b[Tt]he document\b", "this transcript segment", value)
+            fixed[key] = value or (self._sentences_from_text(document_text)[0] if document_text.strip() else "Scene summary not available.")
+        fixed["study_notes"] = [
+            re.sub(r"\b[Tt]he paper\b", "this scene", str(note)) for note in self._string_list(fixed.get("study_notes"))
+        ]
+        return fixed
+
+    def _promote_video_spoken_phrases(
+        self,
+        phrases: list[dict[str, Any]],
+        document_text: str,
+        support_language: str,
+    ) -> list[dict[str, Any]]:
+        preferred = [
+            ("first of all", "Marks the first point in a spoken explanation."),
+            ("this is why", "Connects a problem to the reason for the next idea."),
+            ("let's have a look", "Signals a move into explanation or demonstration."),
+            ("on the cusp of", "Means something important is about to happen."),
+            ("pull this off", "Means to succeed at a difficult plan."),
+            ("breakneck speed", "Means extremely fast progress."),
+            ("in my opinion", "Marks a personal stance."),
+        ]
+        existing = {self._learning_key(str(row.get("phrase") or "")) for row in phrases}
+        additions: list[dict[str, Any]] = []
+        for phrase, explanation in preferred:
+            if self._learning_key(phrase) in existing or not self._appears_in_text(phrase, document_text):
+                continue
+            additions.append(
+                {
+                    "phrase": phrase,
+                    "function": "general",
+                    "explanation": explanation,
+                    "support_language_explanation": self._support_language_gloss(phrase, explanation, support_language, "phrase"),
+                    "source_sentence": self._source_sentence(None, phrase, document_text),
+                    "learning_priority": "useful",
+                    "reason": "Useful spoken expression from the current subtitle segment.",
+                    "context_meaning": explanation,
+                    "confidence": 0.85,
+                    "user_state": "suggested",
+                }
+            )
+        return self._dedupe_rows_by_key([*additions, *phrases], "phrase")[:12]
 
     def _ensure_minimum_learning_signal(
         self,
@@ -681,7 +846,6 @@ class AnalysisNormalizationService:
                 "residual learning framework",
                 "batch normalization",
                 "internal covariate shift",
-                "scaled dot-product attention",
                 "very deep models",
                 "shortcut connections",
                 "residual network",
@@ -880,9 +1044,7 @@ class AnalysisNormalizationService:
             }
             if key in known:
                 return known[key]
-            if kind == "phrase":
-                return f"이 표현은 문장에서 '{meaning}' 역할을 합니다."
-            return f"이 용어는 이 문맥에서 '{meaning}'라는 뜻으로 쓰입니다."
+            return f"문맥상 의미: {meaning}" if kind == "term" else f"문맥상 기능: {meaning}"
         if not language or language in {"english", "en"}:
             return meaning
         return f"{support_language}: {meaning}"
@@ -909,6 +1071,8 @@ class AnalysisNormalizationService:
         if not normalized:
             return False
         language = (support_language or "").strip().lower()
+        if language not in {"korean", "ko", "한국어", "chinese", "zh", "中文", "japanese", "ja", "日本語"} and self._contains_cjk(normalized):
+            return False
         if language in {"korean", "ko", "한국어"}:
             if not re.search(r"[가-힣]", normalized):
                 return False
@@ -920,7 +1084,10 @@ class AnalysisNormalizationService:
             return not any(fragment in normalized for fragment in generic_fallbacks)
         return True
 
-    def _concepts(self, value: Any, document_text: str, terms: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _contains_cjk(self, value: str) -> bool:
+        return bool(re.search(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]", value))
+
+    def _concepts(self, value: Any, document_text: str, terms: list[dict[str, Any]], support_language: str) -> list[dict[str, Any]]:
         rows = value if isinstance(value, list) else []
         concepts: list[dict[str, Any]] = []
         seen: set[str] = set()
@@ -937,11 +1104,16 @@ class AnalysisNormalizationService:
                 continue
             seen.add(key)
             explanation = normalize_pdf_ligatures(str(row.get("explanation") or row.get("meaning") or "Concept explanation not provided.")).strip()
+            support_explanation = normalize_pdf_ligatures(
+                str(row.get("support_language_explanation") or row.get("native_explanation") or "")
+            ).strip()
             source_sentence = self._source_sentence(row.get("source_sentence"), concept, document_text)
             concepts.append(
                 {
                     "concept": concept,
                     "explanation": explanation,
+                    "support_language_explanation": support_explanation
+                    or self._support_language_gloss(concept, explanation, support_language, kind="concept"),
                     "source_sentence": source_sentence,
                     "related_terms": self._string_list(row.get("related_terms")),
                     "why_it_matters": normalize_pdf_ligatures(
@@ -955,9 +1127,9 @@ class AnalysisNormalizationService:
             )
         if concepts:
             return concepts[:8]
-        return self._fallback_concepts(document_text, terms)
+        return self._fallback_concepts(document_text, terms, support_language)
 
-    def _fallback_concepts(self, document_text: str, terms: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _fallback_concepts(self, document_text: str, terms: list[dict[str, Any]], support_language: str) -> list[dict[str, Any]]:
         concepts: list[dict[str, Any]] = []
         seen: set[str] = set()
         for term in terms:
@@ -971,6 +1143,13 @@ class AnalysisNormalizationService:
                 {
                     "concept": concept,
                     "explanation": str(term.get("meaning") or "Source-grounded concept from this section."),
+                    "support_language_explanation": str(term.get("support_language_meaning") or "")
+                    or self._support_language_gloss(
+                        concept,
+                        str(term.get("meaning") or "Source-grounded concept from this section."),
+                        support_language,
+                        kind="concept",
+                    ),
                     "source_sentence": str(term.get("source_sentence") or self._source_sentence(None, concept, document_text)),
                     "related_terms": [concept],
                     "why_it_matters": "This is a concept anchor: understand it before memorizing surrounding vocabulary.",
@@ -3179,7 +3358,6 @@ class AnalysisNormalizationService:
             ("we used the adam optimizer", "method", "Introduces the optimizer choice."),
             ("we varied the learning rate", "method", "Explains a learning-rate schedule."),
             ("we employ", "method", "States a method or regularization choice."),
-            ("on the wmt", "result", "Introduces a benchmark result setting."),
             ("outperforms the best previously reported", "result", "States a benchmark improvement over prior work."),
             ("to evaluate the importance of", "method", "Introduces an ablation purpose."),
             ("unlisted values are identical to", "method", "Explains table shorthand."),
@@ -9392,7 +9570,7 @@ class AnalysisNormalizationService:
             for value in values[:2]
         )
 
-    def _sentences(self, value: Any, document_text: str) -> list[dict[str, str]]:
+    def _sentences(self, value: Any, document_text: str, support_language: str = "Korean") -> list[dict[str, str]]:
         rows = value if isinstance(value, list) else []
         sentences: list[dict[str, str]] = []
         for row in rows:
@@ -9407,7 +9585,12 @@ class AnalysisNormalizationService:
                     "core_structure": normalize_pdf_ligatures(str(row.get("core_structure") or "Structure not provided.")),
                     "simplified_version": normalize_pdf_ligatures(str(row.get("simplified_version") or sentence)),
                     "korean_explanation": normalize_pdf_ligatures(
-                        str(row.get("korean_explanation") or row.get("support_explanation") or "Explanation not provided.")
+                        str(
+                            row.get("support_language_explanation")
+                            or row.get("korean_explanation")
+                            or row.get("support_explanation")
+                            or "Explanation not provided."
+                        )
                     ),
                     "difficulty_reason": normalize_pdf_ligatures(str(row.get("difficulty_reason") or "Dense sentence structure.")),
                 }
@@ -9420,7 +9603,10 @@ class AnalysisNormalizationService:
                 "sentence": first,
                 "core_structure": "Structure not provided.",
                 "simplified_version": first,
-                "korean_explanation": "Explanation not provided.",
+                "korean_explanation": self._sentence_support_explanation(
+                    {"sentence": first, "core_structure": "Structure not provided.", "simplified_version": first},
+                    support_language,
+                ),
                 "difficulty_reason": "Model did not return sentence decomposition.",
             }
         ]
@@ -9473,7 +9659,14 @@ class AnalysisNormalizationService:
         return excerpt
 
     def _appears_in_text(self, value: str, text: str) -> bool:
-        return self._match_text(value) in self._match_text(text)
+        norm_value = self._match_text(value)
+        norm_text = self._match_text(text)
+        if norm_value in norm_text:
+            return True
+        # Also check compact form — handles PDF-extracted text with missing word boundaries
+        compact_value = re.sub(r"[-\s]", "", norm_value)
+        compact_text = re.sub(r"[-\s]", "", norm_text)
+        return len(compact_value) >= 6 and compact_value in compact_text
 
     def _match_text(self, value: str) -> str:
         normalized = normalize_pdf_ligatures(value).lower()

@@ -1,7 +1,7 @@
 "use client";
 
 import { Clipboard, Languages, Loader2, RotateCcw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { LanguageSelect } from "@/components/common/LanguageSelect";
 import { AppShell } from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
@@ -11,6 +11,13 @@ const LIMIT = 1200;
 export default function TranslatePage() {
   const [sourceLanguage, setSourceLanguage] = useState("English");
   const [targetLanguage, setTargetLanguage] = useState("Korean");
+
+  useEffect(() => {
+    api.getProfile().then((p) => {
+      if (p.learning_language) setSourceLanguage(p.learning_language);
+      if (p.support_language) setTargetLanguage(p.support_language);
+    }).catch(() => {});
+  }, []);
   const [text, setText] = useState("");
   const [result, setResult] = useState("");
   const [notes, setNotes] = useState<string[]>([]);

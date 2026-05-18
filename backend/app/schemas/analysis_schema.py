@@ -103,6 +103,7 @@ class PhraseItem(BaseModel):
 class ConceptItem(BaseModel):
     concept: str
     explanation: str
+    support_language_explanation: str = ""
     source_sentence: str
     related_terms: list[str] = Field(default_factory=list)
     why_it_matters: str = ""

@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
+import secrets
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app import models  # noqa: F401
 from app.api.routes_analysis import router as analysis_router
@@ -35,6 +37,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+PUBLIC_PATHS = {"/health"}
+
+
+@app.middleware("http")
+async def api_key_middleware(request: Request, call_next):
+    if not settings.backend_api_key:
+        return await call_next(request)
+    if request.method == "OPTIONS" or request.url.path in PUBLIC_PATHS:
+        return await call_next(request)
+
+    raw_header = request.headers.get("x-gemmalens-api-key") or request.headers.get("authorization", "")
+    token = raw_header.removeprefix("Bearer ").strip()
+    if secrets.compare_digest(token, settings.backend_api_key):
+        return await call_next(request)
+
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={"detail": "Missing or invalid GemmaLens API key."},
+    )
 
 
 app.include_router(health_router)

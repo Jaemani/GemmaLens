@@ -13,5 +13,6 @@ class ModelAdapter(ABC):
         support_language: str = "Korean",
         learning_language: str = "English",
         target_level: str | None = None,
+        source_type: str | None = None,
     ) -> AnalysisResult:
         raise NotImplementedError

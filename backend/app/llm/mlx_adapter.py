@@ -39,6 +39,7 @@ class MLXAdapter(ModelAdapter):
         support_language: str = "Korean",
         learning_language: str = "English",
         target_level: str | None = None,
+        source_type: str | None = None,
     ) -> AnalysisResult:
         try:
             output = await asyncio.to_thread(
@@ -49,13 +50,21 @@ class MLXAdapter(ModelAdapter):
                 support_language,
                 learning_language,
                 target_level,
+                source_type,
             )
             if self.settings.raw_model_output_path:
                 raw_path = Path(self.settings.raw_model_output_path).expanduser()
                 raw_path.parent.mkdir(parents=True, exist_ok=True)
                 raw_path.write_text(output, encoding="utf-8")
             payload = extract_json_object(output)
-            return self.normalizer.normalize_payload(payload, document_id, text, support_language=support_language, target_level=target_level)
+            return self.normalizer.normalize_payload(
+                payload,
+                document_id,
+                text,
+                support_language=support_language,
+                target_level=target_level,
+                source_type=source_type,
+            )
         except (ImportError, FileNotFoundError, ValidationError, Exception) as exc:
             logger.exception("MLX analysis failed")
             raise RuntimeError(f"MLX analysis failed: {exc}") from exc
@@ -90,9 +99,10 @@ class MLXAdapter(ModelAdapter):
         support_language: str,
         learning_language: str,
         target_level: str | None,
+        source_type: str | None,
     ) -> str:
         model, tokenizer = self._load()
-        prompt = self._build_prompt(document_id, text, chunks, support_language, learning_language, target_level)
+        prompt = self._build_prompt(document_id, text, chunks, support_language, learning_language, target_level, source_type)
         messages = [
             {"role": "system", "content": "Return only valid JSON. Do not use markdown. Do not output thoughts, analysis, or commentary."},
             {"role": "user", "content": prompt},
@@ -154,6 +164,7 @@ class MLXAdapter(ModelAdapter):
         support_language: str,
         learning_language: str,
         target_level: str | None = None,
+        source_type: str | None = None,
     ) -> str:
         schema_hint = """
 {
@@ -188,19 +199,44 @@ class MLXAdapter(ModelAdapter):
 }
 """
         chunk_note = f"Document chunks: {len(chunks)}"
+        video_guidance = ""
+        if source_type in {"video_segment", "transcript"}:
+            video_guidance = (
+                "This SOURCE is video subtitles, not an academic paper. "
+                "Teach listening and language from the current scene: choose spoken expressions, idioms, collocations, field terms, and reusable sentence patterns. "
+                "Do not produce a generic whole-document summary. Ignore subtitle boilerplate, credits, filenames, download-site text, and one-word filler. "
+                "Use the support language as quick meaning support, but keep the learning target in the source language. "
+            )
+        level_upper = (target_level or "").upper()
+        count_guidance = {
+            "B1": "Extract at least 12 terms and at least 6 phrases — at B1 most academic vocabulary is unfamiliar, so be comprehensive. Only skip truly basic everyday words.",
+            "B2": "Extract at least 10 terms and at least 5 phrases — cover all field-specific and higher academic vocabulary a B2 learner would not know.",
+            "C1": "Extract at least 6 terms and at least 4 phrases — focus on sophisticated multi-word expressions and disciplinary collocations above C1.",
+            "C2": "Extract at least 4 terms and at least 3 phrases — only the most advanced domain-specific items; skip anything a strong academic reader would know.",
+        }.get(level_upper, "Extract at least 8 terms and at least 4 phrases — cover all field-specific and academic vocabulary that would challenge the learner.")
         return (
             "Return JSON only. No reasoning. No markdown. "
             "Analyze this academic text for language learning. "
+            f"{video_guidance}"
             f"Target learner level: {target_level or 'unknown'}. "
-            "For B1-B2, prefer core terms and common academic expressions with plain support-language glosses. "
-            "For C1-C2, prefer high-signal field terms, dense academic expressions, and rhetorical moves; exclude incidental names, hardware, and section labels unless central. "
-            "Select 3-5 terms, 2-3 academic phrases, 1-2 difficult sentence structures, and short summaries. "
-            "Every term and phrase must appear in its source_sentence. "
-            "Use context-specific meanings, not generic dictionary-only meanings. "
+            "For B1-B2: select core domain terms and common academic collocations that carry content meaning. "
+            "For C1-C2: select only field-specific terminology and sophisticated multi-word expressions; "
+            "skip anything known at B2 or below, including: discourse connectors (based on, in addition to, as a result), "
+            "simple reporting verbs (we propose, we show, we use, we compute, we employ, we find), "
+            "generic transitions (similar to, such as, for example, in contrast), "
+            "and single-clause subject+verb fragments. "
+            "For phrases: write the BASE FORM of the expression, never copy a full clause or sentence from the text. "
+            "Use infinitive or lemma form: 'rely entirely on' not 'The model relies entirely on'; "
+            "'prevent X from attending to Y' not 'prevent positions from attending to subsequent positions'. "
+            "Do not embed numbers, variable names, or bracketed citations in phrases. "
+            "Prefer: complex nominalizations, disciplinary hedging patterns, collocational restrictions, "
+            "argument-structure expressions (attribute X to Y, account for, give rise to), and rhetorical moves unique to the domain. "
+            f"{count_guidance} "
+            "Every term and phrase must appear verbatim or in inflected form in its source_sentence. "
+            "Use context-specific meanings, not generic dictionary definitions. "
             f"Add a short {support_language} learner gloss for every term and phrase. "
-            f"The source language being studied is {learning_language}; do not translate the source_sentence. "
-            "If unsure, set confidence below 0.5 instead of omitting the item. "
-            "Prefer fewer high-confidence items over a long exhaustive list. "
+            f"The source language is {learning_language}; do not translate source_sentence. "
+            "Prefer 4-6 high-confidence items over an exhaustive list. "
             f"Use this exact JSON shape and key names:\n{schema_hint}\n"
             f"document_id: {document_id}\n{chunk_note}\n\nTEXT:\n{text[: self.settings.analysis_model_input_chars]}"
         )

@@ -91,7 +91,7 @@ The model layer is provider-neutral:
 - `MockModelAdapter`: demo/deploy-only UI testing mode.
 - `MLXAdapter`: Apple Silicon local Gemma runtime.
 - `OllamaAdapter`: local Ollama-compatible runtime scaffold.
-- `RemoteGemmaAdapter`: HTTP adapter for a LAN/Tailscale Gemma server, currently tested against the ThinkPad server at `http://PRIVATE-GEMMA-SERVER:11444`.
+- `RemoteGemmaAdapter`: HTTP adapter for a private local, LAN, or edge Gemma server configured through `REMOTE_GEMMA_BASE_URL`.
 
 Important current policy:
 
@@ -200,10 +200,10 @@ Important current policy:
 - Switched the local stack from Turbopack dev mode to webpack dev mode after repeated Turbopack panics caused browser refresh loops and aborted API requests.
 - Restricted demo data and demo result links to explicit `NEXT_PUBLIC_DEMO_MODE=true`.
 - Fixed the MLX warmup route to run async; the first implementation loaded MLX in a FastAPI worker thread and could fail later with a GPU stream/thread error.
-- Added ThinkPad remote Gemma presets:
-  - `Gemma 4 E2B (ThinkPad fp16)` -> remote model id `e2b`
-  - `Gemma 4 E2B (ThinkPad Q4)` -> llama.cpp Q4_K_M server on port `11445`
-  - `Gemma 4 E4B (ThinkPad fp16)` -> remote model id `e4b`
+- Added private remote Gemma presets:
+  - `Gemma 4 E2B (remote fp16)` -> remote model id `e2b`
+  - `Gemma 4 E2B (remote Q4)` -> llama.cpp Q4_K_M-compatible endpoint
+  - `Gemma 4 E4B (remote fp16)` -> remote model id `e4b`
 - Verified the remote server health endpoint and a model-backed English-to-Korean translation through the GemmaLens backend.
 - Changed Settings to server-prefetch the learner profile so it does not stay in a client-side loading state when the browser aborts or reloads requests.
 
@@ -213,15 +213,117 @@ Observed warm local timings on E2B:
 - Short translation: about 1.3 seconds after warmup.
 - Short structured analysis: about 15.3 seconds after warmup.
 
-Observed remote ThinkPad runtime:
+Observed private remote runtime:
 
-- Server: `http://PRIVATE-GEMMA-SERVER:11444`
+- Server: configured through `REMOTE_GEMMA_BASE_URL`
 - Health: available with active model `e2b`
 - Models: Gemma 4 E2B fp16 and Gemma 4 E4B fp16
 - Current limitation: CPU generation is slow, so long analysis tasks need progress UI and staged chunking.
-- Q4 result: the ThinkPad Q4 E2B server is much faster for functional testing than CPU fp16. A short batch-normalization explanation returned 38 output tokens in 5.63s, about 6.75 tok/s.
+- Q4 result: the remote Q4 E2B route is much faster for functional testing than CPU fp16. A short batch-normalization explanation returned 38 output tokens in 5.63s, about 6.75 tok/s.
 
-## 5. Current Technical Limitations
+## 5. UI/UX Design
+
+### Design Principle
+
+The UI is designed to feel like a calm academic reading workspace, not a model dashboard or debug panel. Key rules applied throughout:
+
+- The source document and the current section notes are the primary surfaces. All status, navigation, and secondary information is subordinate.
+- Information appears at most once. If page number is shown in the navigation cluster, it is not repeated in a separate text line.
+- Layout shifts are prevented by returning `null` during loading states rather than showing placeholder cards that take different heights than the final content.
+- Internal model/system concepts do not leak into the UI: no "analyzed_sections", no section-level JSON fields, no uppercase tracking-wide status labels.
+- Model output filler phrases are stripped at render time (e.g., "This term refers to...", "In this context...") via a `stripFiller()` utility in `DocumentPageReader.tsx`.
+
+### Reader Workspace (`/analysis/[documentId]`)
+
+The analysis workspace has a two-column layout at `xl:` widths: PDF source pane on the left (sticky), section reader and notes on the right.
+
+Right panel order:
+1. Section preparation progress (only while background preparation is running or paused)
+2. `DocumentPageReader` — section navigation, source text toggle
+3. `SectionLessonCard` — current section notes (terms, phrases, patterns, ideas tabs)
+4. `PaperMapProgressPanel` — paper-level guide (compact row when closed)
+
+#### Section navigator (`DocumentPageReader`)
+
+The section navigator uses a compact bar layout:
+
+```
+[«][<] 2/9 [>][»]    [Build notes]    [Attach PDF?]
+```
+
+Page number (`2/9`) is embedded inside the navigation button cluster as a non-interactive span. No separate text line.
+
+Below the nav bar, an always-expanded section map shows page groups:
+
+```
+14/25 ready · Preparing…          [● Current] [● Ready] [○ Not ready]
+Page 1                 Page 2                 Page 3
+[1] [2]         [1] [~2] [3] [4]         [~1]
+```
+
+Continuation sections (text that spans from the previous page) are marked with a `~` prefix and a dashed border. When the current section is a continuation, an amber context banner appears:
+
+> ↩ Continues from page 3 — this text is part of the same section.  [View page 3 notes]
+
+Clicking the button jumps to the parent section (last section on the previous page).
+
+#### Section notes (`SectionLessonCard`)
+
+Four tabs: Terms | Phrases | Patterns | Ideas.
+
+- Each tab shows items with English meaning + Korean gloss (if available) + source sentence evidence.
+- Save buttons on each item write to the Library (`/dictionary`).
+- Tab counts visible as small badges.
+- Heading area shows `summaries.one_line` and `summaries.academic` from the section analysis.
+
+### Paper Map (`PaperMapProgressPanel`)
+
+Collapsed state: single compact row showing progress bar, `X/Y` count, Refresh, and "Open map" button.
+
+Open state: full-screen modal with four tabs:
+
+| Tab | Description |
+|-----|-------------|
+| **Overview** | Thesis so far, Reading focus, Next steps from the guide, Section map grid grouped by PDF page. Hover any analyzed section to see its summary in a tooltip and preview card. |
+| **Argument** | Numbered flow diagram: each step in `synthesis.argument_flow` rendered as a node with vertical connecting line. Shows `priority_concepts` below. |
+| **Concepts** | Cross-reference grid: all concepts and terms sorted by how many sections they appear in. Each card shows the item name, kind badge, `§N §M` section chips, and meaning. Filterable by All / Concepts / Terms. |
+| **Vocabulary** | Priority terms, Reusable expressions, Review plan — from `synthesis`. |
+
+The section map in the Overview tab fetches both `GET /documents/{id}/paper-map` and `GET /documents/{id}/sections` in parallel so it can group section tiles by PDF page rather than presenting a flat numbered list.
+
+### Library (`/dictionary`)
+
+Filter pill tabs at the top of the page:
+
+```
+[All 42]  [Key ideas 8]  [Terms 14]  [Phrases 12]  [Patterns 8]
+```
+
+Review queue summary (New / Learning / Familiar) shown inline in the page header, right side.
+
+### Dashboard (`/`)
+
+- Hero: "Read academic English better." with primary action (Analyze a document) and secondary action (Study a video).
+- Recent documents list with progress badges (New / X% / Complete / Ready).
+- Workflow card: three numbered steps (Upload → Read → Save).
+- Model runtime status card (compact mode).
+
+### Global Status Dock (sidebar bottom)
+
+Small card showing:
+- Activity indicator: "Ready" when idle, task label when active.
+- Backend status: "Online" / "Off" / "Check" as a colored dot.
+- Model preset label.
+
+"Online" was chosen over "Ready" to distinguish backend liveness from task readiness, which also shows "Ready" when idle.
+
+### Typography
+
+Body font: system UI sans-serif stack (`-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial`). Antialiasing enabled. No custom webfont in the reading workspace to keep rendering neutral and fast.
+
+Section headers throughout the UI use `text-xs font-semibold text-neutral-500` — no uppercase, no letter-spacing. Uppercase tracking-wide headers were removed as they created visual noise without adding scannability in this context.
+
+## 7. Current Technical Limitations
 
 ### Edge Atomic Pipeline
 
@@ -243,7 +345,7 @@ source chunk
 -> learning guardrails repair weak summaries, phrases, concepts, and sentence structures
 ```
 
-This makes the Q4 ThinkPad route usable for functional testing. A short Batch Normalization smoke analysis completed in about 48 seconds with source-grounded terms, phrases, and sentence explanation, instead of timing out at 300 seconds on the fp16 CPU route.
+This makes the Q4 remote route usable for functional testing. A short Batch Normalization smoke analysis completed in about 48 seconds with source-grounded terms, phrases, and sentence explanation, instead of timing out at 300 seconds on the fp16 CPU route.
 
 Design rule:
 
@@ -302,7 +404,120 @@ Translation is implemented as a short atomic model task. It is intentionally cha
 
 Quiz generation currently uses structured analysis objects. It should later use the model to create distractors, cloze items, and level-aware question types.
 
-## 6. Learning Method Rationale
+## 8. Cross-Domain Analysis Quality Evaluation
+
+### Methodology
+
+Four paper extracts were selected from distinct academic domains to evaluate whether the analysis pipeline produces level-appropriate, domain-relevant output across real scientific text. The evaluation compared B2 vs C2 level outputs for the same text, measuring: term count and relevance, phrase quality and base-form compliance, B2 leakage into C2 outputs, and surface-clause contamination.
+
+**Corpus**
+
+| Paper | Domain | Pages used | Char length |
+|-------|--------|-----------|-------------|
+| Vaswani et al. 2017 — Attention is All You Need | NLP / CS | 3–5 (encoder-decoder architecture) | 6,679 |
+| arXiv 2105.05093 — Electric Mott Transition in V₂O₃ | Condensed Matter Physics | 7–8 (Raman/X-ray results) | 6,255 |
+| arXiv 2212.08011 — Multi-VALUE dialectology benchmark | Computational Linguistics | 2–4 (pipeline + related work) | 11,854 |
+| arXiv 2202.13790 — Relativistic hydrodynamics with Coulomb friction | High-Energy Physics | 2–3 (viscosity derivation) | 10,725 |
+
+**Evaluation rubric**
+
+- *Term relevance*: is the term domain-specific and vocabulary-useful for the assigned level?
+- *Phrase base form*: is the phrase in infinitive/lemma form, or is it a surface clause copied from the text?
+- *B2 leakage*: do generic transitions (similar to, based on, can be described as) appear in C2 output?
+- *Level differentiation*: does C2 select harder, more field-specific items than B2?
+
+### Root-Cause Findings
+
+**Finding 1 — Token budget truncation (high impact, fixed)**
+
+The `mlx_max_tokens` setting was 768. A full analysis JSON for 10 terms requires approximately 700–750 tokens, leaving no budget for the phrases array. The model generated complete terms but the output was cut before writing any phrases, resulting in zero phrases across all test papers.
+
+Evidence: raw model output file showed valid JSON truncating mid-array after 10 term objects, with no `phrases` key present at all.
+
+Fix: `mlx_max_tokens: 768 → 1536`. Phrase generation is now enabled. Analysis latency increased from ~28 s to ~56 s per section on M1 Max.
+
+**Finding 2 — Phrase verbatim check vs. PDF-joined text (medium impact, fixed)**
+
+The normalization service required every phrase to appear verbatim as a substring in the document text (`_appears_in_text`). Two-column PDF extraction joins adjacent words without spaces ("ScaledDot-ProductAttention", "Weemployaresidualconnection"). Correct base-form phrases like "scaled dot-product attention" therefore failed the substring check and were silently discarded.
+
+Fix: added a compact-match fallback that strips all spaces and hyphens before comparison. "scaleddotproductattention" is now found inside the joined PDF text.
+
+**Finding 3 — Valid domain phrase in hard blocklist (low impact, fixed)**
+
+"scaled dot-product attention" was in the phrase blocklist at `analysis_normalization_service.py:684`. This is one of the most domain-specific collocations in the Attention paper and should not be blocked.
+
+Fix: removed the entry from the hard blocklist.
+
+**Finding 4 — Surface clause leakage (medium impact, partially fixed)**
+
+After increasing the token budget, the model generated phrases such as:
+- "prevent positions from attending to subsequent positions" (9 words, verbatim text fragment)
+- "composed of a stack of N = 6 identical layers" (clause with embedded formula)
+
+These are not base-form expressions; they are sentences copied from the source.
+
+Backend fix: strengthened prompt with an explicit negative example — "BAD: 'prevent positions from attending to subsequent positions'. GOOD: 'prevent X from attending to Y'. Do not embed numbers, variable names, or citations in phrases."
+
+Frontend fix: `isUsefulExpression()` now rejects phrases with more than 6 words that contain embedded formulas, position references, or "composed of a stack".
+
+**Finding 5 — B2 leakage in raw C2 output (medium impact, mitigated)**
+
+"similar to", "based on", "similarly to", and "can be described as" appeared in C2 phrase output for both physics papers despite backend prompt instructions to skip them at C2. The backend prompt was strengthened but model compliance was not complete.
+
+Mitigation: the frontend `BASIC_PHRASE_BLOCKLIST` was expanded to include "similarly to" and "can be described as". These are filtered before display. Raw API output still contains leakage in physics domains.
+
+### Results
+
+**Before fixes (baseline)**
+
+| Paper | B2 Phrases (raw) | C2 Phrases (raw) | Phrase quality |
+|-------|-----------------|-----------------|---------------|
+| NLP (Attention) | 0 | 0 | — (truncated) |
+| Physics (Mott) | 2 | 2 | B2 leakage only |
+| Linguistics (Multi-VALUE) | 0 | 0 | — (truncated) |
+| Fluid Physics | 2 | 2 | B2 leakage only |
+
+**After all fixes (final evaluation)**
+
+| Paper | B2 Display | C2 Display | Sample quality phrases |
+|-------|-----------|-----------|----------------------|
+| NLP (Attention) | 1 | 1 | "linear projection"; "compute the matrix of outputs" |
+| Physics (Mott) | 3 | 0 | "spatially resolved X-ray diffraction experiment"; "maximize the signal coming from" |
+| Linguistics | 0 | 1 | "close the performance gap" |
+| Fluid Physics | 1 | 2 | "restore the uniform"; "dissipative term related to" |
+
+Display counts are after the frontend blocklist removes B2 leakage phrases.
+
+**Term quality observations**
+
+Terms were generated across all runs. Level differentiation was present but weak. At C2, the model consistently promoted more field-specific terms to the top of the list (Transformer > queries; Mott transition > lattice contraction; longitudinal bulk viscosity > shear viscosity). However, truly B2-level terms like "queries" and "keys" still appeared in C2 output for the NLP paper, indicating the level filter in the prompt is observed in ranking but not in exclusion.
+
+Korean glosses were present and contextually accurate in all runs where output was complete. Confidence values were consistently 0.95–0.98, which is suspiciously uniform and likely the model interpolating a fixed confidence target rather than varying by actual item certainty.
+
+### Remaining Gaps
+
+1. **Phrase count below target**: the prompt requests 2–4 phrases but effective display is 0–3. Physics at C2 produces 0 displayable phrases because all generated phrases are blocked as B2 leakage. The model needs additional example collocations for non-NLP domains to produce valid C2 phrases.
+
+2. **No genuine C2 exclusion for NLP terms**: "queries" and "keys" belong at B2 (core NLP vocabulary) but appear in C2 output. The backend prompt excludes "similar to" explicitly but does not tell the model which NLP terms are B2-level.
+
+3. **PDF extraction quality**: two-column academic PDFs produce joined words and mixed column flow during text extraction. "dialectdisparities" and "cross-dialectalNLPperformance" appeared as terms in the linguistics paper, sourced from un-segmented PDF text. pdfplumber does not handle multi-column layout. Replacing with PyMuPDF (fitz) with explicit column-detection would improve input quality for all papers.
+
+4. **"pip" as a term**: the linguistics paper's dataset-availability section contains `pip install` setup instructions. This was extracted as a technical term. A text-preprocessing step that strips code blocks, dataset access instructions, and bibliography entries before analysis would prevent this.
+
+5. **Phrase count targeting**: the model generates 10–12 terms (exceeding the "3–6" instruction) and 1–5 phrases (within "2–4" for some runs but below for others). A post-analysis cap on term count, retaining only the highest-priority 6 items, would improve focus and reduce token cost.
+
+### Configuration Changes Made
+
+| Setting | Before | After | Rationale |
+|---------|--------|-------|-----------|
+| `mlx_max_tokens` | 768 | 1536 | prevent JSON truncation before phrases |
+| `analysis_model_input_chars` | 2500 | 3500 | more context for section analysis |
+| Phrase blocklist | included "scaled dot-product attention" | removed | valid domain collocation |
+| `_appears_in_text` | exact substring only | + compact no-space match | handles PDF word-joining |
+| Frontend `BASIC_PHRASE_BLOCKLIST` | 28 entries | 31 entries | added "similarly to", "can be described as", "is described as" |
+| Backend phrase prompt | base form instruction | + negative example + formula prohibition | reduce surface-clause phrases |
+
+## 10. Learning Method Rationale
 
 The current product direction should combine several well-supported learning principles:
 
@@ -325,17 +540,17 @@ Useful references:
 - Visual input enhancement meta-analysis: https://www.cambridge.org/core/product/identifier/S0272263108080479/type/journal_article
 - AI-based language learning tools review: https://arxiv.org/abs/2111.04455
 
-## 7. Recommended Next Engineering Tasks
+## 11. Recommended Next Engineering Tasks
 
 1. Add model output contract tests with real Gemma samples.
 2. Add a durable backend preparation job if client orchestration becomes brittle.
 3. Add model runtime health and memory status.
 4. Add exportable hackathon report and demo script.
-5. Add reproducible setup instructions for MLX, Ollama, and ThinkPad remote presets.
+5. Add reproducible setup instructions for MLX, Ollama, and private remote presets.
 6. Decide mobile edge target: LiteRT, llama.cpp, or companion-server mode.
 7. Extend the learning library into graph/wiki views across papers, docs, and videos.
 
-## 8. Demo Script
+## 12. Demo Script
 
 1. Open dashboard and show selected local model.
 2. Upload a PDF and show the first page appears immediately.
@@ -345,4 +560,4 @@ Useful references:
 6. Fetch a YouTube transcript and show inline video lesson output.
 7. Generate quiz from analyzed source.
 8. Show translation panel.
-9. Explain the edge story: ThinkPad, Mac M1 Max, and future mobile all use the same small section-job product shape.
+9. Explain the edge story: laptops, edge servers, and future mobile all use the same small section-job product shape.

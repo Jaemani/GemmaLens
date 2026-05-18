@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, ExternalLink, Minus, Plus } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { DocumentRead } from "@/lib/types";
 
@@ -27,8 +27,10 @@ export function PdfSourcePane({
   const [status, setStatus] = useState("Loading PDF...");
   const [failed, setFailed] = useState(false);
 
-  if (document.source_type !== "pdf" || !document.has_original_file) return null;
   const fileUrl = api.documentFileUrl(document.id);
+  const fileRequest = useMemo(() => api.documentFileRequest(document.id), [document.id]);
+
+  if (document.source_type !== "pdf" || !document.has_original_file) return null;
 
   useEffect(() => {
     onPageChangeRef.current = onPageChange;
@@ -60,7 +62,7 @@ export function PdfSourcePane({
       try {
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.mjs", import.meta.url).toString();
-        const pdf = await pdfjs.getDocument(fileUrl).promise;
+        const pdf = await pdfjs.getDocument(fileRequest).promise;
         if (cancelled) return;
         setPageCount(pdf.numPages);
         const safePage = Math.min(Math.max(pageNumber, 1), pdf.numPages);
@@ -104,7 +106,7 @@ export function PdfSourcePane({
       cancelled = true;
       renderTaskRef.current?.cancel();
     };
-  }, [fileUrl, pageNumber, zoom]);
+  }, [fileUrl, fileRequest, pageNumber, zoom]);
 
   return (
     <section className="overflow-hidden rounded-lg border border-line bg-panel shadow-material">

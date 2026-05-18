@@ -4,6 +4,8 @@ import type {
   DocumentListItem,
   DocumentRead,
   DocumentSection,
+  LocalMediaLibraryResponse,
+  LocalSubtitleContent,
   ModelConfigUpdate,
   PageBatchAnalysisResponse,
   PaperMap,
@@ -16,7 +18,9 @@ import type {
 } from "./types";
 
 const PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+const PUBLIC_API_KEY = process.env.NEXT_PUBLIC_GEMMALENS_API_KEY;
 const SERVER_API_BASE = process.env.BACKEND_INTERNAL_URL ?? PUBLIC_API_BASE ?? "http://127.0.0.1:8012";
+const SERVER_API_KEY = process.env.GEMMALENS_API_KEY ?? PUBLIC_API_KEY;
 const REQUEST_TIMEOUT_MS = 30000;
 const PROFILE_TIMEOUT_MS = 8000;
 const UPLOAD_TIMEOUT_MS = 300000;
@@ -33,6 +37,11 @@ function timeoutSignal(ms = REQUEST_TIMEOUT_MS) {
   return { signal: controller.signal, clear: () => globalThis.clearTimeout(timeout) };
 }
 
+function authHeaders(): Record<string, string> {
+  const key = typeof window === "undefined" ? SERVER_API_KEY : PUBLIC_API_KEY;
+  return key ? { "x-gemmalens-api-key": key } : {};
+}
+
 async function request<T>(path: string, init?: ApiRequestInit): Promise<T> {
   const { timeoutMs, ...fetchInit } = init ?? {};
   const timeout = timeoutSignal(timeoutMs ?? REQUEST_TIMEOUT_MS);
@@ -42,6 +51,7 @@ async function request<T>(path: string, init?: ApiRequestInit): Promise<T> {
       signal: fetchInit.signal ?? timeout.signal,
       headers: {
         "Content-Type": "application/json",
+        ...authHeaders(),
         ...(fetchInit.headers ?? {})
       },
       cache: "no-store"
@@ -116,7 +126,7 @@ function normalizeRequestError(err: unknown, timeoutMs = REQUEST_TIMEOUT_MS, pha
 
 function apiBase() {
   if (typeof window === "undefined") return SERVER_API_BASE;
-  if (PUBLIC_API_BASE && !isPrivateBackendUrl(PUBLIC_API_BASE)) return PUBLIC_API_BASE;
+  if (PUBLIC_API_BASE && PUBLIC_API_KEY && !isPrivateBackendUrl(PUBLIC_API_BASE)) return PUBLIC_API_BASE;
   return "/api/backend";
 }
 
@@ -143,6 +153,10 @@ export const api = {
   getDocument: (documentId: string) => request<DocumentRead>(`/documents/${documentId}`),
   listDocumentSections: (documentId: string) => request<DocumentSection[]>(`/documents/${documentId}/sections`),
   documentFileUrl: (documentId: string) => `${apiBase()}/documents/${documentId}/file`,
+  documentFileRequest: (documentId: string) => ({
+    url: `${apiBase()}/documents/${documentId}/file`,
+    httpHeaders: authHeaders()
+  }),
   createDocument: (payload: { title: string; content: string; source_type: string }) =>
     request<DocumentRead>("/documents", { method: "POST", body: JSON.stringify(payload) }),
   uploadDocument: async (file: File) => {
@@ -152,6 +166,7 @@ export const api = {
     try {
       const response = await fetch(`${apiBase()}/documents/upload`, {
         method: "POST",
+        headers: authHeaders(),
         body: formData,
         signal: timeout.signal,
         cache: "no-store"
@@ -171,6 +186,7 @@ export const api = {
     try {
       const response = await fetch(`${apiBase()}/documents/${documentId}/file`, {
         method: "POST",
+        headers: authHeaders(),
         body: formData,
         signal: timeout.signal,
         cache: "no-store"
@@ -189,6 +205,13 @@ export const api = {
       "Building full-document learning output",
       () => request<AnalysisResult>(`/documents/${documentId}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
       `/analysis/${documentId}`
+    ),
+  analyzeVideoDocument: (documentId: string, detail = "Building subtitle learning objects") =>
+    withClientActivity(
+      "Analyzing video",
+      detail,
+      () => request<AnalysisResult>(`/documents/${documentId}/analyze`, { method: "POST", timeoutMs: ANALYSIS_TIMEOUT_MS }),
+      "/video"
     ),
   analyzeDocumentSection: (documentId: string, sectionIndex: number, options?: { force?: boolean }) =>
     request<AnalysisResult>(`/documents/${documentId}/sections/${sectionIndex}/analyze${options?.force ? "?force=true" : ""}`, {
@@ -217,7 +240,7 @@ export const api = {
   getAnalysis: (documentId: string) => request<AnalysisResult>(`/documents/${documentId}/analysis`),
   getPaperMap: (documentId: string) => request<PaperMap>(`/documents/${documentId}/paper-map`),
   deleteDocument: async (documentId: string) => {
-    const response = await fetch(`${apiBase()}/documents/${documentId}`, { method: "DELETE" });
+    const response = await fetch(`${apiBase()}/documents/${documentId}`, { method: "DELETE", headers: authHeaders() });
     if (!response.ok) throw new Error(await responseErrorMessage(response));
   },
   listDictionary: () => request<DictionaryItem[]>("/dictionary/items"),
@@ -231,7 +254,7 @@ export const api = {
     document_id?: string;
   }) => request<DictionaryItem>("/dictionary/items", { method: "POST", body: JSON.stringify(payload) }),
   deleteDictionaryItem: async (itemId: string) => {
-    const response = await fetch(`${apiBase()}/dictionary/items/${itemId}`, { method: "DELETE" });
+    const response = await fetch(`${apiBase()}/dictionary/items/${itemId}`, { method: "DELETE", headers: authHeaders() });
     if (!response.ok) throw new Error(await response.text());
   },
   getProfile: () => request<UserProfile>("/profile", { timeoutMs: PROFILE_TIMEOUT_MS }),
@@ -257,5 +280,8 @@ export const api = {
       "YouTube transcript import",
       () => request<TranscriptResponse>("/video/transcripts/youtube", { method: "POST", body: JSON.stringify(payload) }),
       "/video"
-    )
+    ),
+  listLocalMedia: () => request<LocalMediaLibraryResponse>("/video/local-media"),
+  getLocalSubtitle: (path: string) => request<LocalSubtitleContent>(`/video/local-media/subtitle?path=${encodeURIComponent(path)}`),
+  localMediaFileUrl: (path: string) => `${apiBase()}/video/local-media/file?path=${encodeURIComponent(path)}`
 };

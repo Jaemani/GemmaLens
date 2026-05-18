@@ -24,6 +24,9 @@ def test_profile_language_settings(client):
     profile = client.get("/profile")
     assert profile.status_code == 200
     assert profile.json()["learning_language"] == "English"
+    assert profile.json()["support_language"] == "Korean"
+    assert profile.json()["target_level"] == "C2"
+    assert profile.json()["auto_analyze_documents"] is True
 
     updated = client.patch(
         "/profile",
@@ -156,9 +159,23 @@ def test_document_analysis_and_dictionary_flow(client):
     )
     assert saved_concept.status_code == 200
 
+    saved_video_concept = client.post(
+        "/dictionary/items",
+        json={
+            "item_type": "concept",
+            "text": "self-attention",
+            "meaning": "",
+            "source_sentence": "Self-attention lets each token attend to other tokens in the sequence.",
+            "document_id": document["id"],
+        },
+    )
+    assert saved_video_concept.status_code == 200
+    assert saved_video_concept.json()["meaning"]
+    assert "Source:" in saved_video_concept.json()["meaning"]
+
     items = client.get("/dictionary/items")
     assert items.status_code == 200
-    assert len(items.json()) == 2
+    assert len(items.json()) == 3
     term_item = next(item for item in items.json() if item["item_type"] == "term")
     assert term_item["view_count"] == 0
 

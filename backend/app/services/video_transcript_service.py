@@ -51,6 +51,8 @@ class VideoTranscriptService:
         else:
             segments = self._parse_srt(normalized)
         if not segments:
+            segments = self._parse_plain_timestamp_transcript(normalized)
+        if not segments:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No transcript segments found")
         return TranscriptResponse(
             source_type="subtitle",
@@ -91,11 +93,7 @@ class VideoTranscriptService:
                 return cached
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=(
-                    "Could not fetch YouTube transcript from available caption APIs. "
-                    "If captions are visible in the player, paste the subtitle text manually for now. "
-                    f"Transcript API error: {exc}"
-                ),
+                detail=self._youtube_unavailable_detail(str(exc)),
             ) from exc
 
         segments = self._rows_to_segments(rows)
@@ -174,6 +172,23 @@ class VideoTranscriptService:
             path.write_text(response.model_dump_json(), encoding="utf-8")
         except OSError:
             return
+
+    def _youtube_unavailable_detail(self, error: str) -> str:
+        reason = "YouTube caption fetch failed."
+        lowered = error.lower()
+        if "too many requests" in lowered or "429" in lowered:
+            reason = "YouTube rate-limited the caption endpoint for this environment."
+        elif "no transcript" in lowered or "transcript" in lowered:
+            reason = "This video has no caption track that the backend can fetch."
+        compact_error = self._clean_text(error)
+        if len(compact_error) > 260:
+            compact_error = f"{compact_error[:260].rstrip()}..."
+        return (
+            f"{reason} GemmaLens already tried youtube-transcript-api, yt-dlp caption tracks, known public transcript sources, and local cache. "
+            "Use a verified demo source, paste the YouTube transcript text, or upload/paste an .srt/.vtt subtitle file. "
+            "For videos without accessible captions, the remaining fallback is local audio transcription. "
+            f"Caption error: {compact_error}"
+        )
 
     def _fetch_youtube_with_ytdlp(self, url: str, languages: list[str], first_error: str) -> TranscriptResponse | None:
         try:
@@ -361,13 +376,33 @@ class VideoTranscriptService:
                 continue
             start, end = self._parse_time_range(lines[timing_index])
             text = self._clean_text(" ".join(lines[timing_index + 1 :]))
-            if text:
+            if text and not self._is_boilerplate_subtitle(text):
                 segments.append(self._segment(len(segments) + 1, start, end, text))
         return segments
 
     def _parse_vtt(self, content: str) -> list[TranscriptSegment]:
         body = re.sub(r"^WEBVTT[^\n]*\n", "", content, count=1, flags=re.IGNORECASE).strip()
         return self._parse_srt(body)
+
+    def _parse_plain_timestamp_transcript(self, content: str) -> list[TranscriptSegment]:
+        rows: list[tuple[float, str]] = []
+        for line in content.splitlines():
+            match = re.match(r"^\s*((?:\d{1,2}:)?\d{1,2}:\d{2}(?:[,.]\d{1,3})?)\s+(.+?)\s*$", line)
+            if not match:
+                continue
+            try:
+                start = self._parse_timestamp(match.group(1))
+            except HTTPException:
+                continue
+            text = self._clean_text(match.group(2))
+            if text and not self._is_boilerplate_subtitle(text):
+                rows.append((start, text))
+        segments: list[TranscriptSegment] = []
+        for index, (start, text) in enumerate(rows):
+            next_start = rows[index + 1][0] if index + 1 < len(rows) else start + 3.0
+            end = max(start + 0.5, next_start)
+            segments.append(self._segment(index + 1, start, end, text))
+        return segments
 
     def _parse_time_range(self, line: str) -> tuple[float, float]:
         start_raw, end_raw = [part.strip() for part in line.split("-->", 1)]
@@ -393,6 +428,19 @@ class VideoTranscriptService:
         text = re.sub(r"\{\\.*?\}", "", text)
         text = re.sub(r"\b\d{1,2}:\d{2}(?::\d{2})?\s*", "", text)
         return re.sub(r"\s+", " ", text).strip()
+
+    def _is_boilerplate_subtitle(self, text: str) -> bool:
+        lowered = text.lower()
+        blocked = [
+            "downloaded from",
+            "yts.mx",
+            "yify",
+            "opensubtitles",
+            "subtitles by",
+            "sync by",
+            "encoded by",
+        ]
+        return any(token in lowered for token in blocked)
 
     def _plain_text(self, segments: list[TranscriptSegment]) -> str:
         return "\n".join(segment.text for segment in segments)

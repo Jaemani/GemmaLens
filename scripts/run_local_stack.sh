@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND_PORT="${BACKEND_PORT:-8012}"
 FRONTEND_PORT="${FRONTEND_PORT:-3003}"
-BACKEND_URL="http://127.0.0.1:${BACKEND_PORT}"
+BACKEND_URL="http://localhost:${BACKEND_PORT}"
 RUNTIME_CONFIG="${ROOT}/tmp/real-model-runtime-${BACKEND_PORT}.json"
 DATABASE_URL="sqlite:///${ROOT}/tmp/real-model-${BACKEND_PORT}.db"
 
@@ -27,7 +27,7 @@ MODEL_PROVIDER=mlx \
 MODEL_SWITCHING_ENABLED=true \
 MODEL_RUNTIME_CONFIG_PATH="${RUNTIME_CONFIG}" \
 DATABASE_URL="${DATABASE_URL}" \
-REMOTE_GEMMA_BASE_URL="${REMOTE_GEMMA_BASE_URL:-http://PRIVATE-GEMMA-SERVER:11444}" \
+REMOTE_GEMMA_BASE_URL="${REMOTE_GEMMA_BASE_URL:-http://localhost:11444}" \
 CORS_ALLOW_ORIGIN_REGEX='https?://(localhost|127\.0\.0\.1|10\..*|192\.168\..*|100\..*|172\.(1[6-9]|2[0-9]|3[0-1])\..*)?(:[0-9]+)?' \
 .venv-mlx/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port "${BACKEND_PORT}" &
 BACKEND_PID=$!

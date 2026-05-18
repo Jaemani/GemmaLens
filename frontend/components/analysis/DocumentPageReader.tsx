@@ -1,6 +1,6 @@
 "use client";
 
-import { BookmarkPlus, CheckCircle2, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Eye, EyeOff, Paperclip, ScanText } from "lucide-react";
+import { BookmarkPlus, CheckCircle2, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, CornerLeftUp, Eye, EyeOff, Paperclip, ScanText } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { AnalysisResult, DocumentRead, DocumentSection } from "@/lib/types";
@@ -30,6 +30,7 @@ export function DocumentPageReader({
   sourceReady?: boolean;
   hideInlineLesson?: boolean;
 }) {
+  const [supportLanguage, setSupportLanguage] = useState<string>("Korean");
   const [document, setDocument] = useState<DocumentRead | null>(null);
   const [sections, setSections] = useState<DocumentSection[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
@@ -64,16 +65,21 @@ export function DocumentPageReader({
   const firstSourcePage = pdfPageFromLabel(firstSection?.source_label ?? null) ?? 1;
   const previousPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, -1);
   const nextPageIndex = findAdjacentPdfPageIndex(sections, pageIndex, 1);
+  const parentSectionIndex = currentSection?.continuation
+    ? findParentSectionIndex(sections, pageIndex)
+    : null;
+  const parentSection = parentSectionIndex !== null ? sections[parentSectionIndex] : null;
+  const parentPdfPage = parentSection ? pdfPageFromLabel(parentSection.source_label) : null;
   const currentSectionSummary =
     !initialSectionReady
-      ? "Preparing the first section lesson before opening the workspace."
+      ? "Preparing the first lesson before opening the workspace."
       : sectionAnalysis && sectionAnalysisIndex === currentSection?.index
       ? sectionAnalysis.summaries.one_line
       : currentSection?.analyzed
-        ? "Loading this section summary..."
+        ? "Loading this lesson..."
         : isBatchAnalyzing
-          ? "GemmaLens is preparing this document in order. The lesson summary appears here once this section is ready."
-          : "Analyze this section to build its summary, terms, expressions, and sentence patterns.";
+          ? "This part is still preparing. You can keep reading ready parts while GemmaLens works in the background."
+          : "Analyze this part to build its summary, terms, expressions, and sentence patterns.";
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +89,7 @@ export function DocumentPageReader({
           setDocument(loaded);
           setSections(loadedSections);
           setAutoAnalyzeAll(profile?.auto_analyze_documents ?? true);
+          if (profile?.support_language) setSupportLanguage(profile.support_language);
         }
       })
       .catch(() => {
@@ -299,13 +306,7 @@ export function DocumentPageReader({
     }
   }
 
-  if (!document) {
-    return (
-      <section className="rounded-lg border border-line bg-panel p-5 text-sm text-neutral-600 shadow-material">
-        {error || "Loading source reader..."}
-      </section>
-    );
-  }
+  if (!document) return null;
   if (document.source_type === "transcript" || document.source_type === "video_segment") return null;
 
   function goToSection(index: number) {
@@ -394,75 +395,77 @@ export function DocumentPageReader({
     }
   }
 
+  const totalPdfPages = sectionGroups.length || 1;
+
   return (
     <section className="rounded-lg border border-line bg-panel shadow-material">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line p-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Current section</p>
-          <h2 className="mt-1 text-lg font-semibold">
-            {currentSectionTitle || `Page ${currentPdfPage ?? "?"} · S${currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1}`}
-          </h2>
-          <p className="mt-1 text-xs font-semibold text-neutral-600">
-            Page {currentPdfPage ?? "?"} · S{currentPageSectionNumber ?? currentSection?.section_number ?? pageIndex + 1} · document section{" "}
-            {currentSection?.section_number ?? pageIndex + 1} / {currentSection?.total_sections ?? Math.max(sections.length, 1)}
-          </p>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-700">
-            {currentSectionSummary || "Choose a section from the strip below."}
-          </p>
-        </div>
-        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+      {/* Compact navigation bar */}
+      <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+        <div className="flex shrink-0 items-center gap-1.5">
+          {/* Page / section nav with inline page counter */}
           <div className="flex items-center rounded-md border border-line bg-surface">
             <button
               type="button"
-              onClick={() => {
-                if (previousPageIndex !== null) goToSection(previousPageIndex);
-              }}
+              onClick={() => { if (previousPageIndex !== null) goToSection(previousPageIndex); }}
               disabled={previousPageIndex === null}
-              className="inline-flex h-9 w-9 items-center justify-center text-ink hover:bg-white disabled:opacity-35"
+              className="inline-flex h-8 w-8 items-center justify-center text-ink hover:bg-white disabled:opacity-35"
               aria-label="Previous PDF page"
             >
-              <ChevronsLeft size={16} />
+              <ChevronsLeft size={14} />
             </button>
             <button
               type="button"
               onClick={() => goToSection(Math.max(0, pageIndex - 1))}
               disabled={pageIndex === 0}
-              className="inline-flex h-9 w-9 items-center justify-center border-l border-line text-ink hover:bg-white disabled:opacity-35"
+              className="inline-flex h-8 w-8 items-center justify-center border-l border-line text-ink hover:bg-white disabled:opacity-35"
               aria-label="Previous section"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={14} />
             </button>
+            <span className="flex h-8 min-w-[3rem] items-center justify-center border-l border-line px-2 text-xs font-semibold tabular-nums text-neutral-600">
+              {currentPdfPage ?? "?"} / {totalPdfPages}
+            </span>
             <button
               type="button"
               onClick={() => goToSection(Math.min(sections.length - 1, pageIndex + 1))}
               disabled={!sections.length || pageIndex >= sections.length - 1}
-              className="inline-flex h-9 w-9 items-center justify-center border-l border-line text-ink hover:bg-white disabled:opacity-35"
+              className="inline-flex h-8 w-8 items-center justify-center border-l border-line text-ink hover:bg-white disabled:opacity-35"
               aria-label="Next section"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={14} />
             </button>
             <button
               type="button"
-              onClick={() => {
-                if (nextPageIndex !== null) goToSection(nextPageIndex);
-              }}
+              onClick={() => { if (nextPageIndex !== null) goToSection(nextPageIndex); }}
               disabled={nextPageIndex === null}
-              className="inline-flex h-9 w-9 items-center justify-center border-l border-line text-ink hover:bg-white disabled:opacity-35"
+              className="inline-flex h-8 w-8 items-center justify-center border-l border-line text-ink hover:bg-white disabled:opacity-35"
               aria-label="Next PDF page"
             >
-              <ChevronsRight size={16} />
+              <ChevronsRight size={14} />
             </button>
           </div>
+          {/* Rebuild / build lesson */}
+          <button
+            type="button"
+            onClick={analyzePage}
+            disabled={isAnalyzing || isBatchAnalyzing || !currentSection || !page.trim()}
+            className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:opacity-40"
+            title={isBatchAnalyzing ? "Pause background preparation first" : undefined}
+          >
+            <ScanText size={13} />
+            {isAnalyzing ? "Analyzing…" : currentSection?.analyzed ? "Rebuild" : "Build notes"}
+          </button>
+          {/* Attach PDF button */}
           {document.source_type === "pdf" && !document.has_original_file ? (
             <>
               <button
                 type="button"
                 onClick={() => attachInputRef.current?.click()}
                 disabled={isAttaching}
-                className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:opacity-50"
               >
-                <Paperclip size={16} />
-                {isAttaching ? "Attaching..." : "Attach original PDF"}
+                <Paperclip size={13} />
+                {isAttaching ? "Attaching…" : "Attach PDF"}
               </button>
               <input
                 ref={attachInputRef}
@@ -477,27 +480,42 @@ export function DocumentPageReader({
               />
             </>
           ) : null}
-          <button
-            type="button"
-            onClick={analyzePage}
-            disabled={isAnalyzing || isBatchAnalyzing || !currentSection || !page.trim()}
-            className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-600"
-          >
-            <ScanText size={16} />
-            {isAnalyzing ? "Analyzing..." : isBatchAnalyzing ? "Pause auto first" : currentSection?.analyzed ? "Re-analyze section" : "Analyze section"}
-          </button>
         </div>
       </div>
+      {/* Continuation context — this section continues from a previous page */}
+      {currentSection?.continuation && parentSection ? (
+        <div className="flex items-center gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2">
+          <CornerLeftUp size={13} className="shrink-0 text-amber-600" />
+          <p className="min-w-0 flex-1 text-xs text-amber-700">
+            Continues from page {parentPdfPage ?? "previous"} — this text is part of the same section.
+          </p>
+          <button
+            type="button"
+            onClick={() => { if (parentSectionIndex !== null) goToSection(parentSectionIndex); }}
+            className="shrink-0 rounded-md border border-amber-200 bg-white px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+          >
+            View page {parentPdfPage ?? "prev"} notes
+          </button>
+        </div>
+      ) : null}
+      {/* Status message — only when section not analyzed (no shift while lesson loads) */}
+      {(!sectionAnalysis || sectionAnalysisIndex !== currentSection?.index) && !currentSection?.analyzed ? (
+        <p className="border-b border-line px-4 py-2.5 text-xs leading-5 text-neutral-500">
+          {currentSectionSummary || "Select a section to view its notes."}
+        </p>
+      ) : null}
       {sections.length ? (
-        <div className="border-b border-line px-5 py-3">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Paper sections</p>
-            <div className="flex items-center gap-3 text-[11px] font-semibold text-neutral-600">
-              <span>{analyzedCount} ready</span>
-              {hiddenSectionGroupCount ? <span>{sectionGroups.length} source pages · nearby only</span> : null}
-              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-accent" /> Current</span>
-              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" /> Ready</span>
-              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-neutral-300" /> Not ready</span>
+        <div className="border-b border-line px-4 py-2">
+          <div className="mb-2 flex items-center justify-between gap-2 text-[11px] text-neutral-500">
+            <span className="font-semibold tabular-nums text-neutral-600">
+              {analyzedCount}/{sections.length} ready
+              {isBatchAnalyzing ? <span className="ml-1.5 text-accent">· Preparing…</span> : null}
+            </span>
+            <div className="flex items-center gap-2">
+              {hiddenSectionGroupCount ? <span>{sectionGroups.length} pages</span> : null}
+              <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-accent" /> Current</span>
+              <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Ready</span>
+              <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-neutral-300" /> Not ready</span>
             </div>
           </div>
           <div className="flex gap-2 overflow-x-auto">
@@ -512,28 +530,31 @@ export function DocumentPageReader({
                 isCurrentPageGroup ? "border-accent bg-blue-50 shadow-sm" : "border-line bg-surface"
               }`}
             >
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <p className={`text-[11px] font-semibold uppercase tracking-wide ${isCurrentPageGroup ? "text-accent" : "text-neutral-500"}`}>
-                  {group.label}
-                </p>
-              </div>
+              <p className={`mb-1.5 text-[11px] font-semibold ${isCurrentPageGroup ? "text-accent" : "text-neutral-500"}`}>
+                Page {group.pdfPage ?? "?"}
+              </p>
               <div className="flex gap-1">
                 {group.items.map(({ section, index, localNumber }) => (
                   <button
                     key={section.index}
                     type="button"
                     onClick={() => goToSection(index)}
-                    className={`flex h-8 min-w-12 items-center justify-center rounded-md border px-2 text-[11px] font-semibold ${
+                    className={`flex h-8 min-w-12 items-center justify-center gap-0.5 rounded-md px-2 text-[11px] font-semibold transition ${
                       index === pageIndex
-                        ? "border-accent bg-accent text-white"
+                        ? "border border-accent bg-accent text-white"
                         : section.analyzed
-                          ? "border-green-200 bg-green-50 text-green-700"
-                          : "border-line bg-panel text-neutral-500 hover:bg-white"
+                          ? section.continuation
+                            ? "border border-dashed border-green-300 bg-green-50 text-green-700"
+                            : "border border-green-200 bg-green-50 text-green-700"
+                          : section.continuation
+                            ? "border border-dashed border-neutral-200 bg-panel text-neutral-400 hover:bg-white"
+                            : "border border-line bg-panel text-neutral-500 hover:bg-white"
                     }`}
-                    title={`${group.label} / S${localNumber} on page / document section ${section.section_number}${
-                      section.analyzed ? " analyzed" : " not analyzed"
+                    title={`Page ${group.pdfPage ?? "?"} / Part ${localNumber}${section.continuation ? " (continued from prev page)" : ""}${
+                      section.analyzed ? " · ready" : " · not analyzed"
                     }`}
                   >
+                    {section.continuation ? <span className="opacity-60">~</span> : null}
                     <span>{compactSectionNavLabel(section, localNumber)}</span>
                   </button>
                 ))}
@@ -544,37 +565,26 @@ export function DocumentPageReader({
           </div>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-5 py-3">
-        <div className="max-w-2xl space-y-1">
-          <p className="text-sm font-semibold leading-6 text-ink">Source text</p>
-          <p className="text-xs leading-5 text-neutral-600">
-            {currentSection?.analyzed
-              ? "Open the lesson from this section, then save words and expressions worth reviewing."
-              : "No lesson has been built for this section yet. By default, GemmaLens prepares all sections in the background while the first page stays readable."}
-          </p>
-        </div>
+      <div className="flex items-center justify-end gap-2 border-b border-line px-4 py-2">
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
-          className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-3 py-2 text-xs font-semibold text-ink hover:bg-white"
+          className="inline-flex items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-white"
         >
-          {expanded ? <EyeOff size={15} /> : <Eye size={15} />}
-          {expanded ? "Hide source text" : "Show source text"}
+          {expanded ? <EyeOff size={13} /> : <Eye size={13} />}
+          {expanded ? "Hide source" : "Source text"}
         </button>
       </div>
+      {error ? <p className="mx-4 my-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
       {expanded ? (
-        <>
-          {error ? <p className="mx-5 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-          <article className="whitespace-pre-wrap p-5 text-sm leading-7 text-neutral-800">{page}</article>
-        </>
-      ) : error ? (
-        <p className="mx-5 my-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <article className="whitespace-pre-wrap p-4 text-sm leading-7 text-neutral-800">{page}</article>
       ) : null}
       {sectionAnalysis && !hideInlineLesson ? (
         <SectionLessonCard
           analysis={sectionAnalysis}
           sectionNumber={pageIndex + 1}
           sectionLabel={formatSectionLabel(currentSection, currentPdfPage, currentPageSectionNumber)}
+          supportLanguage={supportLanguage}
           embedded
         />
       ) : null}
@@ -586,23 +596,31 @@ export function SectionLessonCard({
   analysis,
   sectionNumber,
   sectionLabel,
+  supportLanguage,
   embedded = false
 }: {
   analysis: AnalysisResult;
   sectionNumber: number;
   sectionLabel?: string;
+  supportLanguage?: string;
   isAnalyzingNext?: boolean;
   embedded?: boolean;
 }) {
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState<string | null>(null);
-  const concepts = (analysis.concepts ?? []).slice(0, 4);
-  const terms = analysis.terms.slice(0, 6);
-  const phrases = analysis.phrases.filter((phrase) => isUsefulExpression(phrase.phrase)).slice(0, 5);
+  const [activeTab, setActiveTab] = useState<"terms" | "phrases" | "patterns" | "ideas">("terms");
+  const concepts = dedupeByText(analysis.concepts ?? [], (concept) => concept.concept).slice(0, 4);
+  const conceptNames = new Set(concepts.map((concept) => normalizeItemText(concept.concept)));
+  const terms = dedupeByText(
+    analysis.terms.filter((term) => !conceptNames.has(normalizeItemText(term.term))),
+    (term) => term.term
+  ).slice(0, 6);
+  const phrases = dedupeByText(analysis.phrases.filter((phrase) => isUsefulExpression(phrase.phrase)), (phrase) => phrase.phrase).slice(0, 5);
   const studyNotes = analysis.summaries.study_notes.slice(0, 3);
-  const className = embedded
-    ? "border-t border-line p-5"
-    : "rounded-lg border border-line bg-panel p-5 shadow-material";
+  const firstSentence = analysis.sentences[0];
+  const wrapperClass = embedded
+    ? "border-t border-line"
+    : "rounded-lg border border-line bg-panel shadow-material";
 
   async function saveItem(item: LessonSaveItem) {
     const key = `${item.item_type}:${item.text}`;
@@ -618,117 +636,154 @@ export function SectionLessonCard({
     }
   }
 
+  const tabs: { id: typeof activeTab; label: string; count: number }[] = [
+    { id: "terms", label: "Terms", count: terms.length },
+    { id: "phrases", label: "Phrases", count: phrases.length },
+    { id: "patterns", label: "Patterns", count: firstSentence ? 1 : 0 },
+    { id: "ideas", label: "Ideas", count: concepts.length },
+  ];
+
   return (
-    <div className={className}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Section {sectionNumber} lesson</p>
-          {sectionLabel ? <p className="mt-1 text-xs font-semibold text-neutral-600">{sectionLabel}</p> : null}
-          <h3 className="mt-1 text-lg font-semibold">{analysis.summaries.one_line}</h3>
-        </div>
-        <p className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-accent">
-          {concepts.length} concepts · {terms.length} terms · {phrases.length} expressions
-        </p>
-      </div>
-      <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.summaries.simple}</p>
-      <div className="mt-5 grid gap-4">
-        <MiniList
-          title="Words and terms"
-          supportLabel="Native gloss"
-          meaningLabel="English meaning"
-          rows={terms.map((term) => ({
-            item_type: "term" as const,
-            text: term.term,
-            meaning: term.meaning,
-            supportMeaning: term.support_language_meaning,
-            source_sentence: term.source_sentence
-          }))}
-          saved={saved}
-          saving={saving}
-          onSave={saveItem}
-        />
-        <MiniList
-          title="Academic expressions"
-          supportLabel="Native usage"
-          meaningLabel="English function"
-          rows={phrases.map((phrase) => ({
-            item_type: "phrase" as const,
-            text: phrase.phrase,
-            meaning: phrase.explanation,
-            supportMeaning: phrase.support_language_explanation,
-            source_sentence: phrase.source_sentence
-          }))}
-          saved={saved}
-          saving={saving}
-          onSave={saveItem}
-        />
-      </div>
-      <div className="mt-4 rounded-md border border-line bg-surface p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">How to read this section</p>
-        <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.summaries.academic}</p>
+    <div className={wrapperClass}>
+      {/* Primary lesson summary */}
+      <div className="p-5 pb-4">
+        <h3 className="text-[15px] font-semibold leading-snug text-ink">{analysis.summaries.one_line}</h3>
+        <p className="mt-1.5 text-sm leading-6 text-neutral-600">{analysis.summaries.academic}</p>
         {studyNotes.length ? (
-          <ul className="mt-3 space-y-2">
+          <ul className="mt-3 space-y-1.5">
             {studyNotes.map((note) => (
-              <li key={note} className="text-sm leading-6 text-neutral-700">
-                <span className="mr-2 font-semibold text-accent">Focus</span>
+              <li key={note} className="flex items-start gap-2 text-sm leading-5 text-neutral-700">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                 {note}
               </li>
             ))}
           </ul>
         ) : null}
       </div>
-      {concepts.length ? (
-        <div className="mt-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Concept anchors</p>
-          <div className="mt-2 grid gap-3">
-            {concepts.map((concept) => {
-              const key = `concept:${concept.concept}`;
-              const isSaved = saved.has(key);
-              return (
-                <div key={concept.concept} className="rounded-md border border-line bg-surface p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-ink">{concept.concept}</p>
-                      <p className="mt-1 text-sm leading-6 text-neutral-700">{concept.explanation || concept.why_it_matters}</p>
+
+      {/* Tabs */}
+      <div className="flex border-b border-line">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-colors ${
+              activeTab === tab.id
+                ? "border-b-2 border-accent text-accent"
+                : "text-neutral-500 hover:text-ink"
+            }`}
+          >
+            {tab.label}
+            {tab.count > 0 ? (
+              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                activeTab === tab.id ? "bg-blue-100 text-accent" : "bg-neutral-100 text-neutral-500"
+              }`}>
+                {tab.count}
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div className="p-4">
+        {activeTab === "terms" ? (
+          <MiniList
+            supportLabel={`${supportLanguage ?? "Native"} gloss`}
+            meaningLabel="Meaning"
+            rows={terms.map((term) => ({
+              item_type: "term" as const,
+              text: term.term,
+              meaning: stripFiller(term.meaning),
+              supportMeaning: term.support_language_meaning,
+              source_sentence: term.source_sentence
+            }))}
+            saved={saved}
+            saving={saving}
+            onSave={saveItem}
+            emptyMessage="No terms found for this section."
+          />
+        ) : null}
+        {activeTab === "phrases" ? (
+          <MiniList
+            supportLabel={`${supportLanguage ?? "Native"} usage`}
+            meaningLabel="Function"
+            rows={phrases.map((phrase) => ({
+              item_type: "phrase" as const,
+              text: normalizeExpressionDisplay(phrase.phrase),
+              meaning: stripFiller(phrase.explanation),
+              supportMeaning: phrase.support_language_explanation,
+              source_sentence: phrase.source_sentence
+            }))}
+            saved={saved}
+            saving={saving}
+            onSave={saveItem}
+            emptyMessage="No academic phrases found for this section."
+          />
+        ) : null}
+        {activeTab === "patterns" ? (
+          firstSentence ? (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-ink">{firstSentence.core_structure}</p>
+              <p className="text-sm leading-6 text-neutral-700">{stripFiller(firstSentence.simplified_version)}</p>
+              {firstSentence.korean_explanation ? (
+                <p className="text-sm leading-6 text-blue-700">{firstSentence.korean_explanation}</p>
+              ) : null}
+              {firstSentence.sentence ? (
+                <p className="border-l-2 border-blue-200 pl-3 text-xs leading-5 text-neutral-500">
+                  {truncateText(firstSentence.sentence, 320)}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-neutral-500">No sentence patterns found for this section.</p>
+          )
+        ) : null}
+        {activeTab === "ideas" ? (
+          concepts.length ? (
+            <div className="space-y-3">
+              {concepts.map((concept) => {
+                const key = `concept:${concept.concept}`;
+                const isSaved = saved.has(key);
+                return (
+                  <div key={concept.concept} className="rounded-md border border-line bg-surface p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-ink">{concept.concept}</p>
+                        <p className="mt-1 text-sm leading-5 text-neutral-700">{stripFiller(concept.explanation || concept.why_it_matters)}</p>
+                        {concept.source_sentence ? (
+                          <p className="mt-2 border-l-2 border-blue-200 pl-3 text-xs leading-5 text-neutral-500">
+                            {truncateText(concept.source_sentence, 200)}
+                          </p>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          saveItem({
+                            item_type: "concept",
+                            text: concept.concept,
+                            meaning: stripFiller(concept.explanation || concept.why_it_matters),
+                            source_sentence: concept.source_sentence
+                          })
+                        }
+                        disabled={isSaved || saving === key}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:text-green-700"
+                      >
+                        {isSaved ? <CheckCircle2 size={12} /> : <BookmarkPlus size={12} />}
+                        {isSaved ? "Saved" : saving === key ? "…" : "Save"}
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        saveItem({
-                          item_type: "concept",
-                          text: concept.concept,
-                          meaning: concept.explanation || concept.why_it_matters,
-                          source_sentence: concept.source_sentence
-                        })
-                      }
-                      disabled={isSaved || saving === key}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line bg-panel px-2.5 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:text-green-700"
-                      title={isSaved ? "Saved to dictionary" : "Save concept"}
-                    >
-                      {isSaved ? <CheckCircle2 size={13} /> : <BookmarkPlus size={13} />}
-                      {isSaved ? "Saved" : saving === key ? "Saving" : "Save"}
-                    </button>
                   </div>
-                  {concept.source_sentence ? (
-                    <p className="mt-3 border-l-2 border-blue-200 pl-3 text-xs leading-5 text-neutral-600">{truncateText(concept.source_sentence, 260)}</p>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
-      {analysis.sentences[0] ? (
-        <div className="mt-5 rounded-md border border-line bg-surface p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Hard sentence pattern</p>
-          <p className="mt-2 text-sm font-semibold text-ink">{analysis.sentences[0].core_structure}</p>
-          <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.sentences[0].simplified_version}</p>
-          <p className="mt-2 text-sm leading-6 text-neutral-700">{analysis.sentences[0].korean_explanation}</p>
-          <p className="mt-3 border-l-2 border-blue-200 pl-3 text-xs leading-5 text-neutral-600">
-            {truncateText(analysis.sentences[0].sentence, 320)}
-          </p>
-        </div>
-      ) : null}
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-neutral-500">No key ideas found for this section.</p>
+          )
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -763,79 +818,120 @@ export type SectionPreparationStatus = {
 };
 
 function MiniList({
-  title,
   supportLabel,
   meaningLabel,
   rows,
   saved,
   saving,
-  onSave
+  onSave,
+  emptyMessage
 }: {
-  title: string;
   supportLabel: string;
   meaningLabel: string;
   rows: LessonSaveItem[];
   saved: Set<string>;
   saving: string | null;
   onSave: (item: LessonSaveItem) => Promise<void>;
+  emptyMessage?: string;
 }) {
   return (
-    <div className="rounded-md border border-line bg-surface p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
-      <p className="mt-1 text-xs leading-5 text-neutral-600">Use these as quick glosses while reading; save only items worth reviewing later.</p>
+    <div>
       {rows.length ? (
-        <div className="mt-3 space-y-3">
+        <div className="space-y-2.5">
           {rows.map((row) => {
             const key = `${row.item_type}:${row.text}`;
             const isSaved = saved.has(key);
             const supportMeaning = usefulSupportMeaning(row.supportMeaning);
             return (
-            <div key={row.text} className="rounded-md border border-line bg-panel p-3">
+            <div key={row.text} className="rounded-md border border-line bg-surface p-3">
               <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-ink">{row.text}</p>
-                {supportMeaning ? (
-                  <div className="mt-2 rounded-md bg-blue-50 px-3 py-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">{supportLabel}</p>
-                    <p className="mt-1 text-sm leading-5 text-ink">{supportMeaning}</p>
-                  </div>
-                ) : null}
-                <div className="mt-2 rounded-md bg-surface px-3 py-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{meaningLabel}</p>
-                  <p className="mt-1 text-xs leading-5 text-neutral-700">{row.meaning}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-ink">{row.text}</p>
+                  {supportMeaning ? (
+                    <p className="mt-1 text-xs leading-5 text-blue-700">{supportMeaning}</p>
+                  ) : null}
+                  <p className="mt-1 text-xs leading-5 text-neutral-600">{row.meaning}</p>
+                  {row.source_sentence ? (
+                    <p className="mt-2 border-l-2 border-line pl-2.5 text-[11px] leading-4 text-neutral-400">
+                      {truncateText(row.source_sentence, 180)}
+                    </p>
+                  ) : null}
                 </div>
-                {row.source_sentence ? (
-                  <div className="mt-2 border-l-2 border-line pl-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Source</p>
-                    <p className="mt-1 text-xs leading-5 text-neutral-500">{truncateText(row.source_sentence, 220)}</p>
-                  </div>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => onSave(row)}
-                disabled={isSaved || saving === key}
-                className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line bg-panel px-2.5 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:text-green-700"
-              >
-                {isSaved ? <CheckCircle2 size={13} /> : <BookmarkPlus size={13} />}
-                {isSaved ? "Saved" : saving === key ? "Saving" : "Save"}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => onSave(row)}
+                  disabled={isSaved || saving === key}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:text-green-700"
+                >
+                  {isSaved ? <CheckCircle2 size={12} /> : <BookmarkPlus size={12} />}
+                  {isSaved ? "Saved" : saving === key ? "…" : "Save"}
+                </button>
               </div>
             </div>
             );
           })}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-neutral-600">No strong items found for this section.</p>
+        <p className="text-sm text-neutral-500">{emptyMessage ?? "No items found."}</p>
       )}
     </div>
   );
 }
 
+// Trivially common phrases not worth saving at any level above B1
+const BASIC_PHRASE_BLOCKLIST = new Set([
+  "based on", "similar to", "similarly to", "in addition to", "as well as", "such as",
+  "for example", "for instance", "in order to", "as a result", "in contrast",
+  "on the other hand", "due to", "in terms of", "with respect to",
+  "with regard to", "consists of", "is based on", "is similar to",
+  "can be described as", "is described as", "can be seen as",
+  "we propose", "we present", "we describe", "we show", "we find",
+  "we use", "we train", "we evaluate", "we compare", "we report",
+  "we note", "we define", "we follow", "we replace", "we compute",
+  "we employ", "we apply", "we introduce", "we extend", "we adopt",
+  "it is", "it can be", "this is", "there are", "there is",
+  "can be used", "is used to", "is used for", "is defined as",
+  "as shown in", "as described in", "as discussed in",
+  "in this paper", "in this work", "in this section",
+  "in the following", "in the next section",
+]);
+
 function isUsefulExpression(value: string) {
   const normalized = value.trim().toLowerCase();
-  const blocked = new Set(["the best performing models", "best performing models", "performing models"]);
-  return Boolean(normalized) && !blocked.has(normalized);
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (!normalized) return false;
+  if (BASIC_PHRASE_BLOCKLIST.has(normalized)) return false;
+  if (words.length < 2) return false;
+  if (/^\d/.test(normalized)) return false;
+  // Benchmark/dataset names without context
+  if (/\b(wmt|bleu|gpu|p100|imagenet|mnist)\b/i.test(value) && words.length <= 4) return false;
+  // Single pronoun + single common verb (e.g. "We employ", "We use")
+  if (/^(we|i|they|it|the model|our model|this model)\s+\w+$/i.test(value.trim())) return false;
+  if (/^[a-z]+\s+(the|a|an)$/i.test(value.trim())) return false;
+  // Surface clauses: long phrases that are verbatim text extracts (contain embedded formulas or specific numbers)
+  if (words.length > 6 && /\b(n\s*=\s*\d|positions|attending to|composed of a stack)\b/i.test(value)) return false;
+  return true;
+}
+
+// Strip leading pronoun subject from short phrases for display ("We employ" → "employ")
+function normalizeExpressionDisplay(value: string): string {
+  return value
+    .replace(/^(We|I|They|It|The model|Our model|This model)\s+(?=[a-z])/i, "")
+    .trim();
+}
+
+function normalizeItemText(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function dedupeByText<T>(rows: T[], getText: (row: T) => string) {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    const key = normalizeItemText(getText(row));
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function truncateText(value: string, limit: number) {
@@ -846,6 +942,15 @@ function truncateText(value: string, limit: number) {
     .trim();
   if (normalized.length <= limit) return normalized;
   return `${normalized.slice(0, limit).trim()}...`;
+}
+
+function findParentSectionIndex(sections: DocumentSection[], continuationIndex: number): number | null {
+  const currentPage = pdfPageFromLabel(sections[continuationIndex]?.source_label ?? null);
+  for (let i = continuationIndex - 1; i >= 0; i--) {
+    const page = pdfPageFromLabel(sections[i]?.source_label ?? null);
+    if (page !== currentPage) return i;
+  }
+  return null;
 }
 
 function pdfPageFromLabel(label: string | null) {
@@ -940,8 +1045,8 @@ function formatSectionLabel(section: DocumentSection | undefined, pdfPage: numbe
   const total = section?.total_sections ?? null;
   const title = formatSectionTitle(section);
   const pageLabel = pdfPage ? `Page ${pdfPage}` : "Page unknown";
-  const localLabel = localSection ? `S${localSection} on this page` : "section on page unknown";
-  const globalLabel = global && total ? `document section ${global} / ${total}` : "document section unknown";
+  const localLabel = localSection ? `Part ${localSection}` : "part unknown";
+  const globalLabel = global && total ? `${global} / ${total} lessons` : "lesson unknown";
   return title ? `${title} · ${pageLabel} · ${localLabel} · ${globalLabel}` : `${pageLabel} · ${localLabel} · ${globalLabel}`;
 }
 
@@ -952,7 +1057,21 @@ function formatSectionTitle(section: DocumentSection | undefined) {
 }
 
 function compactSectionNavLabel(section: DocumentSection, localNumber: number) {
-  return `S${localNumber}`;
+  return `${localNumber}`;
+}
+
+function stripFiller(text: string | undefined): string | undefined {
+  if (!text) return text;
+  return text
+    .replace(/^(This term refers to|This term means|The term refers to|The term means)\s+/i, "")
+    .replace(/^(In this context,?\s*)/i, "")
+    .replace(/^(This section (discusses|explains|covers|introduces|describes|examines|presents|focuses on)\s*)/i, "")
+    .replace(/^(In this sentence,?\s*)/i, "")
+    .replace(/^(This expression is used to\s*)/i, "")
+    .replace(/^(In academic writing,?\s*)/i, "")
+    .replace(/^(This phrase (is used to|means|refers to|indicates)\s*)/i, "")
+    .replace(/^(This (pattern|structure) (is used to|shows|indicates|means)\s*)/i, "")
+    .trim();
 }
 
 function usefulSupportMeaning(value: string | undefined) {

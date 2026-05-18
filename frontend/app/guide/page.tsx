@@ -10,7 +10,7 @@ const workflow = [
   {
     icon: PanelsTopLeft,
     title: "Read beside the source",
-    detail: "For PDFs, the left pane shows the original page while the right pane shows backend-cleaned text sections."
+    detail: "For PDFs, the original page stays visible while the learning panel explains the current section."
   },
   {
     icon: ScanText,
@@ -20,7 +20,7 @@ const workflow = [
   {
     icon: Map,
     title: "Build the paper map",
-    detail: "The whole-paper guide grows from analyzed sections: argument flow, priority concepts, terms, and expressions."
+    detail: "As sections finish, GemmaLens builds an outline of argument flow, concepts, terms, and expressions."
   },
   {
     icon: BookmarkPlus,
@@ -31,7 +31,7 @@ const workflow = [
 
 const learningObjects = [
   {
-    title: "Concept anchors",
+    title: "Key ideas",
     detail: "Ideas needed to follow the paper's argument, such as the method, objective, ablation, or benchmark setup."
   },
   {
@@ -49,10 +49,10 @@ const learningObjects = [
 ];
 
 const expectations = [
-  "The PDF pane is the visual source. The section text is extracted text that the model can read, so equations and columns may be imperfect.",
-  "A complete paper guide is built from section lessons, not from one huge summary call. This keeps latency low and lets fast local models prepare the rest while you read.",
-  "Translation is a support tool for short passages. Full-paper learning should stay in the document reader.",
-  "Video learning uses transcripts as timestamped text sections. YouTube caption endpoints can be rate-limited, so demos should use verified transcript fallback sources or pasted subtitles."
+  "PDF pages remain the visual source. Extracted text powers the lesson, so complex equations or unusual columns may need source-side checking.",
+  "The paper map is built from section lessons instead of one large summary, which keeps local inference responsive.",
+  "Translation is for quick sentence help. Documents and Video are the main learning workspaces.",
+  "Video learning works best with verified subtitles, either local SRT/VTT files or a stable public transcript."
 ];
 
 const runtimes = [
@@ -78,22 +78,22 @@ const levels = [
   { label: "Domain-heavy", detail: "Difficulty comes mainly from specialist concepts rather than grammar." }
 ];
 
-const demoPlan = [
+const videoWorkflow = [
   {
-    title: "Show the source, not a chatbot",
-    detail: "Open a PDF and keep the original page visible while section lessons prepare beside it."
+    title: "Local subtitle study",
+    detail: "Open a local video and attach English subtitles. The timeline follows playback and supports line-level study."
   },
   {
-    title: "Show fast local preparation",
-    detail: "Start from the first page, then let background section preparation fill the paper map."
+    title: "Live cues",
+    detail: "While watching, GemmaLens surfaces lightweight vocabulary and phrases from the current subtitle window."
   },
   {
-    title: "Show learner-level output",
-    detail: "Switch between B1/B2/C1/C2 examples and point out how terms, expressions, and sentence guidance change."
+    title: "Scene lessons",
+    detail: "Analyze a short scene for concepts, spoken expressions, and source-grounded review items."
   },
   {
-    title: "Show video as learning source",
-    detail: "Use one verified demo URL so the transcript path is stable, then analyze the current scene inline."
+    title: "Recap watched part",
+    detail: "Use deeper recap after watching a larger segment, then save useful terms and expressions for review."
   }
 ];
 
@@ -101,10 +101,9 @@ export default function GuidePage() {
   return (
     <AppShell>
       <div className="mb-6">
-        <p className="text-sm font-semibold uppercase text-accent">User guide</p>
-        <h1 className="mt-2 text-3xl font-semibold text-ink">How to use GemmaLens</h1>
+        <h1 className="text-3xl font-semibold text-ink">Guide</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-700">
-          GemmaLens is for reading difficult academic material while learning the language around it. It should help you understand this paper and read the next one with less support.
+          GemmaLens turns academic papers, technical documents, and subtitles into source-grounded language lessons. The goal is not to replace reading with translation; it is to help you read the next source with less support.
         </p>
       </div>
 
@@ -115,9 +114,9 @@ export default function GuidePage() {
               <BookOpen size={18} />
             </div>
             <div>
-              <h2 className="text-xl font-semibold">Paper reading workflow</h2>
+              <h2 className="text-xl font-semibold">Paper reading</h2>
               <p className="mt-1 text-sm leading-6 text-neutral-600">
-                Start from the document page. For long PDFs, work section by section; the paper map becomes useful after several sections and complete after every section is ready.
+                Start with the original source. GemmaLens opens the first prepared lesson quickly, then continues preparing the rest while you read.
               </p>
             </div>
           </div>
@@ -139,9 +138,9 @@ export default function GuidePage() {
         </section>
 
         <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
-          <h2 className="text-xl font-semibold">Why it feels fast</h2>
+          <h2 className="text-xl font-semibold">Local-first preparation</h2>
           <p className="mt-2 text-sm leading-6 text-neutral-600">
-            GemmaLens does not wait for a whole-paper pass before becoming useful. It shows the first page, then analyzes page sections as small jobs. This is the demo advantage for Gemma 4 Good: the same product shape works from ThinkPad-class local models to Mac M1 Max and future mobile edge runtimes.
+            GemmaLens does not wait for a whole-paper pass before becoming useful. It breaks long sources into small jobs, which lets local Gemma models prepare useful lessons without sending your paper to a remote reading service.
           </p>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {runtimes.map((item) => (
@@ -152,9 +151,9 @@ export default function GuidePage() {
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="rounded-lg border border-line bg-panel p-6 shadow-material">
-            <h2 className="text-xl font-semibold">What the analysis separates</h2>
+            <h2 className="text-xl font-semibold">Learning objects</h2>
             <p className="mt-2 text-sm leading-6 text-neutral-600">
-              GemmaLens should not treat every interesting phrase as vocabulary. Concepts, terms, expressions, and sentence patterns have different jobs.
+              GemmaLens separates different kinds of help so the lesson does not become a wall of generated text.
             </p>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {learningObjects.map((item) => (
@@ -164,13 +163,32 @@ export default function GuidePage() {
           </div>
 
           <div className="rounded-lg border border-line bg-panel p-6 shadow-material">
-            <h2 className="text-xl font-semibold">Where translation fits</h2>
+            <h2 className="text-xl font-semibold">Translation</h2>
             <div className="mt-4 rounded-md bg-surface p-4">
               <Languages size={18} className="text-accent" />
               <p className="mt-3 text-sm leading-6 text-neutral-700">
-                Use Translate for quick sentence support. Use Documents for papers, because the document reader preserves source context, repeated terms, and the paper map.
+                Use Translate for short passages. Use Documents or Video for real study, because those workspaces preserve source context, repeated terms, and review history.
               </p>
             </div>
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
+          <div className="flex items-start gap-3">
+            <div className="rounded-md bg-blue-50 p-2 text-accent">
+              <PlaySquare size={18} />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">Video study</h2>
+              <p className="mt-2 text-sm leading-6 text-neutral-600">
+                Video mode treats subtitles as timestamped reading material. It is strongest when you have a reliable English subtitle file or stable public transcript.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {videoWorkflow.map((item) => (
+              <GuideItem key={item.title} title={item.title} detail={item.detail} accent />
+            ))}
           </div>
         </section>
 
@@ -184,7 +202,7 @@ export default function GuidePage() {
         </section>
 
         <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
-          <h2 className="text-xl font-semibold">Current limits</h2>
+          <h2 className="text-xl font-semibold">Notes</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {expectations.map((item) => (
               <div key={item} className="rounded-md border border-line bg-surface p-4 text-sm leading-6 text-neutral-700">
@@ -194,24 +212,6 @@ export default function GuidePage() {
           </div>
         </section>
 
-        <section className="rounded-lg border border-line bg-panel p-6 shadow-material">
-          <div className="flex items-start gap-3">
-            <div className="rounded-md bg-blue-50 p-2 text-accent">
-              <PlaySquare size={18} />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">Gemma 4 Good demo strategy</h2>
-              <p className="mt-2 text-sm leading-6 text-neutral-600">
-                Position GemmaLens as a local-first learning harness: it converts real academic sources into durable reading skills, not just summaries. The demo should use verified PDF and video sources so the story is about learning quality and local speed, not network availability.
-              </p>
-            </div>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {demoPlan.map((item) => (
-              <GuideItem key={item.title} title={item.title} detail={item.detail} accent />
-            ))}
-          </div>
-        </section>
       </div>
     </AppShell>
   );

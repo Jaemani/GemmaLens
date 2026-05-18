@@ -36,7 +36,7 @@ export function DictionaryTable({ items, onDeleted }: { items: DictionaryItem[];
               {item.source_sentence ? <p className="mt-3 rounded-md bg-white p-3 text-xs leading-5 text-neutral-600">{item.source_sentence}</p> : null}
               <div className="mt-3 flex items-center justify-between gap-3">
                 <p className="text-xs text-neutral-500">
-                  Saved hits {item.encounter_count} · opened {item.view_count}
+                  Saved {item.encounter_count} time{item.encounter_count === 1 ? "" : "s"} · reviewed {item.view_count} time{item.view_count === 1 ? "" : "s"}
                 </p>
                 <div className="flex gap-1">
                   <button aria-label="Mark viewed" onClick={() => markViewed(item.id)} className="rounded-md p-2 hover:bg-white">
@@ -57,8 +57,8 @@ export function DictionaryTable({ items, onDeleted }: { items: DictionaryItem[];
             <th className="px-4 py-3">Item</th>
             <th className="px-4 py-3">Meaning</th>
             <th className="px-4 py-3">Review</th>
-            <th className="px-4 py-3">Saved hits</th>
-            <th className="px-4 py-3">Opened</th>
+            <th className="px-4 py-3">Saved</th>
+            <th className="px-4 py-3">Reviewed</th>
             <th className="px-4 py-3"></th>
           </tr>
         </thead>

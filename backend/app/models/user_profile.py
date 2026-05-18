@@ -12,7 +12,7 @@ class UserProfile(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
     display_name: Mapped[str] = mapped_column(String(120), default="Local learner")
-    target_level: Mapped[str] = mapped_column(String(32), default="C1")
+    target_level: Mapped[str] = mapped_column(String(32), default="C2")
     support_language: Mapped[str] = mapped_column(String(32), default="Korean")
     learning_language: Mapped[str] = mapped_column(String(32), default="English")
     auto_analyze_documents: Mapped[bool] = mapped_column(Boolean, default=True)

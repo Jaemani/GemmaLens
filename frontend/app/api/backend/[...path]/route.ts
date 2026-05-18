@@ -1,59 +1,52 @@
 import { NextRequest } from "next/server";
 
-const BACKEND_INTERNAL_URL =
-  process.env.BACKEND_INTERNAL_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "http://127.0.0.1:8012";
+const BACKEND_BASE =
+  process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8012";
+const BACKEND_API_KEY = process.env.GEMMALENS_API_KEY ?? process.env.NEXT_PUBLIC_GEMMALENS_API_KEY;
 
 type RouteContext = {
   params: Promise<{ path: string[] }>;
 };
 
-export async function GET(request: NextRequest, context: RouteContext) {
-  return proxy(request, context);
+function backendUrl(path: string[], requestUrl: string) {
+  const incoming = new URL(requestUrl);
+  const target = new URL(path.join("/"), `${BACKEND_BASE.replace(/\/$/, "")}/`);
+  target.search = incoming.search;
+  return target;
 }
 
-export async function POST(request: NextRequest, context: RouteContext) {
-  return proxy(request, context);
-}
-
-export async function PATCH(request: NextRequest, context: RouteContext) {
-  return proxy(request, context);
-}
-
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  return proxy(request, context);
+function forwardedHeaders(request: NextRequest) {
+  const headers = new Headers();
+  const contentType = request.headers.get("content-type");
+  const accept = request.headers.get("accept");
+  const range = request.headers.get("range");
+  if (contentType) headers.set("content-type", contentType);
+  if (accept) headers.set("accept", accept);
+  if (range) headers.set("range", range);
+  if (BACKEND_API_KEY) headers.set("x-gemmalens-api-key", BACKEND_API_KEY);
+  return headers;
 }
 
 async function proxy(request: NextRequest, context: RouteContext) {
   const { path } = await context.params;
-  const target = new URL(path.join("/"), BACKEND_INTERNAL_URL.endsWith("/") ? BACKEND_INTERNAL_URL : `${BACKEND_INTERNAL_URL}/`);
-  target.search = request.nextUrl.search;
-
-  const headers = new Headers(request.headers);
-  headers.delete("host");
-  headers.delete("content-length");
-  headers.delete("connection");
-
-  let response: Response;
-  try {
-    response = await fetch(target, {
-      method: request.method,
-      headers,
-      body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
-      duplex: "half",
-      cache: "no-store"
-    } as RequestInit & { duplex: "half" });
-  } catch {
-    return Response.json(
-      { detail: `Backend is not reachable at ${BACKEND_INTERNAL_URL}. Start it with ./scripts/run_local_stack.sh.` },
-      { status: 502 }
-    );
-  }
-
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers
+  const method = request.method;
+  const response = await fetch(backendUrl(path, request.url), {
+    method,
+    headers: forwardedHeaders(request),
+    body: method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer(),
+    cache: "no-store"
   });
+
+  const headers = new Headers();
+  for (const key of ["content-type", "content-disposition", "content-length", "content-range", "accept-ranges"]) {
+    const value = response.headers.get(key);
+    if (value) headers.set(key, value);
+  }
+  return new Response(response.body, { status: response.status, headers });
 }
+
+export const GET = proxy;
+export const POST = proxy;
+export const PATCH = proxy;
+export const PUT = proxy;
+export const DELETE = proxy;

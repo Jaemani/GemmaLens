@@ -69,7 +69,7 @@ def run_probe(base_url: str, model: str, prompt: str, max_tokens: int, timeout: 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Monitor Gemma 4 server health, active model, and simple I/O speed.")
-    parser.add_argument("--base-url", default="http://PRIVATE-GEMMA-SERVER:11444")
+    parser.add_argument("--base-url", default="http://127.0.0.1:11444")
     parser.add_argument("--model", default="e2b", choices=["e2b", "e4b"])
     parser.add_argument("--interval", type=float, default=5)
     parser.add_argument("--timeout", type=float, default=120)

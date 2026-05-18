@@ -1,16 +1,108 @@
-# GemmaLens
+<p align="center">
+  <img src="./frontend/public/gemmalens_icon.png" alt="GemmaLens icon" width="96" height="96" />
+</p>
 
-GemmaLens: Multimodal Language Learning from Any Content.
+<h1 align="center">GemmaLens</h1>
 
-Local-first learning harness for turning documents, transcripts, and short passages into personalized language-learning objects with Gemma.
+<p align="center">
+  A local-first academic reading coach powered by Gemma.
+</p>
 
-## Stack
+<p align="center">
+  <strong>Translation helps with this sentence. GemmaLens helps you read the next one.</strong>
+</p>
 
-- Backend: FastAPI, Pydantic, SQLAlchemy, SQLite, Uvicorn
-- Frontend: Next.js, TypeScript, Tailwind CSS
-- Model layer: provider-neutral adapter with MLX local runtime, Ollama scaffold, and demo-only mock mode
+---
 
-## Run Backend
+## What It Does
+
+GemmaLens turns real learning sources into source-grounded study material:
+
+- academic PDFs and papers
+- technical documents and reports
+- local videos with SRT/VTT subtitles
+- public videos with available transcripts
+
+Instead of replacing reading with a summary, GemmaLens keeps the source visible and builds learning objects beside it:
+
+- key ideas
+- technical vocabulary
+- reusable academic phrases
+- difficult sentence patterns
+- paper maps
+- saved review items
+
+The first user is a non-native English-speaking student or researcher who needs to read papers, lectures, documentation, and technical material with more durable support than one-off translation.
+
+## Why Gemma
+
+GemmaLens is designed around small, local, incremental jobs:
+
+```txt
+source -> sections or subtitle windows -> Gemma analysis -> learning objects -> saved review
+```
+
+That shape fits Gemma well:
+
+- E2B can provide fast glosses and live subtitle cues.
+- E4B gives stronger local phrase and sentence analysis.
+- Larger Gemma routes can be used for deeper paper maps and recaps.
+- The same workflow can run locally, on a private edge backend, or in a low-connectivity setting.
+
+The product goal is not a chatbot. It is a reading workspace where Gemma prepares the next useful lesson while the learner keeps reading.
+
+## Core Workflows
+
+### Paper Reading
+
+1. Upload a PDF, DOCX, Markdown, or text file.
+2. GemmaLens opens the first readable page or section quickly.
+3. Remaining sections prepare in the background.
+4. The learner reads the original source beside structured notes.
+5. Paper map, key ideas, vocabulary, phrases, and sentence patterns grow from analyzed sections.
+
+### Video Study
+
+1. Load a local video or a public video transcript.
+2. Attach or fetch English subtitles.
+3. The subtitle timeline follows playback.
+4. GemmaLens surfaces live cues, scene lessons, and watched-part recaps.
+5. The learner can save terms, concepts, and spoken expressions to the library.
+
+### Review
+
+Saved terms, phrases, concepts, and sentence patterns become reviewable items. Quiz prompts are generated from current saved sources and local drafts, not from a permanent backend quiz table.
+
+## Architecture
+
+```txt
+frontend/
+  Next.js + TypeScript + Tailwind
+  document reader, video workspace, library, settings, guide
+
+backend/
+  FastAPI + Pydantic + SQLAlchemy + SQLite
+  ingestion, sectioning, model adapters, normalization, dictionary
+
+model layer/
+  provider-neutral adapter
+  MLX local Gemma route
+  Ollama scaffold
+  remote/private Gemma route
+  mock mode for UI and CI smoke tests
+```
+
+Important design constraints:
+
+- Prompts do not live in route handlers.
+- Model output is normalized into structured objects.
+- Source sentences remain attached to learning objects.
+- Local/private routes are preferred for sensitive documents.
+- Demo mode is explicit and separate from real model behavior.
+
+## Quick Start
+
+### 1. Backend
 
 ```bash
 cd backend
@@ -20,9 +112,13 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8012
 ```
 
-Backend API: `http://127.0.0.1:8012`
+Backend health check:
 
-## Run Frontend
+```bash
+curl http://localhost:8012/health
+```
+
+### 2. Frontend
 
 ```bash
 cd frontend
@@ -30,39 +126,81 @@ npm install
 npm run dev
 ```
 
-Frontend app: `http://localhost:3000`
+Open:
 
-Set `BACKEND_INTERNAL_URL=http://127.0.0.1:8012` or `NEXT_PUBLIC_API_BASE_URL` if the backend runs elsewhere.
+```txt
+http://localhost:3000
+```
 
-## Run Local Demo Stack
+If the backend is not on `localhost:8012`, set one of:
 
-For phone/team testing on the local network, use the fixed demo ports:
+```bash
+BACKEND_INTERNAL_URL=http://localhost:8012
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8012
+```
+
+### 3. Local Demo Stack
+
+For the fixed local demo ports:
 
 ```bash
 ./scripts/run_local_stack.sh
 ```
 
-This starts:
+Default local demo ports:
 
-- Backend: `http://127.0.0.1:8012`
-- Frontend: `http://localhost:3003`
+- backend: `http://localhost:8012`
+- frontend: `http://localhost:3003`
 
-The frontend uses a same-origin `/api/backend/*` proxy for private/local backend URLs. This avoids browser CORS and changed-IP failures when testing from Samsung Internet or another device on the same network.
+The frontend proxies browser requests through `/api/backend/*`, so a Vercel or local frontend can call a private backend without exposing backend keys to the browser.
 
-The local stack uses Next.js webpack dev mode for stability. Turbopack previously caused repeated dev-server panics and browser refresh loops in this project.
+## Optional Gemma MLX Runtime
 
-If the frontend is running but upload shows `Backend is not reachable at http://127.0.0.1:8012`, the backend process is down while the Next.js app is still alive. Restart the stack with `./scripts/run_local_stack.sh`, or start the backend on port `8012` before uploading.
-
-## Smoke Test
+For Apple Silicon:
 
 ```bash
-curl http://127.0.0.1:8012/health
-curl -X POST http://127.0.0.1:8012/documents \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Demo","content":"Although previous studies have suggested a correlation between sleep deprivation and reduced cognitive performance, the extent to which these findings generalize across real-world learning environments remains unclear. To address this gap, we analyze longitudinal study logs collected from undergraduate students over a six-week period.","source_type":"text"}'
+./scripts/download_gemma4_mlx.sh
+./scripts/setup_backend_mlx.sh
+./scripts/run_backend_mlx.sh
 ```
 
-## Test
+The model adapter can be switched through the app model card or the backend model config endpoint.
+
+For quick local model validation:
+
+```bash
+backend/.venv-mlx/bin/python scripts/local_model_smoke.py --provider mlx --preset gemma4-e4b-mlx
+```
+
+For a small fixed benchmark:
+
+```bash
+backend/.venv-mlx/bin/python scripts/model_benchmark.py
+```
+
+## Public Demo Deployment
+
+Recommended deployment shape:
+
+```txt
+Vercel frontend
+  -> /api/backend proxy
+  -> private/local FastAPI backend
+  -> local or edge Gemma runtime
+```
+
+Use a server-side backend URL and API key:
+
+```txt
+BACKEND_INTERNAL_URL=https://your-backend.example
+GEMMALENS_API_KEY=...
+```
+
+The browser should not receive private backend keys. See `docs/DEPLOYMENT.md` for setup notes.
+
+## Testing
+
+Backend:
 
 ```bash
 cd backend
@@ -71,88 +209,42 @@ ruff check app tests
 pytest
 ```
 
-Uploads support `.txt`, `.md`, `.markdown`, `.docx`, and basic text-extractable `.pdf` files through `POST /documents/upload`. Legacy `.doc` files should be exported to `.docx`, `.pdf`, or `.txt` first. Scanned/image-only PDFs need OCR before GemmaLens can analyze them.
-Uploaded originals are stored locally so PDF uploads can be opened through `GET /documents/{id}/file` and rendered in the analysis workspace. Existing documents created before this storage change will not have an original file attached.
-For existing demo documents, attach the original source later with `POST /documents/{id}/file`; the document id and existing analysis can remain in place.
-
-## Prototype Scope
-
-This slice supports pasted text or uploaded text/markdown/DOCX/PDF files, local structured document analysis, transcript learning, learning-library saves, short model-backed translation, and quiz draft generation. Mock/demo content is only shown when `NEXT_PUBLIC_DEMO_MODE=true`. Long PDFs open directly into a source-aware section workspace; GemmaLens shows the first page/section first, then prepares remaining section lessons in the background when the setting is enabled.
-
-## Optional Gemma 4 MLX Runtime
-
-For Apple Silicon, use the MLX path. The recommended small local model is:
-
-```txt
-mlx-community/gemma-4-e4b-it-bf16
-```
-
-Download model weights:
+Frontend:
 
 ```bash
-./scripts/download_gemma4_mlx.sh
+cd frontend
+npm run build
 ```
 
-Install MLX backend env with Python 3.12:
+## Demo Sources
 
-```bash
-./scripts/setup_backend_mlx.sh
-```
+For a clean public demo, use sources with clear redistribution or public-access terms:
 
-Run backend with MLX provider:
+- public academic papers
+- open course lecture videos
+- local SRT/VTT subtitle files
+- short excerpts where rights are clear
 
-```bash
-./scripts/run_backend_mlx.sh
-```
+Do not commit downloaded copyrighted movies, private PDFs, transcripts with unclear redistribution rights, local databases, model weights, or user-specific runtime files.
 
-Local MLX failures return explicit errors. Mock output is reserved for demo/deployment UI testing via `APP_DEMO_MODE=true`.
+## Repository Notes
 
-The default E4B preset uses the full-precision MLX bf16 conversion at `~/Models/mlx/gemma-4-e4b-it-bf16`.
+This repository intentionally does not include:
 
-## Optional Remote Gemma Runtime
+- Gemma model weights
+- local SQLite databases
+- private PDFs or videos
+- generated local runtime config
+- browser-local quiz drafts
+- agent workspace files
 
-GemmaLens can also route model calls to a LAN/Tailscale Gemma server when the local GPU is busy. The current tested server is:
+Useful docs:
 
-```txt
-http://PRIVATE-GEMMA-SERVER:11444
-```
+- `docs/DEPLOYMENT.md`
+- `docs/TECHNICAL_REPORT.md`
+- `docs/VIDEO_LEARNING_STRATEGY.md`
+- `docs/RECENT_PRODUCT_CHANGELOG.md`
 
-Available presets:
+## License
 
-- `Gemma 4 E2B (ThinkPad fp16)`
-- `Gemma 4 E2B (ThinkPad Q4)`
-- `Gemma 4 E4B (ThinkPad fp16)`
-
-Select the preset from the dashboard model card under `Change model`, or call:
-
-```bash
-curl -X POST http://127.0.0.1:8012/models/config \
-  -H "Content-Type: application/json" \
-  -d '{"preset_id":"gemma4-e2b-thinkpad"}'
-```
-
-The backend reads the remote server from `REMOTE_GEMMA_BASE_URL`. `scripts/run_local_stack.sh` defaults that variable to the current ThinkPad Tailscale server for local testing.
-
-For fast functional testing, prefer the Q4 preset. It uses the ThinkPad llama.cpp server on `http://PRIVATE-GEMMA-SERVER:11445` and leaves the fp16 server on `:11444` untouched.
-
-The Q4 route uses an atomic analysis path: separate small calls for learning terms, phrases, and sentence explanation, followed by parser/validator cleanup and source-grounded fallback. This is the recommended path for CPU or mobile-class edge testing.
-
-Run one local model smoke test and save normalized JSON:
-
-```bash
-backend/.venv-mlx/bin/python scripts/local_model_smoke.py --provider mlx --preset gemma4-e4b-mlx
-```
-
-Output is written to `tmp/local_model_smoke.json`.
-
-Run a local E2B/E4B benchmark over fixed samples:
-
-```bash
-backend/.venv-mlx/bin/python scripts/model_benchmark.py
-```
-
-Benchmark summaries are written to `tmp/model_benchmark/summary.json` and `tmp/model_benchmark/summary.csv`.
-
-## Technical Report
-
-See `docs/TECHNICAL_REPORT.md` for architecture, competition-rule checklist, current limitations, and recommended learning-method design.
+Add the final project license before public submission.

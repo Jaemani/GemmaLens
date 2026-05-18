@@ -27,8 +27,9 @@ class OllamaAdapter(ModelAdapter):
         support_language: str = "Korean",
         learning_language: str = "English",
         target_level: str | None = None,
+        source_type: str | None = None,
     ) -> AnalysisResult:
-        prompt = self._build_prompt(document_id, text, support_language, learning_language, target_level)
+        prompt = self._build_prompt(document_id, text, support_language, learning_language, target_level, source_type)
         for _ in range(2):
             try:
                 async with httpx.AsyncClient(timeout=45) as client:
@@ -48,13 +49,17 @@ class OllamaAdapter(ModelAdapter):
                     return AnalysisResult.model_validate(payload)
             except (httpx.HTTPError, json.JSONDecodeError, ValidationError) as exc:
                 logger.warning("Ollama analysis failed, retrying/falling back: %s", exc)
-        return await self.fallback.analyze_document(document_id, text, chunks, support_language, learning_language, target_level)
+        return await self.fallback.analyze_document(document_id, text, chunks, support_language, learning_language, target_level, source_type)
 
-    def _build_prompt(self, document_id: str, text: str, support_language: str, learning_language: str, target_level: str | None = None) -> str:
+    def _build_prompt(self, document_id: str, text: str, support_language: str, learning_language: str, target_level: str | None = None, source_type: str | None = None) -> str:
         level_note = f"Target learner level: {target_level}. " if target_level and target_level != "unknown" else ""
+        mode_note = ""
+        if source_type in {"video_segment", "transcript"}:
+            mode_note = "This is video subtitle text. Focus on spoken expressions, listening support, field terms, and reusable sentence patterns. Ignore subtitle boilerplate. "
         return (
             "Analyze this academic text for language learning. Return only valid JSON "
             "matching fields: document_id, domain, difficulty, terms, phrases, sentences, summaries. "
+            f"{mode_note}"
             f"{level_note}"
             f"For terms, include support_language_meaning in {support_language}. "
             f"For phrases, include support_language_explanation in {support_language}. "
