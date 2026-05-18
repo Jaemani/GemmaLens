@@ -77,22 +77,20 @@ class RemoteGemmaAdapter(ModelAdapter):
             fallback={"phrases": self._fallback_phrases(task_text)},
         )
         concepts = (
-            {"concepts": self._fallback_concepts(task_text, terms.get("terms", []))}
+            {"concepts": []}
             if self._is_q4_remote()
             else await self._json_task(
                 "concepts",
-                self._concepts_prompt(task_text, target_level, mode_note),
+                self._concepts_prompt(task_text, support_language, learning_language, target_level, mode_note),
                 max_tokens=self._task_budget("concepts"),
-                fallback={"concepts": self._fallback_concepts(task_text, terms.get("terms", []))},
+                fallback={"concepts": []},
             )
         )
         sentences = await self._json_task("sentences", self._sentences_prompt(task_text, target_level, mode_note), max_tokens=self._task_budget("sentences"), fallback={"sentences": []})
-        if self._is_q4_remote() or len(terms.get("terms", [])) < 2:
+        if self._is_q4_remote() and len(terms.get("terms", [])) < 2:
             terms["terms"] = [*terms.get("terms", []), *self._fallback_terms(task_text)]
-        if self._is_q4_remote() or len(phrases.get("phrases", [])) < 2:
+        if self._is_q4_remote() and len(phrases.get("phrases", [])) < 2:
             phrases["phrases"] = [*phrases.get("phrases", []), *self._fallback_phrases(task_text)]
-        if not concepts.get("concepts"):
-            concepts["concepts"] = self._fallback_concepts(task_text, terms.get("terms", []))
         return {
             "document_id": document_id,
             "domain": meta.get("domain", {}),
@@ -444,12 +442,12 @@ class RemoteGemmaAdapter(ModelAdapter):
     def _level_guidance(self, target_level: str | None) -> str:
         level = (target_level or "unknown").upper()
         if level in {"B1", "B2"}:
-            coverage = "most academic vocabulary" if level == "B1" else "all field-specific and higher academic vocabulary"
+            coverage = "core academic vocabulary" if level == "B1" else "field-specific and higher academic vocabulary"
             return (
-                f"Target learner level: {level}. Include {coverage} that this learner would not know — be comprehensive, not selective. "
-                "Include domain terms, academic collocations, and multi-word expressions. "
-                "Only skip truly basic everyday words that any adult speaker would know. "
-                "Use plain support-language glosses."
+                f"Target learner level: {level}. Select {coverage} that this learner is likely to need for this section. "
+                "Choose by learning value and source relevance, not by filling a target range. "
+                "Prefer domain terms, report/research methodology terms, statistical concepts, academic collocations, and multi-word expressions. "
+                "Skip basic everyday words and PDF boilerplate. Use plain support-language glosses."
             )
         if level in {"C1", "C2"}:
             return (
@@ -467,30 +465,32 @@ class RemoteGemmaAdapter(ModelAdapter):
 
     def _terms_count(self, target_level: str | None) -> str:
         return {
-            "B1": "at least 12",
-            "B2": "at least 10",
-            "C1": "at least 6",
-            "C2": "at least 4",
-        }.get((target_level or "").upper(), "at least 8")
+            "B1": "roughly 8 to 12 if the section has enough real learning signal",
+            "B2": "roughly 7 to 10 if the section has enough real learning signal",
+            "C1": "roughly 5 to 7 if the section has enough real learning signal",
+            "C2": "roughly 3 to 5 if the section has enough real learning signal",
+        }.get((target_level or "").upper(), "roughly 6 to 8 if the section has enough real learning signal")
 
     def _phrases_count(self, target_level: str | None) -> str:
         return {
-            "B1": "at least 6",
-            "B2": "at least 5",
-            "C1": "at least 4",
-            "C2": "at least 3",
-        }.get((target_level or "").upper(), "at least 4")
+            "B1": "roughly 4 to 6 if available",
+            "B2": "roughly 4 to 5 if available",
+            "C1": "roughly 3 to 4 if available",
+            "C2": "roughly 2 to 3 if available",
+        }.get((target_level or "").upper(), "roughly 3 to 4 if available")
 
     def _terms_prompt(self, text: str, support_language: str = "Korean", learning_language: str = "English", target_level: str | None = None, mode_note: str = "") -> str:
         return (
             f"Atomic task: extract {self._terms_count(target_level)} important learning terms from SOURCE. "
             f"{mode_note} "
             f"{self._level_guidance(target_level)} "
+            "Return fewer terms when the page is sparse, boilerplate, a table of contents, a questionnaire, or mostly metadata. Never pad with random words. "
             "Return only JSON with key terms. terms must be an array. "
             "Each term object must include: term, meaning, support_language_meaning, domain_relevance, difficulty, source_sentence, should_save, learning_priority, reason, confidence. "
             f"meaning must be a concise {learning_language} context meaning. support_language_meaning must be a concise {support_language} learner gloss. "
             "The term text must literally appear in SOURCE. The source_sentence must be copied from SOURCE. "
-            "Prefer field terms and high-value unknown words. Do not invent terms. Do not use placeholder values.\n\n"
+            "Prefer field terms and high-value unknown words. Reject generic words such as section, source, figure, table, page, note, report, study, participant, value, item, data, result, and generic organization names unless the source teaches a technical meaning. "
+            "Do not invent terms. Do not use placeholder values.\n\n"
             f"SOURCE:\n{text}"
         )
 
@@ -499,7 +499,9 @@ class RemoteGemmaAdapter(ModelAdapter):
             f"Atomic task: extract {self._phrases_count(target_level)} reusable academic or technical phrases from SOURCE. "
             f"{mode_note} "
             f"{self._level_guidance(target_level)} "
+            "Return fewer phrases when the section has fewer real reusable expressions. Never pad with generic fragments. "
             "For C1-C2, prefer phrases that express contrast, limitation, method, result claims, or argument positioning. "
+            "Reject weak phrases such as 'similarly to', 'based on', 'in addition to', 'as a result', and copied sentence fragments. "
             "Return only JSON with key phrases. phrases must be an array. "
             "Each phrase object must include: phrase, function, explanation, support_language_explanation, source_sentence, learning_priority, reason, confidence. "
             f"explanation must be a concise {learning_language} explanation. support_language_explanation must be a concise {support_language} learner gloss for how the phrase works. "
@@ -513,21 +515,24 @@ class RemoteGemmaAdapter(ModelAdapter):
             "Atomic task: choose 1 to 2 difficult sentences from SOURCE and explain their structure for a language learner. "
             f"{mode_note} "
             f"{self._level_guidance(target_level)} "
+            "The core_structure must be a reusable pattern with placeholders and rhetorical function, not a generic label like 'main claim + detail'. "
             "Return only JSON with key sentences. sentences must be an array. "
             "Each object must include: sentence, core_structure, simplified_version, korean_explanation, difficulty_reason. "
             "The sentence must be copied exactly from SOURCE. Keep explanations concise.\n\n"
             f"SOURCE:\n{text}"
         )
 
-    def _concepts_prompt(self, text: str, target_level: str | None = None, mode_note: str = "") -> str:
+    def _concepts_prompt(self, text: str, support_language: str = "Korean", learning_language: str = "English", target_level: str | None = None, mode_note: str = "") -> str:
         return (
-            "Atomic task: extract 2 to 4 source-grounded concepts from SOURCE for paper reading. "
+            "Atomic task: extract roughly 2 to 5 source-grounded ideas/concepts from SOURCE for paper reading, only when the section has real conceptual signal. "
             f"{mode_note} "
             f"{self._level_guidance(target_level)} "
-            "Concepts are ideas the reader must understand, not just dictionary words. "
+            "Concepts are ideas, methods, claims, mechanisms, or argument moves the reader must understand; they are not vocabulary duplicates. "
+            "Good concept labels look like short ideas, not bare vocabulary terms. "
             "Return only JSON with key concepts. concepts must be an array. "
-            "Each concept object must include: concept, explanation, source_sentence, related_terms, why_it_matters, references, learning_priority, confidence. "
-            "The concept text must literally appear in SOURCE. The source_sentence must be copied from SOURCE. "
-            "references should include citation markers from the source_sentence if present, otherwise an empty array. Do not invent concepts.\n\n"
+            "Each concept object must include: concept, explanation, support_language_explanation, source_sentence, related_terms, why_it_matters, references, learning_priority, confidence. "
+            f"explanation must be a concise {learning_language} explanation. support_language_explanation must be a concise {support_language} learner gloss. "
+            "The concept should be grounded in SOURCE, and source_sentence must be copied from SOURCE. "
+            "references should include citation markers from the source_sentence if present, otherwise an empty array. Do not invent concepts and do not copy the terms list.\n\n"
             f"SOURCE:\n{text}"
         )

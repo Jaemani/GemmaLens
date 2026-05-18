@@ -44,8 +44,10 @@ class AnalysisNormalizationService:
             document_text,
             support_language=support_language,
         )
+        phrases = self._filter_weak_generic_phrases(phrases)
         terms = self._merge_learning_rows(self._heuristic_terms(document_text), terms, "term", limit=14)
         phrases = self._merge_learning_rows(phrases, self._heuristic_phrases(document_text), "phrase", limit=12)
+        phrases = self._filter_weak_generic_phrases(phrases)
         if self._is_bert_text(document_text):
             terms = self._filter_bert_learning_rows(terms, "term")
             phrases = self._filter_bert_learning_rows(phrases, "phrase")
@@ -484,10 +486,9 @@ class AnalysisNormalizationService:
                 limit=12,
             )
             phrases_changed = True
-        normalized["terms"] = self._calibrate_term_rows(existing_terms, (target_level or "").upper()) if terms_changed else existing_terms
-        normalized["phrases"] = (
-            self._calibrate_phrase_rows(existing_phrases, (target_level or "").upper()) if phrases_changed else existing_phrases
-        )
+        level = (target_level or "").upper()
+        normalized["terms"] = self._calibrate_term_rows(existing_terms, level) if terms_changed else existing_terms
+        normalized["phrases"] = self._calibrate_phrase_rows(existing_phrases, level) if phrases_changed else existing_phrases
         return normalized
 
     def _source_grounded_term_backfill(self, document_text: str) -> list[dict[str, Any]]:
@@ -578,6 +579,24 @@ class AnalysisNormalizationService:
                 }
             )
         return rows
+
+    def _filter_weak_generic_phrases(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        weak = {
+            "similarly to",
+            "based on",
+            "in addition to",
+            "for example",
+            "such as",
+            "this section",
+            "in this section",
+        }
+        filtered: list[dict[str, Any]] = []
+        for row in rows:
+            phrase = str(row.get("phrase") or "").strip().lower()
+            if phrase in weak:
+                continue
+            filtered.append(row)
+        return filtered
 
     def _source_grounded_phrase_backfill(self, document_text: str) -> list[dict[str, Any]]:
         phrase_specs = [
@@ -1117,7 +1136,13 @@ class AnalysisNormalizationService:
             concept = self._clean_learning_term(str(row.get("concept") or row.get("name") or row.get("text") or ""))
             if not concept or concept.lower() in {"string", "concept", "actual concept"}:
                 continue
-            if not self._appears_in_text(concept, document_text):
+            raw_source_sentence = normalize_pdf_ligatures(str(row.get("source_sentence") or "")).strip()
+            concept_appears = self._appears_in_text(concept, document_text)
+            source_appears = bool(raw_source_sentence and self._appears_in_text(raw_source_sentence, document_text))
+            if not concept_appears and not source_appears:
+                continue
+            source_sentence = self._source_sentence(raw_source_sentence if source_appears else None, concept, document_text)
+            if not source_sentence:
                 continue
             key = concept.lower()
             if key in seen:
@@ -1127,7 +1152,6 @@ class AnalysisNormalizationService:
             support_explanation = normalize_pdf_ligatures(
                 str(row.get("support_language_explanation") or row.get("native_explanation") or "")
             ).strip()
-            source_sentence = self._source_sentence(row.get("source_sentence"), concept, document_text)
             if not self._is_valid_support_language_gloss(support_explanation, support_language):
                 support_explanation = self._support_language_gloss(concept, explanation, support_language, kind="concept")
             concepts.append(
@@ -1148,7 +1172,7 @@ class AnalysisNormalizationService:
             )
         if concepts:
             return concepts[:8]
-        return self._fallback_concepts(document_text, terms, support_language)
+        return []
 
     def _fallback_concepts(self, document_text: str, terms: list[dict[str, Any]], support_language: str) -> list[dict[str, Any]]:
         concepts: list[dict[str, Any]] = []
@@ -4044,6 +4068,11 @@ class AnalysisNormalizationService:
                     "This is related-work background, not the main ResNet block itself.",
                 ),
                 (
+                    "residual vectors",
+                    "Vector differences represented relative to an original vector or coarser solution.",
+                    "This connects the related-work examples to the broader residual-representation idea.",
+                ),
+                (
                     "shortcut connections",
                     "A long-studied connection pattern that passes information across layers.",
                     "This related-work section explains ResNet's architectural ancestry.",
@@ -5680,15 +5709,31 @@ class AnalysisNormalizationService:
         if rows:
             return rows[:4]
         first = self._sentences_from_text(document_text)[0] if document_text.strip() else ""
+        if not first:
+            return []
         return [
             {
                 "sentence": first,
-                "core_structure": "Main claim + explanation.",
+                "core_structure": self._fallback_core_structure(first),
                 "simplified_version": first,
-                "korean_explanation": "이 문장은 핵심 주장과 설명을 함께 담고 있습니다.",
-                "difficulty_reason": "Fallback sentence selected because no stronger structure marker was detected.",
+                "korean_explanation": "이 문장은 핵심 정보와 설명 정보를 한 문장 안에 함께 압축합니다.",
+                "difficulty_reason": "Fallback pattern selected because no stronger source-specific structure marker was detected.",
             }
         ]
+
+    def _fallback_core_structure(self, sentence: str) -> str:
+        lowered = sentence.lower()
+        if lowered.startswith("although "):
+            return "Although X, Y."
+        if lowered.startswith("to "):
+            return "To do X, the author explains Y."
+        if " because " in lowered:
+            return "X happens because Y."
+        if " while " in lowered:
+            return "X happens while Y provides contrast or background."
+        if " with " in lowered:
+            return "X is stated with Y as supporting detail."
+        return "Subject + key claim + supporting detail."
 
     def _heuristic_summaries(self, document_text: str) -> dict[str, Any]:
         lower = document_text.lower()

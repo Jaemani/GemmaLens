@@ -607,15 +607,12 @@ export function SectionLessonCard({
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"terms" | "phrases" | "patterns" | "ideas">("terms");
-  const concepts = dedupeByText(analysis.concepts ?? [], (concept) => concept.concept).slice(0, 4);
-  const conceptNames = new Set(concepts.map((concept) => normalizeItemText(concept.concept)));
-  const terms = dedupeByText(
-    analysis.terms.filter((term) => !conceptNames.has(normalizeItemText(term.term))),
-    (term) => term.term
-  ).slice(0, 6);
+  const concepts = dedupeByText(analysis.concepts ?? [], (concept) => concept.concept).slice(0, 5);
+  const terms = dedupeByText(analysis.terms, (term) => term.term).slice(0, 8);
   const phrases = dedupeByText(analysis.phrases.filter((phrase) => isUsefulExpression(phrase.phrase)), (phrase) => phrase.phrase).slice(0, 5);
   const studyNotes = analysis.summaries.study_notes.slice(0, 3);
-  const firstSentence = analysis.sentences[0];
+  const sentencePatterns = dedupeByText(analysis.sentences, (sentence) => sentence.core_structure || sentence.sentence).slice(0, 3);
+  const firstSentence = sentencePatterns[0];
   const wrapperClass = embedded
     ? "border-t border-line"
     : "rounded-lg border border-line bg-panel shadow-material";
@@ -637,7 +634,7 @@ export function SectionLessonCard({
   const tabs: { id: typeof activeTab; label: string; count: number }[] = [
     { id: "terms", label: "Terms", count: terms.length },
     { id: "phrases", label: "Phrases", count: phrases.length },
-    { id: "patterns", label: "Patterns", count: firstSentence ? 1 : 0 },
+    { id: "patterns", label: "Patterns", count: sentencePatterns.length },
     { id: "ideas", label: "Ideas", count: concepts.length },
   ];
 
@@ -721,46 +718,49 @@ export function SectionLessonCard({
           />
         ) : null}
         {activeTab === "patterns" ? (
-          firstSentence ? (
-            <div className="rounded-md border border-line bg-surface p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1 space-y-2">
-                  <p className="text-sm font-semibold text-ink">{firstSentence.core_structure}</p>
-                  <p className="text-sm leading-6 text-neutral-700">{stripFiller(firstSentence.simplified_version)}</p>
-                  {firstSentence.korean_explanation ? (
-                    <p className="text-sm leading-6 text-blue-700">{firstSentence.korean_explanation}</p>
-                  ) : null}
-                  {firstSentence.sentence ? (
-                    <p className="border-l-2 border-blue-200 pl-3 text-xs leading-5 text-neutral-500">
-                      {truncateText(firstSentence.sentence, 320)}
-                    </p>
-                  ) : null}
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    saveItem({
-                      item_type: "sentence",
-                      text: firstSentence.core_structure,
-                      meaning: [
-                        stripFiller(firstSentence.simplified_version),
-                        firstSentence.korean_explanation,
-                        firstSentence.difficulty_reason
-                      ].filter(Boolean).join(" "),
-                      source_sentence: firstSentence.sentence
-                    })
-                  }
-                  disabled={saved.has(`sentence:${firstSentence.core_structure}`) || saving === `sentence:${firstSentence.core_structure}`}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:text-green-700"
-                >
-                  {saved.has(`sentence:${firstSentence.core_structure}`) ? <CheckCircle2 size={12} /> : <BookmarkPlus size={12} />}
-                  {saved.has(`sentence:${firstSentence.core_structure}`)
-                    ? "Saved"
-                    : saving === `sentence:${firstSentence.core_structure}`
-                      ? "…"
-                      : "Save"}
-                </button>
-              </div>
+          sentencePatterns.length ? (
+            <div className="space-y-3">
+              {sentencePatterns.map((sentence) => {
+                const key = `sentence:${sentence.core_structure}`;
+                return (
+                  <div key={`${sentence.core_structure}:${sentence.sentence}`} className="rounded-md border border-line bg-surface p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <p className="text-sm font-semibold text-ink">{sentence.core_structure}</p>
+                        <p className="text-sm leading-6 text-neutral-700">{stripFiller(sentence.simplified_version)}</p>
+                        {sentence.korean_explanation ? (
+                          <p className="text-sm leading-6 text-blue-700">{sentence.korean_explanation}</p>
+                        ) : null}
+                        {sentence.sentence ? (
+                          <p className="border-l-2 border-blue-200 pl-3 text-xs leading-5 text-neutral-500">
+                            {truncateText(sentence.sentence, 320)}
+                          </p>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          saveItem({
+                            item_type: "sentence",
+                            text: sentence.core_structure,
+                            meaning: [
+                              stripFiller(sentence.simplified_version),
+                              sentence.korean_explanation,
+                              sentence.difficulty_reason
+                            ].filter(Boolean).join(" "),
+                            source_sentence: sentence.sentence
+                          })
+                        }
+                        disabled={saved.has(key) || saving === key}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-semibold text-ink hover:bg-white disabled:text-green-700"
+                      >
+                        {saved.has(key) ? <CheckCircle2 size={12} /> : <BookmarkPlus size={12} />}
+                        {saved.has(key) ? "Saved" : saving === key ? "…" : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-neutral-500">No sentence patterns found for this section.</p>
