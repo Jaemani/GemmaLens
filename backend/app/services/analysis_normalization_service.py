@@ -293,6 +293,7 @@ class AnalysisNormalizationService:
         normalized = self._ensure_minimum_learning_signal(normalized, document_text, support_language, target_level)
         normalized["terms"] = self._with_support_language_glosses(normalized["terms"], support_language, "term")
         normalized["phrases"] = self._with_support_language_glosses(normalized["phrases"], support_language, "phrase")
+        normalized["concepts"] = self._with_support_concept_glosses(normalized["concepts"], support_language)
         normalized = self._apply_quality_eval_guardrails(normalized, document_text, support_language, source_type)
         result = AnalysisResult.model_validate(normalized)
         warnings = [*result.quality_warnings, *self.quality.inspect(result, document_text)]
@@ -1066,6 +1067,21 @@ class AnalysisNormalizationService:
                     str(row.get(meaning_key) or ""),
                     support_language,
                     kind,
+                )
+            updated.append(row)
+        return updated
+
+    def _with_support_concept_glosses(self, rows: list[dict[str, Any]], support_language: str) -> list[dict[str, Any]]:
+        updated: list[dict[str, Any]] = []
+        for row in rows:
+            row = dict(row)
+            support = str(row.get("support_language_explanation") or row.get("native_explanation") or "")
+            if not self._is_valid_support_language_gloss(support, support_language):
+                row["support_language_explanation"] = self._support_language_gloss(
+                    str(row.get("concept") or ""),
+                    str(row.get("explanation") or row.get("why_it_matters") or ""),
+                    support_language,
+                    "concept",
                 )
             updated.append(row)
         return updated

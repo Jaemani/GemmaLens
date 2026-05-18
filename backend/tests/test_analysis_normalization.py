@@ -271,6 +271,23 @@ def test_normalizer_keeps_source_grounded_concepts():
     assert result.concepts[0].source_sentence.startswith("Although previous studies")
 
 
+def test_normalizer_adds_korean_fallback_for_concepts_without_native_gloss():
+    payload = {
+        "concepts": [
+            {
+                "concept": "cognitive performance",
+                "explanation": "Mental task performance used as the outcome in the study.",
+                "source_sentence": "Although previous studies have suggested a correlation between sleep deprivation and reduced cognitive performance, the extent to which these findings generalize across real-world learning environments remains unclear.",
+            }
+        ],
+    }
+
+    result = AnalysisNormalizationService().normalize_payload(payload, "doc-5b", DOCUMENT_TEXT, support_language="Korean")
+
+    assert result.concepts[0].support_language_explanation.startswith("핵심 개념:")
+    assert "Mental task performance" in result.concepts[0].support_language_explanation
+
+
 def test_normalizer_trims_long_transcript_source_context():
     transcript = (
         "hello and welcome to this long tutorial about sequence models " * 10

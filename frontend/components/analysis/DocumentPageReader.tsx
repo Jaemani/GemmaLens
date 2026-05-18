@@ -772,15 +772,24 @@ export function SectionLessonCard({
               {concepts.map((concept) => {
                 const key = `concept:${concept.concept}`;
                 const isSaved = saved.has(key);
+                const supportMeaning =
+                  usefulSupportMeaning(concept.support_language_explanation) ||
+                  fallbackSupportMeaning(
+                    supportLanguage,
+                    "concept",
+                    concept.concept,
+                    stripFiller(concept.explanation || concept.why_it_matters)
+                  );
+                const explanation = stripFiller(concept.explanation || concept.why_it_matters);
                 return (
                   <div key={concept.concept} className="rounded-md border border-line bg-surface p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-ink">{concept.concept}</p>
-                        {usefulSupportMeaning(concept.support_language_explanation) ? (
-                          <p className="mt-1 text-xs leading-5 text-blue-700">{usefulSupportMeaning(concept.support_language_explanation)}</p>
+                        {supportMeaning ? (
+                          <p className="mt-1 text-xs leading-5 text-blue-700">{supportMeaning}</p>
                         ) : null}
-                        <p className="mt-1 text-sm leading-5 text-neutral-700">{stripFiller(concept.explanation || concept.why_it_matters)}</p>
+                        <p className="mt-1 text-sm leading-5 text-neutral-700">{explanation}</p>
                         {concept.source_sentence ? (
                           <p className="mt-2 border-l-2 border-blue-200 pl-3 text-xs leading-5 text-neutral-500">
                             {truncateText(concept.source_sentence, 200)}
@@ -794,8 +803,8 @@ export function SectionLessonCard({
                             item_type: "concept",
                             text: concept.concept,
                             meaning: [
-                              usefulSupportMeaning(concept.support_language_explanation),
-                              stripFiller(concept.explanation || concept.why_it_matters)
+                              supportMeaning,
+                              explanation
                             ].filter(Boolean).join("\n\n"),
                             source_sentence: concept.source_sentence
                           })
@@ -1106,6 +1115,17 @@ function usefulSupportMeaning(value: string | undefined) {
   }
   if (!/[가-힣]/.test(normalized) && normalized.length > 60) return null;
   return normalized;
+}
+
+function fallbackSupportMeaning(language: string | undefined, kind: "term" | "phrase" | "concept", text: string, meaning: string | undefined) {
+  const normalizedLanguage = language?.trim().toLowerCase();
+  const normalizedMeaning = meaning?.trim();
+  if (!normalizedMeaning) return null;
+  if (normalizedLanguage && !["korean", "ko", "한국어"].includes(normalizedLanguage)) return null;
+  if (/[가-힣]/.test(normalizedMeaning)) return normalizedMeaning;
+  if (kind === "term") return `문맥상 의미: ${normalizedMeaning}`;
+  if (kind === "concept") return `핵심 개념: ${normalizedMeaning}`;
+  return `문맥상 기능: ${normalizedMeaning}`;
 }
 
 function nextUnanalyzedPageNumbers(sections: DocumentSection[], limit: number) {
