@@ -309,7 +309,13 @@ def get_paper_map(document_id: str, db: Session = Depends(get_db)):
         raise not_found("Document not found")
     readable_text = AcademicTextService().readable_section(document.content)
     sections = DocumentSectionService().split(readable_text)
-    return PaperMapService(AnalysisRepository(db), SectionAnalysisRepository(db)).build(document_id, sections)
+    profile = UserProfileRepository(db).get_or_create()
+    return PaperMapService(AnalysisRepository(db), SectionAnalysisRepository(db)).build(
+        document_id,
+        sections,
+        support_language=profile.support_language,
+        target_level=profile.target_level,
+    )
 
 
 def _learning_pages(sections) -> list[int]:

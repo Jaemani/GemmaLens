@@ -1044,7 +1044,11 @@ class AnalysisNormalizationService:
             }
             if key in known:
                 return known[key]
-            return f"문맥상 의미: {meaning}" if kind == "term" else f"문맥상 기능: {meaning}"
+            if kind == "term":
+                return f"문맥상 의미: {meaning}"
+            if kind == "concept":
+                return f"핵심 개념: {meaning}"
+            return f"문맥상 기능: {meaning}"
         if not language or language in {"english", "en"}:
             return meaning
         return f"{support_language}: {meaning}"
@@ -1108,12 +1112,13 @@ class AnalysisNormalizationService:
                 str(row.get("support_language_explanation") or row.get("native_explanation") or "")
             ).strip()
             source_sentence = self._source_sentence(row.get("source_sentence"), concept, document_text)
+            if not self._is_valid_support_language_gloss(support_explanation, support_language):
+                support_explanation = self._support_language_gloss(concept, explanation, support_language, kind="concept")
             concepts.append(
                 {
                     "concept": concept,
                     "explanation": explanation,
-                    "support_language_explanation": support_explanation
-                    or self._support_language_gloss(concept, explanation, support_language, kind="concept"),
+                    "support_language_explanation": support_explanation,
                     "source_sentence": source_sentence,
                     "related_terms": self._string_list(row.get("related_terms")),
                     "why_it_matters": normalize_pdf_ligatures(

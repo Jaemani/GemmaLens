@@ -777,6 +777,9 @@ export function SectionLessonCard({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-ink">{concept.concept}</p>
+                        {usefulSupportMeaning(concept.support_language_explanation) ? (
+                          <p className="mt-1 text-xs leading-5 text-blue-700">{usefulSupportMeaning(concept.support_language_explanation)}</p>
+                        ) : null}
                         <p className="mt-1 text-sm leading-5 text-neutral-700">{stripFiller(concept.explanation || concept.why_it_matters)}</p>
                         {concept.source_sentence ? (
                           <p className="mt-2 border-l-2 border-blue-200 pl-3 text-xs leading-5 text-neutral-500">
@@ -790,7 +793,10 @@ export function SectionLessonCard({
                           saveItem({
                             item_type: "concept",
                             text: concept.concept,
-                            meaning: stripFiller(concept.explanation || concept.why_it_matters),
+                            meaning: [
+                              usefulSupportMeaning(concept.support_language_explanation),
+                              stripFiller(concept.explanation || concept.why_it_matters)
+                            ].filter(Boolean).join("\n\n"),
                             source_sentence: concept.source_sentence
                           })
                         }

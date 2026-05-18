@@ -282,39 +282,49 @@ function OverviewTab({
         </div>
       </div>
 
-      {/* Section map */}
+      {/* Reading coverage */}
       <div className="rounded-lg border border-line bg-panel p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold text-neutral-500">Section map</p>
-          <span className="text-[11px] text-neutral-400">{analyzedSet.size} / {paperMap.total_sections ?? "?"} analyzed</span>
+          <div>
+            <p className="text-xs font-semibold text-neutral-500">Reading coverage</p>
+            <p className="mt-1 text-sm font-semibold text-ink">
+              {complete ? "All sections are ready." : "GemmaLens is building the paper map page by page."}
+            </p>
+          </div>
+          <span className="rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-neutral-500">
+            {analyzedSet.size} / {paperMap.total_sections ?? "?"} ready
+          </span>
         </div>
 
         {groups.length ? (
-          <div className="space-y-1">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {groups.map((group) => (
-              <div key={group.label}>
-                <p className="mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 first:mt-0">{group.label}</p>
-                <div className="space-y-0.5">
+              <div key={group.label} className="rounded-lg border border-line bg-white p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-ink">{group.label}</p>
+                  <span className="text-[10px] font-semibold text-neutral-400">
+                    {group.items.filter((sec) => analyzedSet.has(sec.section_number)).length}/{group.items.length}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
                   {group.items.map((sec) => {
                     const isAnalyzed = analyzedSet.has(sec.section_number);
                     const summary = summaryBySection.get(sec.section_number);
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={sec.index}
                         onMouseEnter={() => setHoveredSection(sec.section_number)}
                         onMouseLeave={() => setHoveredSection(null)}
-                        className={`flex items-center gap-3 rounded-md px-3 py-2 transition-colors ${
-                          isAnalyzed ? "bg-blue-50" : "bg-neutral-50 hover:bg-neutral-100"
+                        title={summary?.oneLine ?? `Section ${sec.section_number}`}
+                        className={`inline-flex h-7 min-w-7 items-center justify-center rounded-md px-2 text-[11px] font-bold transition-colors ${
+                          isAnalyzed
+                            ? "bg-accent text-white shadow-sm"
+                            : "bg-surface text-neutral-400 hover:bg-neutral-100"
                         }`}
                       >
-                        <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                          isAnalyzed ? "bg-accent text-white" : "bg-neutral-200 text-neutral-500"
-                        }`}>{sec.section_number}</span>
-                        <span className={`min-w-0 flex-1 truncate text-xs ${isAnalyzed ? "font-medium text-ink" : "text-neutral-500"}`}>
-                          {summary?.oneLine ?? sec.title ?? `Section ${sec.section_number}`}
-                        </span>
-                        {isAnalyzed ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" /> : null}
-                      </div>
+                        {sec.section_number}
+                      </button>
                     );
                   })}
                 </div>
@@ -323,27 +333,25 @@ function OverviewTab({
           </div>
         ) : (
           /* Fallback: no sections prop, compact numbered list */
-          <div className="space-y-0.5">
+          <div className="flex flex-wrap gap-1.5">
             {Array.from({ length: paperMap.total_sections }, (_, i) => i + 1).map((n) => {
               const isAnalyzed = analyzedSet.has(n);
               const summary = summaryBySection.get(n);
               return (
-                <div
+                <button
+                  type="button"
                   key={n}
                   onMouseEnter={() => setHoveredSection(n)}
                   onMouseLeave={() => setHoveredSection(null)}
-                  className={`flex items-center gap-3 rounded-md px-3 py-2 transition-colors ${
-                    isAnalyzed ? "bg-blue-50" : "bg-neutral-50 hover:bg-neutral-100"
+                  title={summary?.oneLine ?? `Section ${n}`}
+                  className={`inline-flex h-7 min-w-7 items-center justify-center rounded-md px-2 text-[11px] font-bold transition-colors ${
+                    isAnalyzed
+                      ? "bg-accent text-white shadow-sm"
+                      : "bg-surface text-neutral-400 hover:bg-neutral-100"
                   }`}
                 >
-                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                    isAnalyzed ? "bg-accent text-white" : "bg-neutral-200 text-neutral-500"
-                  }`}>{n}</span>
-                  <span className={`min-w-0 flex-1 truncate text-xs ${isAnalyzed ? "font-medium text-ink" : "text-neutral-500"}`}>
-                    {summary?.oneLine ?? `Section ${n}`}
-                  </span>
-                  {isAnalyzed ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" /> : null}
-                </div>
+                  {n}
+                </button>
               );
             })}
           </div>
@@ -456,15 +464,12 @@ function ArgumentTab({
 // ─── Concepts tab ─────────────────────────────────────────────────────────────
 
 function ConceptsTab({ paperMap }: { paperMap: PaperMap }) {
-  const allItems = [
-    ...paperMap.top_concepts.map((i) => ({ ...i, kind: "concept" as const })),
-    ...paperMap.top_terms.map((i) => ({ ...i, kind: "term" as const })),
-  ];
+  const allItems = mergeConceptItems(paperMap);
   // Sort by how many sections they appear in (cross-reference value)
   const sorted = [...allItems].sort((a, b) => b.sections.length - a.sections.length || b.count - a.count);
 
   const [filter, setFilter] = useState<"all" | "concept" | "term">("all");
-  const filtered = filter === "all" ? sorted : sorted.filter((i) => i.kind === filter);
+  const filtered = filter === "all" ? sorted : sorted.filter((i) => i.kind === filter || i.kind === "both");
 
   return (
     <div className="space-y-4">
@@ -499,13 +504,18 @@ function ConceptsTab({ paperMap }: { paperMap: PaperMap }) {
             >
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-semibold leading-5 text-ink">{item.text}</p>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                  item.kind === "concept"
-                    ? "bg-purple-50 text-purple-600"
-                    : "bg-blue-50 text-accent"
-                }`}>
-                  {item.kind}
-                </span>
+                <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                  {(item.kind === "concept" || item.kind === "both") ? (
+                    <span className="rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-semibold text-purple-600">
+                      concept
+                    </span>
+                  ) : null}
+                  {(item.kind === "term" || item.kind === "both") ? (
+                    <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-accent">
+                      term
+                    </span>
+                  ) : null}
+                </div>
               </div>
               {item.sections.length > 1 ? (
                 <div className="mt-2 flex flex-wrap gap-1">
@@ -594,4 +604,45 @@ function SectionRef({ sections }: { sections: number[] }) {
 
 function EmptyNote() {
   return <p className="text-sm text-neutral-400">Analyze more sections to build this list.</p>;
+}
+
+function mergeConceptItems(paperMap: PaperMap) {
+  const rows = [
+    ...paperMap.top_concepts.map((item) => ({ ...item, kind: "concept" as const })),
+    ...paperMap.top_terms.map((item) => ({ ...item, kind: "term" as const })),
+  ];
+  type MergedItem = Omit<(typeof rows)[number], "kind"> & { kind: "concept" | "term" | "both" };
+  const merged = new Map<string, MergedItem>();
+  for (const item of rows) {
+    const key = item.text.trim().toLowerCase();
+    if (!key) continue;
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, item);
+      continue;
+    }
+    const preferIncoming = existing.kind === "term" && item.kind === "concept";
+    const winner = preferIncoming ? item : existing;
+    const sections = Array.from(new Set([...existing.sections, ...item.sections])).sort((a, b) => a - b);
+    merged.set(key, {
+      ...winner,
+      kind: existing.kind === item.kind ? existing.kind : "both",
+      count: Math.max(existing.count, item.count),
+      sections,
+      meaning: cleanMapMeaning(winner.meaning) || cleanMapMeaning(existing.meaning),
+    });
+  }
+  return Array.from(merged.values()).map((item) => ({
+    ...item,
+    meaning: cleanMapMeaning(item.meaning),
+  }));
+}
+
+function cleanMapMeaning(value: string) {
+  const cleaned = value.trim();
+  if (!cleaned) return "";
+  if (/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/.test(cleaned)) {
+    return "Source-grounded learning item from the analyzed sections.";
+  }
+  return cleaned;
 }

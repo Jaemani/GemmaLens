@@ -19,7 +19,7 @@ export function ConceptMapPanel({ analysis, sourceKind = "document" }: { analysi
         await api.saveDictionaryItem({
           item_type: "concept",
           text: concept.concept,
-          meaning: concept.explanation,
+          meaning: [concept.support_language_explanation, concept.explanation].filter(Boolean).join("\n\n"),
           source_sentence: concept.source_sentence,
           document_id: analysis.document_id
         });
@@ -60,6 +60,9 @@ export function ConceptMapPanel({ analysis, sourceKind = "document" }: { analysi
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-semibold text-ink">{concept.concept}</h3>
+                  {concept.support_language_explanation ? (
+                    <p className="mt-2 text-sm leading-6 text-blue-700">{concept.support_language_explanation}</p>
+                  ) : null}
                   <p className="mt-2 text-sm leading-6 text-neutral-700">{concept.explanation}</p>
                 </div>
                 <button

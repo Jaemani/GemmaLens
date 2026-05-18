@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import re
 from typing import Any
 
 from app.repositories.analysis_repository import AnalysisRepository
@@ -13,11 +14,25 @@ class PaperMapService:
         self.section_analyses = section_analyses
         self.normalizer = AnalysisNormalizationService()
 
-    def build(self, document_id: str, section_texts: list[str] | None = None) -> PaperMapResponse:
+    def build(
+        self,
+        document_id: str,
+        section_texts: list[str] | None = None,
+        support_language: str = "Korean",
+        target_level: str | None = None,
+    ) -> PaperMapResponse:
         section_results = self.section_analyses.list_results(document_id)
         if section_texts:
             section_results = [
-                (index, self.normalizer.normalize_result(result, section_texts[index]))
+                (
+                    index,
+                    self.normalizer.normalize_result(
+                        result,
+                        section_texts[index],
+                        support_language=support_language,
+                        target_level=target_level,
+                    ),
+                )
                 for index, result in section_results
                 if 0 <= index < len(section_texts)
             ]
@@ -25,7 +40,18 @@ class PaperMapService:
         section_indices = {index for index, _ in section_results}
         if base and 0 not in section_indices:
             base_text = section_texts[0] if section_texts else ""
-            section_results = [(0, self.normalizer.normalize_result(base, base_text)), *section_results]
+            section_results = [
+                (
+                    0,
+                    self.normalizer.normalize_result(
+                        base,
+                        base_text,
+                        support_language=support_language,
+                        target_level=target_level,
+                    ),
+                ),
+                *section_results,
+            ]
 
         concepts: OrderedDict[str, dict[str, Any]] = OrderedDict()
         terms: OrderedDict[str, dict[str, Any]] = OrderedDict()
@@ -50,13 +76,36 @@ class PaperMapService:
                 self._add(
                     concepts,
                     concept.concept,
-                    concept.explanation or concept.why_it_matters,
+                    self._map_meaning(
+                        concept.explanation,
+                        concept.why_it_matters,
+                        fallback="Concept extracted from the analyzed section.",
+                    ),
                     section_number,
                 )
             for term in result.terms:
-                self._add(terms, term.term, term.meaning, section_number)
+                self._add(
+                    terms,
+                    term.term,
+                    self._map_meaning(
+                        term.meaning,
+                        term.context_meaning,
+                        term.general_meaning,
+                        fallback="Source-grounded term from this document.",
+                    ),
+                    section_number,
+                )
             for phrase in result.phrases:
-                self._add(phrases, phrase.phrase, phrase.explanation, section_number)
+                self._add(
+                    phrases,
+                    phrase.phrase,
+                    self._map_meaning(
+                        phrase.explanation,
+                        phrase.context_meaning,
+                        fallback="Reusable expression from this document.",
+                    ),
+                    section_number,
+                )
 
         top_concepts = [item for item in self._rank(concepts, 40) if not self._is_paper_map_study_noise(str(item["text"]))][:20]
         top_terms = [item for item in self._rank(terms, 30) if not self._is_paper_map_study_noise(str(item["text"]))][:12]
@@ -78,14 +127,27 @@ class PaperMapService:
         text = " ".join(text.split())
         if not text:
             return
-        key = text.lower()
+        key = self._item_key(text)
         if key not in rows:
             rows[key] = {"text": text, "meaning": meaning, "sections": [], "count": 0}
         rows[key]["count"] += 1
         if section_number not in rows[key]["sections"]:
             rows[key]["sections"].append(section_number)
-        if not rows[key]["meaning"] and meaning:
+        if meaning and (not rows[key]["meaning"] or self._contains_cjk(str(rows[key]["meaning"]))):
             rows[key]["meaning"] = meaning
+
+    def _item_key(self, text: str) -> str:
+        return re.sub(r"\s+", " ", text.strip().lower())
+
+    def _map_meaning(self, *candidates: str | None, fallback: str) -> str:
+        for candidate in candidates:
+            value = " ".join(str(candidate or "").split())
+            if value and not self._contains_cjk(value):
+                return value
+        return fallback
+
+    def _contains_cjk(self, value: str) -> bool:
+        return bool(re.search(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]", value))
 
     def _rank(self, rows: OrderedDict[str, dict[str, Any]], limit: int) -> list[dict[str, Any]]:
         return sorted(rows.values(), key=lambda row: (self._rank_priority(str(row["text"])), -row["count"], row["sections"][0], row["text"].lower()))[:limit]
