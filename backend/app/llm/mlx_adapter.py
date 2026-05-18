@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import json
 from pathlib import Path
@@ -42,7 +43,8 @@ class MLXAdapter(ModelAdapter):
         source_type: str | None = None,
     ) -> AnalysisResult:
         try:
-            payload = self._analyze_atomic(
+            payload = await asyncio.to_thread(
+                self._analyze_atomic,
                 document_id,
                 text,
                 chunks,
@@ -132,7 +134,7 @@ class MLXAdapter(ModelAdapter):
 
     async def translate_text(self, source_language: str, target_language: str, text: str) -> TranslationResponse:
         try:
-            output = self._generate_translation_output(source_language, target_language, text)
+            output = await asyncio.to_thread(self._generate_translation_output, source_language, target_language, text)
             payload = extract_json_object(output)
             translated_text = str(payload.get("translated_text", "")).strip()
             if not translated_text:

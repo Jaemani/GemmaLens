@@ -266,6 +266,12 @@ export function DocumentPageReader({
     if (!options.stayOnCurrent) goToSection(index);
     setIsAnalyzing(true);
     setError("");
+    writeGlobalActivity({
+      label: "Analyzing",
+      detail: `Building notes for section ${section.index + 1}`,
+      href: `/analysis/${documentId}`,
+      updatedAt: Date.now()
+    });
     try {
       const created = await api.analyzeDocumentSection(document.id, section.index, { force: section.analyzed });
       if (options.showLesson !== false && (!options.stayOnCurrent || index === pageIndex)) {
@@ -282,6 +288,7 @@ export function DocumentPageReader({
       throw err;
     } finally {
       if (!options.keepBusy) setIsAnalyzing(false);
+      if (!options.keepBusy && !isBatchAnalyzing) clearGlobalActivity();
     }
   }
 

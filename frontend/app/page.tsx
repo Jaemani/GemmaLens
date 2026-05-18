@@ -79,9 +79,6 @@ export default async function DashboardPage() {
                     <SecondaryAction href="/video" label="Study a video" icon={<Video size={15} />} />
                     <SecondaryAction href="/settings" label="Set learning profile" icon={<ArrowRight size={15} />} />
                   </div>
-                  <p className="mt-4 max-w-[410px] rounded-lg border border-[#DBEAFE] bg-white/75 px-3 py-2 text-[12px] leading-[1.5] text-secondary">
-                    Public judging demo: this Vercel app routes model work to a private Gemma 4 runtime on the developer's Mac. The temporary model host will be shut down after judging.
-                  </p>
                 </div>
               </div>
             </section>

@@ -156,7 +156,13 @@ Default local demo ports:
 
 The frontend proxies browser requests through `/api/backend/*`, so a Vercel or local frontend can call a private backend without exposing backend keys to the browser.
 
-## Optional Gemma MLX Runtime
+## Connecting Local Gemma Models
+
+GemmaLens can run without a model in mock mode, but the intended local setup is
+MLX on Apple Silicon. GGUF is supported through a separate llama.cpp-compatible
+server when you want to use quantized model files.
+
+### MLX Route
 
 For Apple Silicon:
 
@@ -175,6 +181,27 @@ gemma4-e2b-mlx -> ~/Models/mlx/gemma-4-e2b-it-bf16
 gemma4-e4b-mlx -> ~/Models/mlx/gemma-4-e4b-it-bf16
 ```
 
+Manual MLX setup:
+
+```bash
+cd backend
+python3.12 -m venv .venv-mlx
+source .venv-mlx/bin/activate
+pip install -r requirements.txt -r requirements-mlx.txt
+
+export MODEL_PROVIDER=mlx
+export MLX_MODEL_PATH="$HOME/Models/mlx/gemma-4-e2b-it-bf16"
+uvicorn app.main:app --host 0.0.0.0 --port 8012
+```
+
+Switch presets from the UI model card, or with:
+
+```bash
+curl -X POST http://localhost:8012/models/config \
+  -H "Content-Type: application/json" \
+  -d '{"preset_id":"gemma4-e4b-mlx"}'
+```
+
 Optional larger MLX 4-bit presets are exposed only as local paths. They show as
 `missing` until the model folder exists:
 
@@ -188,24 +215,43 @@ Optional larger MLX 4-bit presets are exposed only as local paths. They show as
   ~/Models/mlx/gemma-4-31b-4bit
 ```
 
-GGUF is also supported as an optional bridge through llama.cpp. It is not the
-default demo path because it requires a separate local `llama-server` process
-and a valid GGUF file:
+### GGUF Route
+
+GGUF is an optional bridge through llama.cpp. It is useful when you have a
+quantized `.gguf` file and want to serve it from a local HTTP process. It is not
+the default demo path because it requires two running processes:
+
+1. a llama.cpp-compatible model server
+2. the GemmaLens FastAPI backend pointing at that server
 
 ```bash
 ./scripts/run_gguf_server.sh
 ```
 
-Then point the backend remote route at the wrapper:
+If you run llama.cpp manually, the shape is:
 
 ```bash
+llama-server \
+  -m /path/to/gemma-model.gguf \
+  --host 127.0.0.1 \
+  --port 11445 \
+  -c 4096
+```
+
+Then point GemmaLens at it through the remote adapter:
+
+```bash
+cd backend
+source .venv-mlx/bin/activate
 MODEL_PROVIDER=remote \
 REMOTE_GEMMA_BASE_URL=http://localhost:11445 \
 REMOTE_GEMMA_MODEL=gemma4-26b-gguf \
-./scripts/run_funnel_backend.sh
+uvicorn app.main:app --host 0.0.0.0 --port 8012
 ```
 
-For judging, the stable path is the validated MLX E2B/E4B route.
+For judging and routine demos, the stable path is the validated MLX E2B/E4B
+route. Use GGUF only after confirming the local server answers a simple health
+or completion request.
 
 For quick local model validation:
 

@@ -2,7 +2,7 @@
 
 import { Activity, Circle, Cpu } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { ModelStatus } from "@/lib/types";
 
@@ -18,19 +18,40 @@ export function GlobalStatusDock() {
   const [alive, setAlive] = useState<boolean | null>(null);
   const [model, setModel] = useState<ModelStatus | null>(null);
   const [activity, setActivity] = useState<GlobalActivity | null>(null);
+  const activityRef = useRef<GlobalActivity | null>(null);
+  const healthMissesRef = useRef(0);
+  const lastAliveAtRef = useRef<number | null>(null);
   const idleDetail = "No active work";
 
   useEffect(() => {
     let cancelled = false;
     async function poll() {
       try {
-        const [health, status] = await Promise.all([api.health(), api.getModelStatus()]);
+        const health = await api.health();
         if (cancelled) return;
-        setAlive(health.status === "ok");
-        setModel(status);
+        if (health.status === "ok") {
+          healthMissesRef.current = 0;
+          lastAliveAtRef.current = Date.now();
+          setAlive(true);
+        }
       } catch {
         if (cancelled) return;
-        setAlive(false);
+        healthMissesRef.current += 1;
+        const recentlyAlive = lastAliveAtRef.current ? Date.now() - lastAliveAtRef.current < 45_000 : false;
+        if (activityRef.current || recentlyAlive || healthMissesRef.current < 3) {
+          setAlive((current) => current ?? true);
+        } else {
+          setAlive(false);
+        }
+      }
+
+      try {
+        const status = await api.getModelStatus();
+        if (cancelled) return;
+        setModel(status);
+      } catch {
+        // During local analysis the model runtime can be busy even while the
+        // backend is alive. Keep the last known model instead of flickering.
       }
     }
     poll();
@@ -42,11 +63,23 @@ export function GlobalStatusDock() {
     function readActivity() {
       try {
         const raw = window.localStorage.getItem("gemmalens:active-task");
-        if (!raw) { setActivity(null); return; }
+        if (!raw) {
+          activityRef.current = null;
+          setActivity(null);
+          return;
+        }
         const parsed = JSON.parse(raw) as GlobalActivity;
-        if (!parsed.updatedAt || Date.now() - parsed.updatedAt > 120_000) { setActivity(null); return; }
+        if (!parsed.updatedAt || Date.now() - parsed.updatedAt > 600_000) {
+          activityRef.current = null;
+          setActivity(null);
+          return;
+        }
+        activityRef.current = parsed;
         setActivity(parsed);
-      } catch { setActivity(null); }
+      } catch {
+        activityRef.current = null;
+        setActivity(null);
+      }
     }
     readActivity();
     const timer = window.setInterval(readActivity, 1500);

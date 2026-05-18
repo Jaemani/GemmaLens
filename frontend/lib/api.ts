@@ -21,7 +21,7 @@ const PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 const PUBLIC_API_KEY = process.env.NEXT_PUBLIC_GEMMALENS_API_KEY;
 const SERVER_API_BASE = process.env.BACKEND_INTERNAL_URL ?? PUBLIC_API_BASE ?? "http://127.0.0.1:8012";
 const SERVER_API_KEY = process.env.GEMMALENS_API_KEY ?? PUBLIC_API_KEY;
-const REQUEST_TIMEOUT_MS = 30000;
+const REQUEST_TIMEOUT_MS = 60000;
 const PROFILE_TIMEOUT_MS = 8000;
 const UPLOAD_TIMEOUT_MS = 300000;
 const ANALYSIS_TIMEOUT_MS = 300000;
@@ -144,8 +144,8 @@ function isPrivateBackendUrl(value: string) {
 
 export const api = {
   health: () => request<{ status: string }>("/health", { timeoutMs: 4000 }),
-  getModelStatus: () => request<ModelStatus>("/models/status"),
-  listModelPresets: () => request<ModelPreset[]>("/models/presets"),
+  getModelStatus: () => request<ModelStatus>("/models/status", { timeoutMs: 5000 }),
+  listModelPresets: () => request<ModelPreset[]>("/models/presets", { timeoutMs: 5000 }),
   warmupModel: () => request<{ status: string; provider: string; elapsed_seconds: number }>("/models/warmup", { method: "POST", timeoutMs: 300000 }),
   updateModelConfig: (payload: ModelConfigUpdate) =>
     request<ModelStatus>("/models/config", { method: "POST", body: JSON.stringify(payload) }),

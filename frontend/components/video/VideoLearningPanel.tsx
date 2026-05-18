@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnalysisProgress } from "@/components/analysis/AnalysisProgress";
 import { api } from "@/lib/api";
 import { LANGUAGE_OPTIONS } from "@/lib/languages";
-import type { AnalysisResult, LocalMediaItem, LocalSubtitleFile, TranscriptResponse, TranscriptSegment, UserProfile } from "@/lib/types";
+import type { AnalysisResult, TranscriptResponse, TranscriptSegment, UserProfile } from "@/lib/types";
 
 declare global {
   interface Window {
@@ -45,14 +45,7 @@ export function VideoLearningPanel() {
   const [mode, setMode] = useState<VideoMode>("local");
   const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);
   const [localVideoName, setLocalVideoName] = useState("");
-  const [localMediaRoot, setLocalMediaRoot] = useState("");
-  const [localMediaItems, setLocalMediaItems] = useState<LocalMediaItem[]>([]);
-  const [localMediaDisabled, setLocalMediaDisabled] = useState(false);
-  const [selectedLocalMedia, setSelectedLocalMedia] = useState<LocalMediaItem | null>(null);
-  const [selectedKoreanSubtitle, setSelectedKoreanSubtitle] = useState<LocalSubtitleFile | null>(null);
   const [activeSubtitleLanguage, setActiveSubtitleLanguage] = useState<string | null>(null);
-  const [localMediaLoading, setLocalMediaLoading] = useState(false);
-  const [localPickerOpen, setLocalPickerOpen] = useState(true);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [videoId, setVideoId] = useState<string | null>(null);
   const [subtitleText, setSubtitleText] = useState("");
@@ -164,11 +157,6 @@ export function VideoLearningPanel() {
   }, [localVideoUrl]);
 
   useEffect(() => {
-    if (mode !== "local") return;
-    void loadLocalMediaLibrary();
-  }, [mode]);
-
-  useEffect(() => {
     let cancelled = false;
     function loadProfile() {
       api.getProfile()
@@ -213,64 +201,6 @@ export function VideoLearningPanel() {
     setCurrentTime(0);
     setError(null);
     setVideoAnalysis(null);
-  }
-
-  async function loadLocalMediaLibrary() {
-    setLocalMediaLoading(true);
-    try {
-      const library = await api.listLocalMedia();
-      setLocalMediaDisabled(false);
-      setLocalMediaRoot(library.root);
-      setLocalMediaItems(library.items);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not read the Mac Movies library.";
-      if (message.toLowerCase().includes("local media library browsing is disabled")) {
-        setLocalMediaDisabled(true);
-        setLocalMediaRoot("");
-        setLocalMediaItems([]);
-      } else {
-        setError(message);
-      }
-    } finally {
-      setLocalMediaLoading(false);
-    }
-  }
-
-  async function openLocalMediaItem(item: LocalMediaItem, subtitle?: LocalSubtitleFile) {
-    setSelectedLocalMedia(item);
-    setLocalPickerOpen(false);
-    setLocalVideoUrl(api.localMediaFileUrl(item.path));
-    setLocalVideoName(item.title || item.name);
-    setCurrentTime(0);
-    setError(null);
-    setVideoAnalysis(null);
-    const englishSubtitle = subtitle ?? item.subtitles.find((candidate) => candidate.language === "en") ?? item.subtitles[0];
-    const koreanSubtitle = item.subtitles.find((candidate) => candidate.language === "ko") ?? null;
-    setSelectedKoreanSubtitle(koreanSubtitle);
-    if (englishSubtitle) {
-      await loadLocalSubtitle(englishSubtitle);
-    } else {
-      setTranscript(null);
-      setSubtitleText("");
-      setSourceName("subtitle.srt");
-    }
-  }
-
-  async function loadLocalSubtitle(subtitle: LocalSubtitleFile) {
-    setBusy(true);
-    setBusyLabel("Loading local subtitles");
-    try {
-      const result = await api.getLocalSubtitle(subtitle.path);
-      setSubtitleText(result.content);
-      setSourceName(result.name);
-      setActiveSubtitleLanguage(subtitle.language ?? inferSubtitleLanguage(result.name));
-      await parseSubtitle(result.content, result.name);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load this subtitle file.");
-    } finally {
-      setBusy(false);
-      setBusyLabel(null);
-    }
   }
 
   async function readSubtitleFile(file: File | null) {
@@ -545,21 +475,10 @@ export function VideoLearningPanel() {
           {mode === "local" ? (
             <LocalVideoSetup
               localVideoName={localVideoName}
-              localMediaRoot={localMediaRoot}
-              localMediaItems={localMediaItems}
-              selectedLocalMedia={selectedLocalMedia}
-              selectedKoreanSubtitle={selectedKoreanSubtitle}
-              localMediaLoading={localMediaLoading}
-              localMediaDisabled={localMediaDisabled}
-              localPickerOpen={localPickerOpen}
               busy={busy}
               busyLabel={busyLabel}
-              onTogglePicker={() => setLocalPickerOpen((value) => !value)}
               onOpenVideo={openLocalVideo}
               onReadSubtitle={readSubtitleFile}
-              onRefreshLibrary={loadLocalMediaLibrary}
-              onSelectMedia={openLocalMediaItem}
-              onSelectSubtitle={loadLocalSubtitle}
             />
           ) : (
             <OnlineVideoSetup
@@ -641,158 +560,44 @@ export function VideoLearningPanel() {
 
 function LocalVideoSetup({
   localVideoName,
-  localMediaRoot,
-  localMediaItems,
-  selectedLocalMedia,
-  selectedKoreanSubtitle,
-  localMediaLoading,
-  localMediaDisabled,
-  localPickerOpen,
   busy,
   busyLabel,
-  onTogglePicker,
   onOpenVideo,
-  onReadSubtitle,
-  onRefreshLibrary,
-  onSelectMedia,
-  onSelectSubtitle
+  onReadSubtitle
 }: {
   localVideoName: string;
-  localMediaRoot: string;
-  localMediaItems: LocalMediaItem[];
-  selectedLocalMedia: LocalMediaItem | null;
-  selectedKoreanSubtitle: LocalSubtitleFile | null;
-  localMediaLoading: boolean;
-  localMediaDisabled: boolean;
-  localPickerOpen: boolean;
   busy: boolean;
   busyLabel: string | null;
-  onTogglePicker: () => void;
   onOpenVideo: (file: File | null) => void;
   onReadSubtitle: (file: File | null) => void;
-  onRefreshLibrary: () => void;
-  onSelectMedia: (item: LocalMediaItem, subtitle?: LocalSubtitleFile) => void;
-  onSelectSubtitle: (subtitle: LocalSubtitleFile) => void;
 }) {
-  if (selectedLocalMedia && !localPickerOpen) {
-    return (
-      <div className="mt-3 rounded-md border border-line bg-surface px-3 py-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0 flex items-center gap-2">
-            <p className="truncate text-sm font-semibold text-ink">{cleanVideoTitle(selectedLocalMedia.title || localVideoName || selectedLocalMedia.name)}</p>
-            <span className="shrink-0 rounded-full bg-panel px-2 py-0.5 text-xs font-semibold text-neutral-600">{selectedLocalMedia.subtitles.length} subtitles</span>
-            {selectedKoreanSubtitle ? <span className="hidden shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-accent md:inline">KO support</span> : null}
-          </div>
-          <button
-            type="button"
-            onClick={onTogglePicker}
-            className="shrink-0 rounded-md border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-ink hover:bg-white"
-          >
-            Change
-          </button>
-        </div>
-        {busyLabel ? <p className="mt-2 rounded-md bg-blue-50 px-3 py-2 text-sm font-medium text-accent">{busyLabel}...</p> : null}
-      </div>
-    );
-  }
-
   return (
     <div className="mt-5 space-y-4">
-      <div className="rounded-md border border-line bg-surface p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-ink">Mac Movies library</p>
-            <p className="mt-1 text-xs leading-5 text-neutral-500">
-              {localMediaRoot ? localMediaRoot : "~/Movies"} · finds local videos and nearby English/Korean subtitles.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={selectedLocalMedia ? onTogglePicker : onRefreshLibrary}
-            className="rounded-md border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-ink hover:bg-white"
-          >
-            {selectedLocalMedia ? (localPickerOpen ? "Collapse" : "Change") : localMediaLoading ? "Scanning..." : "Refresh"}
-          </button>
-        </div>
-        {selectedLocalMedia && !localPickerOpen ? (
-          <div className="mt-3 rounded-md border border-line bg-panel p-3">
-            <p className="truncate text-sm font-semibold text-ink">{selectedLocalMedia.title}</p>
-            <p className="mt-1 text-xs text-neutral-500">
-              {selectedLocalMedia.subtitles.length} subtitles found · click Change to pick another file
-            </p>
-          </div>
-        ) : localMediaItems.length ? (
-          <div className="mt-3 max-h-56 overflow-y-auto rounded-md border border-line bg-panel">
-            {localMediaItems.map((item) => (
-              <div key={item.path} className={`border-t border-line p-3 first:border-t-0 ${selectedLocalMedia?.path === item.path ? "bg-blue-50" : ""}`}>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <button type="button" onClick={() => onSelectMedia(item)} className="min-w-0 text-left">
-                    <span className="block truncate text-sm font-semibold text-ink">{item.title}</span>
-                    <span className="mt-1 block truncate text-xs text-neutral-500">{item.name}</span>
-                  </button>
-                  <span className="rounded-full bg-surface px-2 py-1 text-xs font-semibold text-neutral-600">{item.subtitles.length} subtitles</span>
-                </div>
-                {item.subtitles.length ? (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {item.subtitles.map((subtitle) => (
-                      <button
-                        key={subtitle.path}
-                        type="button"
-                        onClick={() => {
-                          if (selectedLocalMedia?.path !== item.path) onSelectMedia(item, subtitle);
-                          else onSelectSubtitle(subtitle);
-                        }}
-                        className="rounded-full border border-line bg-white px-2.5 py-1 text-xs font-semibold text-neutral-700 hover:border-accent hover:text-accent"
-                      >
-                        {subtitle.language ? subtitle.language.toUpperCase() : "SUB"} · {subtitle.name}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-md border border-line bg-surface px-4 py-3 hover:bg-white">
+          <span>
+            <span className="block text-sm font-semibold text-ink">Open video manually</span>
+            <span className="mt-1 block text-xs text-neutral-500">{localVideoName || "MP4, MOV, MKV, WebM depending on browser support"}</span>
+          </span>
+          <Upload size={18} className="text-accent" />
+          <input type="file" accept="video/*,.mkv" className="hidden" onChange={(event) => onOpenVideo(event.target.files?.[0] ?? null)} />
+        </label>
+        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-md border border-line bg-surface px-4 py-3 hover:bg-white">
+          <span>
+            <span className="block text-sm font-semibold text-ink">Load English subtitles</span>
+            <span className="mt-1 block text-xs text-neutral-500">SRT, VTT, or timestamped transcript text</span>
+          </span>
+          <FileText size={18} className="text-accent" />
+          <input type="file" accept=".srt,.vtt,text/vtt,application/x-subrip,text/plain" className="hidden" onChange={(event) => onReadSubtitle(event.target.files?.[0] ?? null)} />
+        </label>
+        {busyLabel ? (
+          <p className="md:col-span-2 rounded-md bg-blue-50 px-3 py-2 text-sm font-medium text-accent">{busyLabel}...</p>
         ) : (
-          <p className="mt-3 rounded-md border border-dashed border-line bg-panel p-3 text-sm leading-6 text-neutral-600">
-            {localMediaLoading
-              ? "Scanning Movies..."
-              : localMediaDisabled
-                ? "Local media browsing is disabled for the public demo. Use the manual file picker below, or enable it only for a curated demo folder."
-                : "No videos found yet. Put the movie folder under ~/Movies, or use the manual file picker below."}
+          <p className="md:col-span-2 text-xs leading-5 text-neutral-500">
+            Local video files are not uploaded to GemmaLens. The browser plays the file directly; the subtitle text becomes the learning source.
           </p>
         )}
-        {selectedKoreanSubtitle ? (
-          <p className="mt-3 rounded-md bg-blue-50 px-3 py-2 text-xs font-medium text-accent">
-            Korean subtitle detected: {selectedKoreanSubtitle.name}. English subtitles remain the learning source; Korean can be used as timed meaning support next.
-          </p>
-        ) : null}
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
-      <label className="flex cursor-pointer items-center justify-between gap-3 rounded-md border border-line bg-surface px-4 py-3 hover:bg-white">
-        <span>
-          <span className="block text-sm font-semibold text-ink">Open video manually</span>
-          <span className="mt-1 block text-xs text-neutral-500">{localVideoName || "MP4, MOV, MKV, WebM depending on browser support"}</span>
-        </span>
-        <Upload size={18} className="text-accent" />
-        <input type="file" accept="video/*,.mkv" className="hidden" onChange={(event) => onOpenVideo(event.target.files?.[0] ?? null)} />
-      </label>
-      <label className="flex cursor-pointer items-center justify-between gap-3 rounded-md border border-line bg-surface px-4 py-3 hover:bg-white">
-        <span>
-          <span className="block text-sm font-semibold text-ink">Load English subtitles</span>
-          <span className="mt-1 block text-xs text-neutral-500">SRT, VTT, or timestamped transcript text</span>
-        </span>
-        <FileText size={18} className="text-accent" />
-        <input type="file" accept=".srt,.vtt,text/vtt,application/x-subrip,text/plain" className="hidden" onChange={(event) => onReadSubtitle(event.target.files?.[0] ?? null)} />
-      </label>
-      {busyLabel ? (
-        <p className="md:col-span-2 rounded-md bg-blue-50 px-3 py-2 text-sm font-medium text-accent">{busyLabel}...</p>
-      ) : (
-        <p className="md:col-span-2 text-xs leading-5 text-neutral-500">
-          Local video files are not uploaded to GemmaLens. The browser plays the file directly; the subtitle text becomes the learning source.
-        </p>
-      )}
-      {busy ? null : null}
+        {busy ? null : null}
       </div>
     </div>
   );
