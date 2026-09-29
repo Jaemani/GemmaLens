@@ -14,6 +14,18 @@
 
 ---
 
+## Project Status
+
+The judging period has ended. The personal model backend and its automatic
+restart supervisor have been shut down; the judging backend's public route has
+been removed. No always-on replacement model service is being deployed.
+Migration preparation remains the priority.
+
+[Follow-up #1](https://github.com/Jaemani/GemmaLens/issues/1) will add API endpoint,
+key, and model configuration when selecting a model. This feature is planned,
+not implemented. The local-model instructions below are optional developer
+workflows, not an active public service commitment.
+
 ## What It Does
 
 GemmaLens turns real learning sources into source-grounded study material:
@@ -285,9 +297,10 @@ GEMMALENS_API_KEY=...
 
 The browser should not receive private backend keys. See `docs/DEPLOYMENT.md` for setup notes.
 
-Current public judging demo note: the Vercel frontend uses a private Gemma 4
-runtime on the developer's Mac through a protected backend proxy. This temporary
-model host is for judging only and will be shut down after judging ends.
+The former judging backend on the developer's Mac is now shut down. An existing
+frontend deployment may still point to that retired backend; live model analysis
+is not available through it. API configuration during model selection is tracked
+in [follow-up #1](https://github.com/Jaemani/GemmaLens/issues/1).
 
 ## Testing
 

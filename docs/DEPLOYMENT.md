@@ -2,18 +2,30 @@
 
 ## Deployment Status
 
+**Judging service retired (2026-09-29).** At the owner's request, the Mac
+GemmaLens backend was gracefully stopped, its launchd supervisor unloaded and
+disabled, and its public Funnel route removed. Other shared Funnel routes were
+preserved. Model files, databases, uploads, and credentials were not deleted.
+The Linux validation service remains inactive and disabled. No new deployment
+or always-on model service is planned as part of migration preparation.
+
+Next product work is [API configuration during model selection (#1)](https://github.com/Jaemani/GemmaLens/issues/1).
+It is not implemented yet. A remaining frontend deployment can still reference
+the retired backend and cannot be assumed to provide live model analysis.
+The older setup recipes below are historical/opt-in developer instructions;
+do not restart the judging service or its supervisor to follow them.
+
 The existing deployment instructions below describe the demo design, not proof
 that each cloud resource is still running. The September 2026 Linux audit
 validated an isolated mock API; it did not migrate production or model inference.
 See [Linux development and operations](#linux-development-and-operations) for
 the compatibility matrix, repeatable commands, results, and remaining gates.
 
-## Existing Demo Recommendation
+## Historical Judging Demo Architecture
 
-Use Vercel for the frontend and keep the real FastAPI/Gemma backend on a local
-machine exposed through Tailscale Funnel for demos. Protect the backend with a
-shared API key and let the Vercel frontend call it through the same-origin
-`/api/backend/*` proxy.
+The judging setup used Vercel for the frontend and a local FastAPI/Gemma backend
+exposed through Tailscale Funnel. A shared API key protected requests forwarded
+by the frontend's same-origin `/api/backend/*` proxy.
 
 This avoids putting the API key in browser JavaScript and avoids most CORS/PDF
 viewer failures.
@@ -197,8 +209,10 @@ performed and causality was not conclusively established. Host repair, Podman
 installation, user/group changes, firewall edits, and global logging policy
 belong to the infrastructure owner. No Quadlet compatibility is claimed.
 
-Keep Vercel placement and Mac inference until there is a tested reason to change
-them. Do not run an additional production data writer against the same dataset.
+Do not redeploy the existing frontend as part of migration preparation. Mac
+inference has been shut down following judging; the earlier Linux audit below
+records observations before that shutdown. Do not run an additional production
+data writer against the same dataset.
 Services sharing a Unix user are not strongly isolated from one another.
 
 ### Development Setup
