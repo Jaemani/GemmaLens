@@ -171,18 +171,19 @@ The backend now normalizes common E4B issues such as typo enum values, missing f
 
 ### Readiness and Source Reconciliation
 
-**Preparation is partial, not complete.** The Linux checkout validates reviewed
-upstream code plus the preparation commits; it does not contain every change in
-the original Mac working directory. [Issue #2](https://github.com/Jaemani/GemmaLens/issues/2)
-tracks source reconciliation and the remaining lint, browser, dependency, and
-external-corpus gates. Deployment is not a completion requirement.
+The development path is now independent of a personal model host: the default
+runtime is `unconfigured`, analysis returns HTTP 503 until explicitly configured,
+and the portable launcher selects mock mode. Browser tests use isolated fixtures
+and block external requests. [Issue #2](https://github.com/Jaemani/GemmaLens/issues/2)
+records the preparation work and final verification. API-entry UI remains #1;
+deployment and real inference are not preparation completion requirements.
 
-| Existing local work, excluded from the preparation branch | Behavior found in the diff | Required disposition |
+| Existing local work reviewed | Behavior found in the diff | Disposition |
 | --- | --- | --- |
-| `backend/app/api/routes_documents.py`, `core/config.py`, `main.py` | Public upload/file routes bypass the API key, check Origin/Referer, and check file size after ingestion; new 25 MiB settings | Review authentication, URL-origin validation and resource limits before integrating. Header presence is not authorization. |
-| `frontend/lib/api.ts`, `components/document/DocumentInputPanel.tsx` | Optional direct upload base, 4 MiB proxy threshold, 25 MiB direct limit, public file URL and explanatory UI text | Reconcile with post-judging API design; verify upload and attachment paths independently. Not shipped on this branch. |
-| `frontend/app/api/backend/[...path]/route.ts` | Force-dynamic Node runtime and 300-second route duration | Review/test independently; configuration alone does not prove hosted limits. |
-| `backend/app/llm/mlx_adapter.py` | Wrap JSON arrays for atomic terms/phrases/concepts/sentences tasks; reject other non-object payloads | Review with model-free tests before selecting this isolated change. |
+| `backend/app/api/routes_documents.py`, `core/config.py`, `main.py` | Public upload/file routes bypass the API key, check Origin/Referer, and check file size after ingestion; new 25 MiB settings | Not adopted: retired judging bypass is unnecessary for portable development; headers are not authorization. Original diff preserved privately. |
+| `frontend/lib/api.ts`, `components/document/DocumentInputPanel.tsx` | Optional direct upload base, 4 MiB proxy threshold, 25 MiB direct limit, public file URL and explanatory UI text | Not adopted with the retired bypass. Future API/upload design must handle this separately. Not a dependency of the Linux checkout. |
+| `frontend/app/api/backend/[...path]/route.ts` | Force-dynamic Node runtime and 300-second route duration | Selected into the branch and built on Linux. This does not establish a hosting-plan timeout guarantee. |
+| `backend/app/llm/mlx_adapter.py` | Wrap JSON arrays for atomic terms/phrases/concepts/sentences tasks; reject other non-object payloads | Selected with a correction: parse the full JSON value before object extraction. Array/scalar/retry tests run without MLX. |
 | `scripts/run_funnel_backend.sh` | Key alias, runtime-preset writes, loopback-only bind | Historical judging work; do not reactivate it during migration preparation. |
 | Untracked `ensure_funnel_backend.sh`, `supervise_funnel_backend.sh`, install/uninstall autostart scripts | launchd supervision, process restart and Funnel management, including a shared configuration reset path | Preserve privately for review; not Linux deployment tooling. Supervisor is disabled. |
 | Untracked capability report and submission draft | Evaluation/publication documents | Evidence/publication review required before committing. |
@@ -251,21 +252,26 @@ Services sharing a Unix user are not strongly isolated from one another.
 Verified Linux tools: Python 3.12.14 and Node 22.23.0. The noninteractive shell
 instead selected Python 3.14.7 and Node 26.10.0, so select versions explicitly.
 Rust 1.97.1, Flutter 3.44.7, and Codex CLI 0.157.1 were observed but are not
-GemmaLens dependencies. Python requirements are ranges, not a lockfile; record
-`pip freeze` for each release. `npm ci` uses the committed frontend lockfile.
+GemmaLens dependencies. `backend/requirements-linux.lock.txt` pins the tested
+Python 3.12 Linux environment by version (not hashes); CI uses that snapshot.
+`requirements-dev.txt` retains portable dependency ranges for Mac development.
+`npm ci` uses the committed frontend lockfile. `.node-version` and
+`.python-version` record the selected interpreter versions.
 
 Use a new local clone on Linux, never a shared Mac working directory. From that
 clone, with Python 3.12 and Node 22 selected:
 
 ```bash
-python3.12 -m venv backend/.venv
-backend/.venv/bin/python -m pip install -r backend/requirements-dev.txt
+bash scripts/setup_dev.sh
 cd backend
 .venv/bin/python -m pytest -q -rs
 .venv/bin/ruff check app tests
 cd ../frontend
-npm ci
 npm run build
+npm run typecheck
+npm audit
+npx playwright install chromium
+npm run test:e2e -- --workers=2
 ```
 
 For terminal development, start the API in one terminal:
@@ -286,9 +292,11 @@ BACKEND_INTERNAL_URL=http://127.0.0.1:18012 \
 ```
 
 These commands create disposable development state in the backend directory.
-Use the systemd recipe below for state outside Git and API authentication. Do
-not use `run_local_stack.sh` for coexistence testing: it kills listeners on its
-configured ports and selects MLX. Never run pytest from a live service working
+Use the systemd recipe below for state outside Git and API authentication.
+`bash scripts/run_local_stack.sh` now starts a loopback-only mock stack with the
+standard venv, isolated runtime configuration, and no model download. It refuses
+occupied ports instead of killing their owners and stops only its own children.
+Use `BACKEND_PORT` and `FRONTEND_PORT` to choose free ports. Never run pytest from a live service working
 directory: its fixtures delete `model_runtime.json` and initialize a local DB.
 
 External corpus evaluation is opt-in and is not counted as passed when skipped:
@@ -335,7 +343,7 @@ clone. State lives in `~/.local/state/gemmalens/`; credentials live separately i
 
 | Setting | Purpose |
 | --- | --- |
-| `APP_DEMO_MODE`, `MODEL_PROVIDER` | Both `true` and `mock` are required for mock; `ModelRuntimeService._merged_config` otherwise chooses MLX. |
+| `APP_DEMO_MODE`, `MODEL_PROVIDER` | Both `true` and `mock` enable explicit mock mode. The default and mock-without-demo states are unconfigured, never implicit MLX. |
 | `MODEL_SWITCHING_ENABLED` | Keep false for shared validation; persisted runtime JSON can override environment selections, so use fresh state. |
 | `DATABASE_URL` | Absolute SQLite URL; unit uses separate state, never the Mac DB. |
 | `UPLOAD_STORAGE_DIR`, `TRANSCRIPT_CACHE_DIR` | Uploaded sources and derived transcript cache. |
@@ -380,6 +388,18 @@ on the audited host. Changing linger is a host-owner action. Boot/reboot behavio
 was not tested. Do not expose this validation unit as the production service.
 
 ### Backup, Restore, Update, and Rollback
+
+Use `scripts/relocate_upload_paths.py` on an offline staging DB copy to map
+uploaded-file paths to another host. It defaults to dry run, validates every
+target file and rejects paths/symlinks outside the destination. `--apply`
+creates a private SQLite backup before updating paths. Synthetic tests cover
+dry run, backup, missing files and symlink escape. No operational DB was changed.
+
+```bash
+python3.12 scripts/relocate_upload_paths.py \
+  --database /path/to/staging/gemmalens.db \
+  --old-root /old/host/uploads --new-root /path/to/staging/uploads
+```
 
 SQLite contains documents, analyses, dictionary and profile data. Original
 uploads are separate files. `DocumentIngestionService.save_original_file`
@@ -428,6 +448,19 @@ discard post-cutover data.
 
 ### Validation and Handoff Gates
 
+Current local Linux result after portability fixes: **164 backend tests passed,
+one external-corpus evaluation skipped; full backend Ruff passed; 13 browser
+tests passed; production build/typecheck passed; npm audit reported zero
+vulnerabilities**. Next.js is 16.3.6, PDF.js 6.3.289 and PostCSS 8.5.28.
+The browser suite includes a generated PDF rendered with the bundled worker at
+desktop/mobile widths and canvas-pixel assertions. It needs neither a running
+backend, live YouTube, private documents nor model weights. External corpus and
+real inference quality remain separate optional research/product validation.
+
+The following paragraphs preserve the **earlier audit baseline**, not current
+failures. GitHub PR checks and the final clean-checkout rehearsal are the
+authoritative final commit-level evidence.
+
 The Linux baseline build completed. After two test-harness corrections, backend
 tests report **152 passed, 1 external-corpus evaluation skipped**. The original
 baseline had 151 passed/2 failed: a stale dictionary deletion assertion and an
@@ -444,23 +477,18 @@ also failed and is not used as proof of application behavior. The ad-hoc
 `screenshot.spec.ts` was excluded because it hardcodes another port and a local
 document ID. Browser acceptance is therefore an open gate, not a passing check.
 
-To reproduce the connected suite after starting the isolated API:
+The revised browser suite is reproduced without starting an API:
 
 ```bash
-set -a
-. "$HOME/.config/gemmalens/api.env"
-set +a
-export GEMMALENS_API_KEY="$BACKEND_API_KEY"
-export BACKEND_INTERNAL_URL=http://127.0.0.1:18012
-export PLAYWRIGHT_BASE_URL=http://127.0.0.1:13003
 cd frontend
 npx playwright install chromium
-npx playwright test tests/e2e/video.spec.ts tests/e2e/internal-tools.spec.ts --workers=2
+npm run test:e2e -- --workers=2
 ```
 
-Use Node 22, an unused frontend port, and the dedicated validation dataset.
-Playwright's config can reuse a pre-existing server; verify ownership first.
-Afterward stop the dedicated API and unset the exported key variables.
+Use Node 22 and an unused frontend port (`PLAYWRIGHT_BASE_URL` can override it).
+Playwright refuses to reuse an existing server, clears API-key environment
+variables, and uses deterministic API fixtures. The historical screenshot
+test was replaced with generated test artifacts rather than a private document.
 
 Systemd verification, authenticated mock API workflow, upload/read after restart,
 graceful stop, and staged archive integrity checks passed. Service was left
@@ -493,8 +521,8 @@ metadata differed; the rewriting mechanism was not established. A fresh upstream
 worktree preserves both histories and uncommitted operator work. Do not force
 push, reset the original checkout, or treat that divergence as new source work.
 
-Production cutover remains **not performed**. Before approval, resolve dependency
-and lint gates, validate real inference and a full restore, establish monitoring
+Production cutover remains **not requested or performed**. If requested later,
+validate real inference and a full operational restore, establish monitoring
 and storage/log retention, and specify the single writer, final synchronization,
 traffic switch, success checks, and rollback data reconciliation. Host reboot,
 Docker repair, public DNS/Tunnel changes, and existing service replacement are

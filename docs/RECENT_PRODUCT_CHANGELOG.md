@@ -2,6 +2,27 @@
 
 ## 2026-09-29: Post-Judging and Migration Preparation
 
+### Portability Follow-up
+
+- Default runtime is unconfigured, with HTTP 503 for inference until an explicit
+  provider is selected. Mock without demo mode no longer switches to MLX.
+- Replaced the Mac-only destructive development launcher with loopback mock
+  startup, free-port checks, a standard venv and cleanup of owned processes.
+- Added interpreter version files, a pinned Linux Python dependency snapshot
+  and a setup script that installs project dependencies without starting services.
+- Selected the MLX JSON-array fix with full-value parsing and model-free
+  regression tests; selected the Next proxy runtime settings. Retired public
+  upload bypass and launchd supervision remain private historical work.
+- Resolved full-tree Ruff findings. Updated vulnerable dependencies; npm audit
+  is zero. Linux build/typecheck and 13 browser cases pass, including generated
+  PDF canvas rendering. Browser tests no longer require a backend or private ID.
+- Added dry-run-first offline upload-path relocation with SQLite backup and
+  synthetic tests. Latest backend run: 164 passed, one optional corpus skipped.
+- CI now runs frontend audit, typecheck and the isolated browser suite as well
+  as the pinned backend tests. API-entry UI and real inference remain follow-up.
+
+### Initial Audit (Historical)
+
 - Retired the personal judging model backend and disabled its automatic
   supervisor. Removed only its public tunnel route; retained data and other
   shared routes. Linux mock validation remains inactive and disabled.

@@ -21,6 +21,13 @@ restart supervisor have been shut down; the judging backend's public route has
 been removed. No always-on replacement model service is being deployed.
 Migration preparation remains the priority.
 
+The clean checkout no longer selects a personal model automatically. The default
+is `unconfigured`; inference returns HTTP 503 until explicitly configured.
+For model-free development, select Python 3.12 and Node 22, then run
+`bash scripts/setup_dev.sh` and `bash scripts/run_local_stack.sh`. The launcher
+uses mock mode, refuses occupied ports and requires no Mac, model weights, or
+live inference service. Browser tests use isolated fixtures without a backend.
+
 [Follow-up #1](https://github.com/Jaemani/GemmaLens/issues/1) will add API endpoint,
 key, and model configuration when selecting a model. This feature is planned,
 not implemented. The local-model instructions below are optional developer
@@ -125,6 +132,9 @@ source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8012
 ```
+
+This starts the application without an inference model. Use the portable mock
+stack above for development; model API entry remains follow-up #1.
 
 Backend health check:
 
