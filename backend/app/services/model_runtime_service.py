@@ -6,6 +6,13 @@ from app.core.config import get_settings
 from app.schemas.model_schema import ModelConfigUpdate, ModelPreset, ModelStatus
 
 PRESETS: dict[str, dict[str, str]] = {
+    "unconfigured": {
+        "label": "No model configured",
+        "provider": "unconfigured",
+        "size": "None",
+        "speed": "Unavailable",
+        "description": "No inference runtime selected.",
+    },
     "mock": {
         "label": "Mock analysis",
         "provider": "mock",
@@ -146,7 +153,7 @@ class ModelRuntimeService:
 
     def _merged_config(self) -> dict[str, Any]:
         config: dict[str, Any] = {
-            "preset_id": "gemma4-e2b-mlx",
+            "preset_id": "unconfigured",
             "provider": self.settings.model_provider,
             "ollama_model": self.settings.ollama_model,
             "ollama_base_url": self.settings.ollama_base_url,
@@ -181,11 +188,13 @@ class ModelRuntimeService:
         elif config["provider"] == "remote" and "e2b" in str(config["remote_gemma_model"]).lower():
             config.update(self._preset_config("gemma4-e2b-thinkpad"))
         elif config["provider"] == "mock" and not self.settings.app_demo_mode:
-            config.update(self._preset_config("gemma4-e2b-mlx"))
-        elif config["preset_id"] == "mock" and not self.settings.app_demo_mode:
-            config.update(self._preset_config("gemma4-e2b-mlx"))
-        elif config["preset_id"] == "mock" and config["provider"] == "ollama":
+            config.update(self._preset_config("unconfigured"))
+        elif config["provider"] == "mock":
+            config["preset_id"] = "mock"
+        elif config["provider"] == "ollama":
             config.update(self._preset_config("gemma4-e4b-ollama"))
+        elif config["provider"] == "unconfigured":
+            config.update(self._preset_config("unconfigured"))
         return config
 
     def _preset_config(self, preset_id: str) -> dict[str, Any]:

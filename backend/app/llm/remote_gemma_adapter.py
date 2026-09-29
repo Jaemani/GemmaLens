@@ -489,7 +489,8 @@ class RemoteGemmaAdapter(ModelAdapter):
             "Each term object must include: term, meaning, support_language_meaning, domain_relevance, difficulty, source_sentence, should_save, learning_priority, reason, confidence. "
             f"meaning must be a concise {learning_language} context meaning. support_language_meaning must be a concise {support_language} learner gloss. "
             "The term text must literally appear in SOURCE. The source_sentence must be copied from SOURCE. "
-            "Prefer field terms and high-value unknown words. Reject generic words such as section, source, figure, table, page, note, report, study, participant, value, item, data, result, and generic organization names unless the source teaches a technical meaning. "
+            "Prefer field terms and high-value unknown words. Reject generic words such as section, source, figure, table, page, note, report, study, "
+            "participant, value, item, data, result, and generic organization names unless the source teaches a technical meaning. "
             "Do not invent terms. Do not use placeholder values.\n\n"
             f"SOURCE:\n{text}"
         )
