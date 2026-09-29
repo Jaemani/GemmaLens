@@ -457,6 +457,16 @@ desktop/mobile widths and canvas-pixel assertions. It needs neither a running
 backend, live YouTube, private documents nor model weights. External corpus and
 real inference quality remain separate optional research/product validation.
 
+A second, fresh GitHub clone at `d40868d` reproduced setup from the committed
+Linux dependency snapshot, backend lint/tests, frontend build/typecheck/audit,
+and all 13 browser tests without copied environments, private documents or
+Mac access. GitHub Actions run
+[36531789233](https://github.com/Jaemani/GemmaLens/actions/runs/36531789233)
+also passed both jobs, including browser tests. Generated Next.js declarations
+and TypeScript incremental caches are now excluded from version control.
+Development preparation is complete for this model-free scope; PR review/merge
+and the API-configuration feature remain separate. No deployment is required.
+
 The following paragraphs preserve the **earlier audit baseline**, not current
 failures. GitHub PR checks and the final clean-checkout rehearsal are the
 authoritative final commit-level evidence.
