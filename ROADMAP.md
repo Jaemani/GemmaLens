@@ -1,5 +1,19 @@
 # Roadmap
 
+## Post-Judging Priority
+
+- Continue migration preparation without deploying an always-on model service.
+  The personal judging backend and automatic supervisor are shut down.
+- [Linux development preparation (#2)](https://github.com/Jaemani/GemmaLens/issues/2):
+  source changes reconciled, lint/browser/dependency checks passed, and a fresh
+  GitHub clone rehearsed without a personal model server. Review PR #3 before
+  merging; operational data cutover is not part of this preparation.
+- [Accept API configuration when selecting a model (#1)](https://github.com/Jaemani/GemmaLens/issues/1):
+  collect endpoint/provider, API key when needed, and model identifier; validate
+  the connection and handle failures without silently starting local inference.
+  Define credential lifetime and user/session isolation before implementation.
+  This is follow-up work, not an already available feature.
+
 ## Near Term
 
 - Implement staged full-document analysis: page/section analysis, stored section results, merged paper map, and whole-paper summary.

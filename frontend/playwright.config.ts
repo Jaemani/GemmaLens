@@ -16,7 +16,15 @@ export default defineConfig({
   webServer: {
     command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
     url: baseURL,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
+    env: {
+      BACKEND_INTERNAL_URL: "http://127.0.0.1:9",
+      NEXT_PUBLIC_API_BASE_URL: "",
+      NEXT_PUBLIC_GEMMALENS_API_KEY: "",
+      NEXT_PUBLIC_DIRECT_UPLOAD_BASE_URL: "",
+      GEMMALENS_API_KEY: "",
+      NEXT_TELEMETRY_DISABLED: "1",
+    },
     timeout: 120_000
   },
   projects: [

@@ -1,12 +1,11 @@
-from pathlib import Path
 import mimetypes
+from pathlib import Path
 
 from fastapi import HTTPException, status
 from fastapi.responses import FileResponse
 
 from app.core.config import get_settings
 from app.schemas.video_schema import LocalMediaItem, LocalMediaLibraryResponse, LocalSubtitleContent, LocalSubtitleFile
-
 
 VIDEO_EXTENSIONS = {".mp4", ".m4v", ".mov", ".mkv", ".webm"}
 SUBTITLE_EXTENSIONS = {".srt", ".vtt"}

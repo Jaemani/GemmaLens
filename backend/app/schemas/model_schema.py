@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 ModelPresetId = Literal[
+    "unconfigured",
     "mock",
     "gemma4-e2b-mlx",
     "gemma4-e4b-mlx",
@@ -18,7 +19,7 @@ ModelPresetId = Literal[
 class ModelPreset(BaseModel):
     id: ModelPresetId
     label: str
-    runtime: Literal["mock", "mlx", "ollama", "remote"]
+    runtime: Literal["unconfigured", "mock", "mlx", "ollama", "remote"]
     size: str
     speed: str
     availability: Literal["ready", "missing", "external"]
@@ -26,7 +27,7 @@ class ModelPreset(BaseModel):
 
 
 class ModelStatus(BaseModel):
-    provider: Literal["mock", "mlx", "ollama", "remote"]
+    provider: Literal["unconfigured", "mock", "mlx", "ollama", "remote"]
     preset_id: ModelPresetId
     preset_label: str
     ollama_model: str
@@ -41,7 +42,7 @@ class ModelStatus(BaseModel):
 
 class ModelConfigUpdate(BaseModel):
     preset_id: ModelPresetId | None = None
-    provider: Literal["mock", "mlx", "ollama", "remote"] | None = None
+    provider: Literal["unconfigured", "mock", "mlx", "ollama", "remote"] | None = None
     ollama_model: str | None = Field(default=None, min_length=1)
     ollama_base_url: str | None = Field(default=None, min_length=1)
     remote_gemma_model: str | None = Field(default=None, min_length=1)

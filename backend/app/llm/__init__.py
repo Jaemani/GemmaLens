@@ -1,3 +1,5 @@
+from fastapi import HTTPException
+
 from app.llm.base import ModelAdapter
 from app.llm.mlx_adapter import MLXAdapter
 from app.llm.mock_adapter import MockModelAdapter
@@ -14,4 +16,6 @@ def get_model_adapter() -> ModelAdapter:
         return MLXAdapter()
     if provider == "remote":
         return RemoteGemmaAdapter()
-    return MockModelAdapter()
+    if provider == "mock":
+        return MockModelAdapter()
+    raise HTTPException(status_code=503, detail="No model runtime configured. Select an explicit provider before requesting analysis.")

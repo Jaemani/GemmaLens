@@ -277,7 +277,10 @@ def test_normalizer_adds_korean_fallback_for_concepts_without_native_gloss():
             {
                 "concept": "cognitive performance",
                 "explanation": "Mental task performance used as the outcome in the study.",
-                "source_sentence": "Although previous studies have suggested a correlation between sleep deprivation and reduced cognitive performance, the extent to which these findings generalize across real-world learning environments remains unclear.",
+                "source_sentence": (
+                    "Although previous studies have suggested a correlation between sleep deprivation and reduced cognitive performance, "
+                    "the extent to which these findings generalize across real-world learning environments remains unclear."
+                ),
             }
         ],
     }

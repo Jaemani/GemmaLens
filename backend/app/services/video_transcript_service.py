@@ -1,7 +1,7 @@
-from pathlib import Path
 import html
 import re
 from collections.abc import Iterable
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -9,7 +9,6 @@ from fastapi import HTTPException, status
 
 from app.core.config import get_settings
 from app.schemas.video_schema import TranscriptResponse, TranscriptSegment
-
 
 KNOWN_YOUTUBE_TEXT_SOURCES = {
     "eMlx5fFNoYc": {

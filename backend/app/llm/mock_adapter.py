@@ -32,10 +32,7 @@ class MockModelAdapter(ModelAdapter):
     ) -> AnalysisResult:
         source = text.strip() or SAMPLE_PARAGRAPH
         first_sentence = source.split(".")[0].strip() + "."
-        second_sentence = (
-            "To address this gap, we analyze longitudinal study logs collected from "
-            "undergraduate students over a six-week period."
-        )
+        second_sentence = "To address this gap, we analyze longitudinal study logs collected from undergraduate students over a six-week period."
         return AnalysisResult(
             document_id=document_id,
             domain=DomainInfo(
@@ -52,17 +49,76 @@ class MockModelAdapter(ModelAdapter):
                 reason="Dense academic syntax combines concession, uncertainty, and method framing.",
             ),
             terms=[
-                TermItem(term="sleep deprivation", meaning="a state of not getting enough sleep", support_language_meaning="수면이 충분하지 않은 상태", domain_relevance="high", difficulty="medium", source_sentence=first_sentence),
-                TermItem(term="cognitive performance", meaning="how well the mind performs tasks like memory, attention, and reasoning", support_language_meaning="기억, 주의, 추론 같은 인지 과제를 얼마나 잘 수행하는지", domain_relevance="high", difficulty="medium", source_sentence=first_sentence),
-                TermItem(term="generalize", meaning="apply findings from one context to other contexts", support_language_meaning="한 맥락의 결과를 다른 맥락에도 적용하다", domain_relevance="medium", difficulty="hard", source_sentence=first_sentence),
-                TermItem(term="real-world learning environments", meaning="actual educational settings outside controlled experiments", support_language_meaning="통제 실험이 아닌 실제 학습 환경", domain_relevance="high", difficulty="hard", source_sentence=first_sentence),
-                TermItem(term="longitudinal study", meaning="research that observes the same subjects over time", support_language_meaning="같은 대상을 오랜 기간 관찰하는 연구", domain_relevance="high", difficulty="hard", source_sentence=second_sentence),
+                TermItem(
+                    term="sleep deprivation",
+                    meaning="a state of not getting enough sleep",
+                    support_language_meaning="수면이 충분하지 않은 상태",
+                    domain_relevance="high",
+                    difficulty="medium",
+                    source_sentence=first_sentence,
+                ),
+                TermItem(
+                    term="cognitive performance",
+                    meaning="how well the mind performs tasks like memory, attention, and reasoning",
+                    support_language_meaning="기억, 주의, 추론 같은 인지 과제를 얼마나 잘 수행하는지",
+                    domain_relevance="high",
+                    difficulty="medium",
+                    source_sentence=first_sentence,
+                ),
+                TermItem(
+                    term="generalize",
+                    meaning="apply findings from one context to other contexts",
+                    support_language_meaning="한 맥락의 결과를 다른 맥락에도 적용하다",
+                    domain_relevance="medium",
+                    difficulty="hard",
+                    source_sentence=first_sentence,
+                ),
+                TermItem(
+                    term="real-world learning environments",
+                    meaning="actual educational settings outside controlled experiments",
+                    support_language_meaning="통제 실험이 아닌 실제 학습 환경",
+                    domain_relevance="high",
+                    difficulty="hard",
+                    source_sentence=first_sentence,
+                ),
+                TermItem(
+                    term="longitudinal study",
+                    meaning="research that observes the same subjects over time",
+                    support_language_meaning="같은 대상을 오랜 기간 관찰하는 연구",
+                    domain_relevance="high",
+                    difficulty="hard",
+                    source_sentence=second_sentence,
+                ),
             ],
             phrases=[
-                PhraseItem(phrase="previous studies have suggested", function="claim", explanation="Introduces existing evidence without making a fully certain claim.", support_language_explanation="기존 연구가 시사한다고 조심스럽게 말할 때 쓰는 표현", source_sentence=first_sentence),
-                PhraseItem(phrase="the extent to which", function="general", explanation="Frames a question about degree or scope.", support_language_explanation="어느 정도까지 그런지를 묻는 표현", source_sentence=first_sentence),
-                PhraseItem(phrase="remains unclear", function="limitation", explanation="Marks an unresolved research problem.", support_language_explanation="아직 명확하지 않다는 연구 공백을 표시", source_sentence=first_sentence),
-                PhraseItem(phrase="to address this gap", function="method", explanation="Connects the research gap to the authors' method.", support_language_explanation="앞의 공백을 해결하기 위해 방법을 제시할 때 사용", source_sentence=second_sentence),
+                PhraseItem(
+                    phrase="previous studies have suggested",
+                    function="claim",
+                    explanation="Introduces existing evidence without making a fully certain claim.",
+                    support_language_explanation="기존 연구가 시사한다고 조심스럽게 말할 때 쓰는 표현",
+                    source_sentence=first_sentence,
+                ),
+                PhraseItem(
+                    phrase="the extent to which",
+                    function="general",
+                    explanation="Frames a question about degree or scope.",
+                    support_language_explanation="어느 정도까지 그런지를 묻는 표현",
+                    source_sentence=first_sentence,
+                ),
+                PhraseItem(
+                    phrase="remains unclear",
+                    function="limitation",
+                    explanation="Marks an unresolved research problem.",
+                    support_language_explanation="아직 명확하지 않다는 연구 공백을 표시",
+                    source_sentence=first_sentence,
+                ),
+                PhraseItem(
+                    phrase="to address this gap",
+                    function="method",
+                    explanation="Connects the research gap to the authors' method.",
+                    support_language_explanation="앞의 공백을 해결하기 위해 방법을 제시할 때 사용",
+                    source_sentence=second_sentence,
+                ),
             ],
             concepts=[
                 ConceptItem(

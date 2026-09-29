@@ -1,5 +1,5 @@
-from collections import OrderedDict
 import re
+from collections import OrderedDict
 from typing import Any
 
 from app.repositories.analysis_repository import AnalysisRepository

@@ -1,6 +1,6 @@
 import asyncio
-import logging
 import json
+import logging
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -122,7 +122,15 @@ class MLXAdapter(ModelAdapter):
         for attempt in range(2):
             try:
                 output = self._generate_prompt_output(prompt, max_tokens=max_tokens)
-                return extract_json_object(output)
+                try:
+                    payload = json.loads(output.strip())
+                except json.JSONDecodeError:
+                    payload = extract_json_object(output)
+                if isinstance(payload, dict):
+                    return payload
+                if isinstance(payload, list) and task_name in {"terms", "phrases", "concepts", "sentences"}:
+                    return {task_name: payload}
+                raise ValueError(f"Unexpected JSON type for {task_name}: {type(payload).__name__}")
             except Exception as exc:
                 logger.warning("MLX atomic task failed: %s attempt=%s error=%s", task_name, attempt + 1, exc)
                 prompt = (
@@ -316,9 +324,12 @@ class MLXAdapter(ModelAdapter):
             f"Atomic task: extract {self._terms_count(target_level)} important learning terms from SOURCE. "
             f"{mode_note} {self._level_guidance(target_level)} "
             "Quality beats count. Return fewer terms when the page is sparse, boilerplate, a table of contents, a questionnaire, or mostly metadata. "
-            "Never pad with random words. Terms must be high-value learning vocabulary from the current section: field terms, report methodology terms, statistical concepts, domain-specific nouns, or academic nouns that carry the argument. "
+            "Never pad with random words. Terms must be high-value learning vocabulary from the current section: "
+            "field terms, report methodology terms, statistical concepts, domain-specific nouns, or academic nouns that carry the argument. "
             "Reject generic words such as section, source, figure, table, page, note, report, study, participant, value, item, data, result, and generic organization names unless SOURCE teaches a technical meaning. "
-            "Return only JSON: {\"terms\":[{\"term\":\"string\",\"meaning\":\"string\",\"support_language_meaning\":\"string\",\"domain_relevance\":\"low|medium|high\",\"difficulty\":\"easy|medium|hard\",\"source_sentence\":\"string\",\"should_save\":true,\"learning_priority\":\"must_review|useful|field_term|low_priority\",\"reason\":\"string\",\"confidence\":0.0}]}. "
+            'Return only JSON: {"terms":[{"term":"string","meaning":"string","support_language_meaning":"string",'
+            '"domain_relevance":"low|medium|high","difficulty":"easy|medium|hard","source_sentence":"string","should_save":true,'
+            '"learning_priority":"must_review|useful|field_term|low_priority","reason":"string","confidence":0.0}]}. '
             f"meaning must be concise {learning_language}. support_language_meaning must be concise {support_language}. term must appear in source_sentence copied from SOURCE.\n\n"
             f"SOURCE:\n{text}"
         )
@@ -337,7 +348,9 @@ class MLXAdapter(ModelAdapter):
             "Return fewer phrases when the section has fewer real reusable expressions. Never pad with generic fragments. "
             "A good phrase is a reusable academic expression, collocation, or rhetorical move from SOURCE. "
             "Reject weak phrases such as 'similarly to', 'based on', 'in addition to', 'as a result', and copied sentence fragments. "
-            "Return only JSON: {\"phrases\":[{\"phrase\":\"string\",\"function\":\"claim|contrast|limitation|method|result|general\",\"explanation\":\"string\",\"support_language_explanation\":\"string\",\"source_sentence\":\"string\",\"learning_priority\":\"must_review|useful|field_term|low_priority\",\"reason\":\"string\",\"confidence\":0.0}]}. "
+            'Return only JSON: {"phrases":[{"phrase":"string","function":"claim|contrast|limitation|method|result|general",'
+            '"explanation":"string","support_language_explanation":"string","source_sentence":"string",'
+            '"learning_priority":"must_review|useful|field_term|low_priority","reason":"string","confidence":0.0}]}. '
             f"explanation must be concise {learning_language}. support_language_explanation must be concise {support_language}. phrase must appear in source_sentence copied from SOURCE.\n\n"
             f"SOURCE:\n{text}"
         )
@@ -357,7 +370,9 @@ class MLXAdapter(ModelAdapter):
             "Good labels look like short ideas: 'diffusion-based coordinate refinement', 'burden-adjusted trial participation inequality', 'trade-policy uncertainty shock'. "
             "Bad labels are bare terms: 'diffusion module', 'weighted', 'GDP', 'Figure 1'. "
             "Keep each explanation and support_language_explanation to one concise sentence. "
-            "Return only JSON: {\"concepts\":[{\"concept\":\"string\",\"explanation\":\"string\",\"support_language_explanation\":\"string\",\"source_sentence\":\"string\",\"related_terms\":[\"string\"],\"why_it_matters\":\"string\",\"references\":[\"string\"],\"learning_priority\":\"must_review|useful|field_term|low_priority\",\"confidence\":0.0}]}. "
+            'Return only JSON: {"concepts":[{"concept":"string","explanation":"string","support_language_explanation":"string",'
+            '"source_sentence":"string","related_terms":["string"],"why_it_matters":"string","references":["string"],'
+            '"learning_priority":"must_review|useful|field_term|low_priority","confidence":0.0}]}. '
             f"explanation must be concise {learning_language}. support_language_explanation must be concise {support_language}. source_sentence must be copied from SOURCE. Do not copy the terms list.\n\n"
             f"SOURCE:\n{text}"
         )
@@ -453,9 +468,11 @@ class MLXAdapter(ModelAdapter):
             "Quality beats count: if the section is a cover page, table of contents, bibliography, questionnaire topline, or mostly boilerplate, return fewer items and add a quality_warnings entry. "
             "Do not fill target ranges with random words. "
             "Terms must be high-value learning vocabulary from the current section: field terms, report methodology terms, statistical concepts, domain-specific nouns, or academic nouns that carry the argument. "
-            "Reject generic words such as section, source, figure, table, page, note, report, study, participant, value, item, data, result, and generic organization names unless the current section teaches a technical meaning for them. "
+            "Reject generic words such as section, source, figure, table, page, note, report, study, participant, value, item, data, result, "
+            "and generic organization names unless the current section teaches a technical meaning for them. "
             "Concepts are not vocabulary duplicates. A concept should explain an idea, method, claim, mechanism, or argument move in the section. "
-            "Good concept labels look like short ideas: 'diffusion-based coordinate refinement', 'burden-adjusted trial participation inequality', 'trade-policy uncertainty shock', or 'human-caused warming attribution'. "
+            "Good concept labels look like short ideas: 'diffusion-based coordinate refinement', 'burden-adjusted trial participation inequality', "
+            "'trade-policy uncertainty shock', or 'human-caused warming attribution'. "
             "Bad concept labels are bare vocabulary duplicates: 'diffusion module', 'weighted', 'participants', 'GDP', or 'Figure 1'. "
             "Phrases must be reusable academic expressions or collocations, not arbitrary fragments. "
             "Reject weak phrases such as 'similarly to', 'based on', 'in addition to', 'as a result', 'this section', and copied sentence fragments. "

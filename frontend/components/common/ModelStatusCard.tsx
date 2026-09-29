@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import type { ModelPreset, ModelStatus } from "@/lib/types";
 
 const runtimeIcon = {
+  unconfigured: Cloud,
   mock: FlaskConical,
   mlx: Cpu,
   ollama: Cloud,
@@ -181,9 +182,13 @@ export function ModelStatusCard({ status, compact = false }: { status: ModelStat
       <div className="rounded-xl border border-line bg-panel p-4">
         <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-muted">Gemma Engine</p>
         <p className="mt-2 text-sm font-semibold text-ink">Backend offline</p>
-        <p className="mt-1 text-xs text-secondary">Start the backend to use local model features.</p>
+        <p className="mt-1 text-xs text-secondary">Model connection unavailable.</p>
       </div>
     );
+  }
+
+  if (current.provider === "unconfigured") {
+    return <div className="rounded-lg border border-line bg-panel p-4"><p className="text-sm font-semibold text-ink">No model configured</p></div>;
   }
 
   const activeId = detectActive(current.preset_label);

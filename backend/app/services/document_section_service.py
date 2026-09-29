@@ -158,7 +158,7 @@ class DocumentSectionService:
             text,
         )
         text = re.sub(
-            rf"\b(Abstract\s+form\s+convex\s+optimization\s+problem)\s+(?=[A-Z][a-z])",
+            r"\b(Abstract\s+form\s+convex\s+optimization\s+problem)\s+(?=[A-Z][a-z])",
             r"\n\1\n",
             text,
             flags=re.IGNORECASE,
@@ -171,7 +171,8 @@ class DocumentSectionService:
             text,
         )
         text = re.sub(
-            r"(?<=[.!?])\s+(\d{1,2}(?:\.\d+)+\s+(?:Encoder and Decoder Stacks|Scaled Dot-Product Attention|Multi-Head Attention|Applications of Attention in our Model|Position-wise Feed-Forward Networks|Embeddings and Softmax|Positional Encoding)\b)",
+            r"(?<=[.!?])\s+(\d{1,2}(?:\.\d+)+\s+(?:Encoder and Decoder Stacks|Scaled Dot-Product Attention|Multi-Head Attention|"
+            r"Applications of Attention in our Model|Position-wise Feed-Forward Networks|Embeddings and Softmax|Positional Encoding)\b)",
             r"\n\1\n",
             text,
         )
@@ -303,7 +304,10 @@ class DocumentSectionService:
         if simple:
             return simple.group(1).title()
         known_numbered = re.match(
-            r"^(\d{1,2}(?:\.\d+)*\s+(?:Introduction|Background|Model Architecture|ModelArchitecture|Encoder and Decoder Stacks|Attention|Scaled Dot-Product Attention|Multi-Head Attention|Applications of Attention in our Model|Position-wise Feed-Forward Networks|Embeddings and Softmax|Positional Encoding|Why Self-Attention|Training|Training Data and Batching|Hardware and Schedule|Optimizer|Regularization|Results|Machine Translation|Model Variations))\b",
+            r"^(\d{1,2}(?:\.\d+)*\s+(?:Introduction|Background|Model Architecture|ModelArchitecture|Encoder and Decoder Stacks|Attention|"
+            r"Scaled Dot-Product Attention|Multi-Head Attention|Applications of Attention in our Model|Position-wise Feed-Forward Networks|"
+            r"Embeddings and Softmax|Positional Encoding|Why Self-Attention|Training|Training Data and Batching|Hardware and Schedule|"
+            r"Optimizer|Regularization|Results|Machine Translation|Model Variations))\b",
             normalized,
         )
         if known_numbered:

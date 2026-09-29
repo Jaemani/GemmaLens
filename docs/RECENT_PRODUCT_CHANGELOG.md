@@ -1,5 +1,49 @@
 # Recent Product Changelog
 
+## 2026-09-29: Post-Judging and Migration Preparation
+
+### Portability Follow-up
+
+- Default runtime is unconfigured, with HTTP 503 for inference until an explicit
+  provider is selected. Mock without demo mode no longer switches to MLX.
+- Replaced the Mac-only destructive development launcher with loopback mock
+  startup, free-port checks, a standard venv and cleanup of owned processes.
+- Added interpreter version files, a pinned Linux Python dependency snapshot
+  and a setup script that installs project dependencies without starting services.
+- Selected the MLX JSON-array fix with full-value parsing and model-free
+  regression tests; selected the Next proxy runtime settings. Retired public
+  upload bypass and launchd supervision remain private historical work.
+- Resolved full-tree Ruff findings. Updated vulnerable dependencies; npm audit
+  is zero. Linux build/typecheck and 13 browser cases pass, including generated
+  PDF canvas rendering. Browser tests no longer require a backend or private ID.
+- Added dry-run-first offline upload-path relocation with SQLite backup and
+  synthetic tests. Latest backend run: 164 passed, one optional corpus skipped.
+- CI now runs frontend audit, typecheck and the isolated browser suite as well
+  as the pinned backend tests. API-entry UI and real inference remain follow-up.
+
+### Initial Audit (Historical)
+
+- Retired the personal judging model backend and disabled its automatic
+  supervisor. Removed only its public tunnel route; retained data and other
+  shared routes. Linux mock validation remains inactive and disabled.
+- Prepared an independent Linux checkout, user-systemd mock configuration,
+  explicit Python/Node selection, and authenticated API smoke checks. No
+  production migration or new deployment took place.
+- Corrected the dictionary deletion test to verify the remaining IDs and made
+  external PDF corpus evaluation explicitly opt-in. Linux tests: 152 passed,
+  one corpus evaluation skipped; build/proxy and synthetic backup checks passed.
+- Remaining checks are not green: 25 full-tree Ruff findings, 7 browser test
+  failures, and 11 dependency audit findings. See deployment documentation for
+  the exact tested scope and [issue #2](https://github.com/Jaemani/GemmaLens/issues/2)
+  for preparation completion criteria.
+- Recorded the Mac-only uncommitted upload, MLX, proxy and supervisor changes
+  separately. Their private recovery copy is not an implementation in this
+  branch. No credentials, operational data or agent state were published.
+- Planned API configuration during model selection in
+  [issue #1](https://github.com/Jaemani/GemmaLens/issues/1). Not implemented yet.
+
+## 2026-05-19: Product Changes
+
 Date: 2026-05-19
 
 Purpose: record product and implementation changes made after the larger dashboard/document/video redesign notes. This file documents only behavior that remains in the app. Features that were added and then removed are listed as future candidates, not as current functionality.

@@ -1,5 +1,9 @@
 import { NextRequest } from "next/server";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 300;
+
 const BACKEND_BASE =
   process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8012";
 const BACKEND_API_KEY = process.env.GEMMALENS_API_KEY ?? process.env.NEXT_PUBLIC_GEMMALENS_API_KEY;
