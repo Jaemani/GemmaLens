@@ -1,5 +1,28 @@
 # Recent Product Changelog
 
+## 2026-09-29: Post-Judging and Migration Preparation
+
+- Retired the personal judging model backend and disabled its automatic
+  supervisor. Removed only its public tunnel route; retained data and other
+  shared routes. Linux mock validation remains inactive and disabled.
+- Prepared an independent Linux checkout, user-systemd mock configuration,
+  explicit Python/Node selection, and authenticated API smoke checks. No
+  production migration or new deployment took place.
+- Corrected the dictionary deletion test to verify the remaining IDs and made
+  external PDF corpus evaluation explicitly opt-in. Linux tests: 152 passed,
+  one corpus evaluation skipped; build/proxy and synthetic backup checks passed.
+- Remaining checks are not green: 25 full-tree Ruff findings, 7 browser test
+  failures, and 11 dependency audit findings. See deployment documentation for
+  the exact tested scope and [issue #2](https://github.com/Jaemani/GemmaLens/issues/2)
+  for preparation completion criteria.
+- Recorded the Mac-only uncommitted upload, MLX, proxy and supervisor changes
+  separately. Their private recovery copy is not an implementation in this
+  branch. No credentials, operational data or agent state were published.
+- Planned API configuration during model selection in
+  [issue #1](https://github.com/Jaemani/GemmaLens/issues/1). Not implemented yet.
+
+## 2026-05-19: Product Changes
+
 Date: 2026-05-19
 
 Purpose: record product and implementation changes made after the larger dashboard/document/video redesign notes. This file documents only behavior that remains in the app. Features that were added and then removed are listed as future candidates, not as current functionality.

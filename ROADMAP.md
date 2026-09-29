@@ -4,6 +4,9 @@
 
 - Continue migration preparation without deploying an always-on model service.
   The personal judging backend and automatic supervisor are shut down.
+- [Close migration preparation gaps (#2)](https://github.com/Jaemani/GemmaLens/issues/2):
+  reconcile private local changes, resolve validation/dependency findings, and
+  rehearse a clean checkout of the reviewed commit. Preparation is not complete.
 - [Accept API configuration when selecting a model (#1)](https://github.com/Jaemani/GemmaLens/issues/1):
   collect endpoint/provider, API key when needed, and model identifier; validate
   the connection and handle failures without silently starting local inference.

@@ -169,6 +169,37 @@ The backend now normalizes common E4B issues such as typo enum values, missing f
 
 ## Linux Development and Operations
 
+### Readiness and Source Reconciliation
+
+**Preparation is partial, not complete.** The Linux checkout validates reviewed
+upstream code plus the preparation commits; it does not contain every change in
+the original Mac working directory. [Issue #2](https://github.com/Jaemani/GemmaLens/issues/2)
+tracks source reconciliation and the remaining lint, browser, dependency, and
+external-corpus gates. Deployment is not a completion requirement.
+
+| Existing local work, excluded from the preparation branch | Behavior found in the diff | Required disposition |
+| --- | --- | --- |
+| `backend/app/api/routes_documents.py`, `core/config.py`, `main.py` | Public upload/file routes bypass the API key, check Origin/Referer, and check file size after ingestion; new 25 MiB settings | Review authentication, URL-origin validation and resource limits before integrating. Header presence is not authorization. |
+| `frontend/lib/api.ts`, `components/document/DocumentInputPanel.tsx` | Optional direct upload base, 4 MiB proxy threshold, 25 MiB direct limit, public file URL and explanatory UI text | Reconcile with post-judging API design; verify upload and attachment paths independently. Not shipped on this branch. |
+| `frontend/app/api/backend/[...path]/route.ts` | Force-dynamic Node runtime and 300-second route duration | Review/test independently; configuration alone does not prove hosted limits. |
+| `backend/app/llm/mlx_adapter.py` | Wrap JSON arrays for atomic terms/phrases/concepts/sentences tasks; reject other non-object payloads | Review with model-free tests before selecting this isolated change. |
+| `scripts/run_funnel_backend.sh` | Key alias, runtime-preset writes, loopback-only bind | Historical judging work; do not reactivate it during migration preparation. |
+| Untracked `ensure_funnel_backend.sh`, `supervise_funnel_backend.sh`, install/uninstall autostart scripts | launchd supervision, process restart and Funnel management, including a shared configuration reset path | Preserve privately for review; not Linux deployment tooling. Supervisor is disabled. |
+| Untracked capability report and submission draft | Evaluation/publication documents | Evidence/publication review required before committing. |
+
+The original dirty worktree remains intact. A private recovery snapshot contains
+the tracked diff and selected untracked source/documents; it is available on both
+hosts through the operator handoff. It excludes credentials, DBs, model weights,
+agent state and caches. Copying this snapshot does not mean its code is merged,
+tested, or publishable. The original history divergence is also not resolved by
+the preparation branch. Review it separately without force-pushing.
+
+Complete preparation requires reviewed source available through GitHub, a clean
+Linux checkout at that exact commit, resolved/explicitly accepted test gates,
+and a documented disposition for remaining local artifacts. The application
+still needs the API-selection follow-up in #1; no always-on inference service
+will be started to make a test or migration gate appear complete.
+
 ### Scope and Component Inventory
 
 Audit date: 2026-09-29. Code baseline: `099e925a01d3bd8f5678b6c53c10420e2d7b7677`.
@@ -309,7 +340,7 @@ clone. State lives in `~/.local/state/gemmalens/`; credentials live separately i
 | `DATABASE_URL` | Absolute SQLite URL; unit uses separate state, never the Mac DB. |
 | `UPLOAD_STORAGE_DIR`, `TRANSCRIPT_CACHE_DIR` | Uploaded sources and derived transcript cache. |
 | `MODEL_RUNTIME_CONFIG_PATH` | Persistent model selection; keep isolated from tests and Mac runtime. |
-| `BACKEND_API_KEY` | Server secret; health and existing public upload/file routes are exceptions, so API key alone is not a public-access policy. |
+| `BACKEND_API_KEY` | Server secret; `/health` is unauthenticated on this branch. Public upload/file exceptions exist only in the excluded Mac working changes and are not available in the clean Linux checkout. |
 | `BACKEND_INTERNAL_URL`, `GEMMALENS_API_KEY` | Next.js server-side proxy configuration. Never use a `NEXT_PUBLIC_*` secret. |
 | `LOCAL_MEDIA_LIBRARY_ENABLED`, `LOCAL_VIDEO_LIBRARY_DIR` | Disabled by default; enable only with a curated directory and separate review. |
 | `REMOTE_GEMMA_BASE_URL`, `REMOTE_GEMMA_MODEL`, `MLX_MODEL_PATH` | Real inference configuration, not used in mock validation. |
