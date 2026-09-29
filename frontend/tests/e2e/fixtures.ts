@@ -1,4 +1,36 @@
 import type { Page, Route } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
+
+export { expect };
+export const test = base.extend({
+  page: async ({ page, baseURL }, use) => {
+    await page.route("**/*", async (route) => {
+      const url = new URL(route.request().url());
+      if (url.origin !== new URL(baseURL!).origin) return route.abort();
+      return route.fallback();
+    });
+    await page.route("**/api/backend/**", (route) => {
+      const path = new URL(route.request().url()).pathname.replace("/api/backend", "");
+      if (path === "/profile") return fulfillJson(route, {
+        id: "profile", display_name: "Learner", target_level: "B2", support_language: "Korean",
+        learning_language: "English", auto_analyze_documents: false, onboarding_completed: true,
+      });
+      if (path === "/models/status") return fulfillJson(route, {
+        provider: "mock", preset_id: "mock", preset_label: "Mock analysis", mock_fallback: true, demo_mode: true,
+      });
+      if (path === "/models/presets" || path === "/documents" || path === "/dictionary/items") return fulfillJson(route, []);
+      if (path === "/video/local-library") return fulfillJson(route, { root: "", items: [] });
+      if (path.endsWith("/paper-map")) return fulfillJson(route, {
+        document_id: path.split("/")[2], total_sections: 1, analyzed_sections: [1],
+        guide: { title: "Reading guide", thesis_so_far: "Ready.", coverage_note: "1 / 1", reading_focus: [], next_steps: [] },
+        synthesis: { status: "complete", argument_flow: [], priority_concepts: [], priority_terms: [], reusable_expressions: [], review_plan: [] },
+        top_concepts: [], top_terms: [], top_phrases: [], section_summaries: [],
+      });
+      return route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ detail: "No fixture for this request" }) });
+    });
+    await use(page);
+  },
+});
 
 export const mockTranscript = {
   source_type: "subtitle",

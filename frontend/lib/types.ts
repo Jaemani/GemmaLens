@@ -177,8 +177,9 @@ export type UserProfile = {
 };
 
 export type ModelStatus = {
-  provider: "mock" | "mlx" | "ollama" | "remote" | "gguf";
+  provider: "unconfigured" | "mock" | "mlx" | "ollama" | "remote" | "gguf";
   preset_id:
+    | "unconfigured"
     | "mock"
     | "gemma4-e2b-mlx"
     | "gemma4-e4b-mlx"

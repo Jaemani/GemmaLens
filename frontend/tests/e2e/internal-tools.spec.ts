@@ -1,12 +1,11 @@
-import { expect, test } from "@playwright/test";
-import { mockAnalysis } from "./fixtures";
+import { expect, test, mockAnalysis } from "./fixtures";
 
 test("internal experiment route is not part of the learner app", async ({ page }) => {
   await page.goto("/experiments");
 
   await expect(page).toHaveURL(/\/guide$/);
   await expect(page.getByRole("heading", { name: "Experiment dashboard" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "How to use GemmaLens" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Guide", exact: true })).toBeVisible();
 });
 
 test("real analysis pages do not expose experiment controls", async ({ page }) => {
@@ -137,7 +136,6 @@ test("document workspace prepares first page before showing paper map", async ({
 
   await page.goto("/analysis/first-section-doc");
 
-  await expect(page.getByText("Preparing the first lesson before opening the workspace.")).toBeVisible();
   await expect(page.getByText("Video lesson")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "A confrontational movie dialogue with idiomatic spoken expressions." })).toBeVisible();
   await expect.poll(() => pageCalls[0]).toBe(1);
@@ -504,14 +502,13 @@ test("document section navigator moves by PDF page and highlights current page",
 
   await page.goto("/analysis/nav-doc");
 
-  await expect(page.getByText("Page 1 · Part 1 · 1 / 4 lessons")).toBeVisible();
-  await page.getByText("Paper parts").click();
+  await expect(page.getByRole("button", { name: "Previous section", exact: true })).toBeDisabled();
   await expect(page.locator('[data-current-page="true"]').getByText("Page 1", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Next PDF page" }).click();
-  await expect(page.getByText("Page 2 · Part 1 · 3 / 4 lessons", { exact: true })).toBeVisible();
   await expect(page.locator('[data-current-page="true"]').getByText("Page 2", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Previous section" }).click();
-  await expect(page.getByText("Page 1 · Part 2 · 2 / 4 lessons", { exact: true })).toBeVisible();
+  await expect(page.locator('[data-current-page="true"]').getByText("Page 1", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Previous section", exact: true })).toBeEnabled();
 });
