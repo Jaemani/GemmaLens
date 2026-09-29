@@ -291,6 +291,11 @@ model host is for judging only and will be shut down after judging ends.
 
 ## Testing
 
+For isolated Linux setup, service lifecycle, data handling, and current validation
+limits, see [Deployment](docs/DEPLOYMENT.md#linux-development-and-operations).
+The MLX scripts above remain Mac-specific. On Linux, mock testing requires both
+`APP_DEMO_MODE=true` and `MODEL_PROVIDER=mock`.
+
 Backend:
 
 ```bash
