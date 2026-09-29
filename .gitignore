@@ -16,3 +16,12 @@ tmp/
 .vercel
 frontend/test-results/
 frontend/playwright-report/
+.serena/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.log
+.env.*
+!.env.example
