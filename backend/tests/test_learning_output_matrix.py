@@ -1,5 +1,8 @@
-from pathlib import Path
+import os
 import re
+from pathlib import Path
+
+import pytest
 
 from app.services.analysis_normalization_service import AnalysisNormalizationService
 from app.services.document_ingestion_service import DocumentIngestionService
@@ -215,11 +218,16 @@ def test_ml_youtube_opening_does_not_promote_incidental_climate_terms():
 
 
 def test_eval_papers_all_extracted_sections_have_learning_signal_at_all_levels():
+    corpus_dir = os.environ.get("GEMMALENS_EVAL_PAPERS_DIR")
+    if not corpus_dir:
+        pytest.skip("Set GEMMALENS_EVAL_PAPERS_DIR to run the external PDF corpus evaluation")
     papers = [
-        Path("tmp/eval_papers/attention_is_all_you_need.pdf"),
-        Path("tmp/eval_papers/batch_norm.pdf"),
-        Path("tmp/eval_papers/bert.pdf"),
+        Path(corpus_dir) / "attention_is_all_you_need.pdf",
+        Path(corpus_dir) / "batch_norm.pdf",
+        Path(corpus_dir) / "bert.pdf",
     ]
+    missing = [paper.name for paper in papers if not paper.is_file()]
+    assert not missing, f"Requested evaluation corpus is incomplete: {missing}"
     ingestion = DocumentIngestionService()
     splitter = DocumentSectionService()
     normalizer = AnalysisNormalizationService()

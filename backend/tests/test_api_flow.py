@@ -186,7 +186,12 @@ def test_document_analysis_and_dictionary_flow(client):
 
     deleted = client.delete(f"/dictionary/items/{term_item['id']}")
     assert deleted.status_code == 204
-    assert len(client.get("/dictionary/items").json()) == 1
+    remaining = client.get("/dictionary/items")
+    assert remaining.status_code == 200
+    assert {item["id"] for item in remaining.json()} == {
+        saved_concept.json()["id"],
+        saved_video_concept.json()["id"],
+    }
 
 
 def test_document_section_analysis_stays_on_parent_document(client):
