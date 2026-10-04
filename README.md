@@ -14,6 +14,37 @@
 
 ---
 
+## Demo
+
+### Screenshots
+
+Click a screenshot to view it at full size.
+
+<table>
+  <tr>
+    <td><a href="./assets/demo/screenshot-1.png"><img src="./assets/demo/screenshot-1.png" alt="GemmaLens screenshot 1" width="440"></a></td>
+    <td><a href="./assets/demo/screenshot-2.png"><img src="./assets/demo/screenshot-2.png" alt="GemmaLens screenshot 2" width="440"></a></td>
+  </tr>
+  <tr>
+    <td><a href="./assets/demo/screenshot-3.png"><img src="./assets/demo/screenshot-3.png" alt="GemmaLens screenshot 3" width="440"></a></td>
+    <td><a href="./assets/demo/screenshot-4.png"><img src="./assets/demo/screenshot-4.png" alt="GemmaLens screenshot 4" width="440"></a></td>
+  </tr>
+  <tr>
+    <td><a href="./assets/demo/screenshot-5.png"><img src="./assets/demo/screenshot-5.png" alt="GemmaLens screenshot 5" width="440"></a></td>
+    <td><a href="./assets/demo/screenshot-6.png"><img src="./assets/demo/screenshot-6.png" alt="GemmaLens screenshot 6" width="440"></a></td>
+  </tr>
+  <tr>
+    <td><a href="./assets/demo/screenshot-7.png"><img src="./assets/demo/screenshot-7.png" alt="GemmaLens screenshot 7" width="440"></a></td>
+    <td><a href="./assets/demo/screenshot-8.png"><img src="./assets/demo/screenshot-8.png" alt="GemmaLens screenshot 8" width="440"></a></td>
+  </tr>
+</table>
+
+### Demo Video
+
+<a href="https://youtu.be/gRNLVPIhAMw"><img src="./assets/demo/video-thumbnail.jpg" alt="Watch the GemmaLens demo video on YouTube" width="640"></a>
+
+[▶ Watch the GemmaLens demo on YouTube](https://youtu.be/gRNLVPIhAMw)
+
 ## What It Does
 
 GemmaLens turns real learning sources into source-grounded study material:
